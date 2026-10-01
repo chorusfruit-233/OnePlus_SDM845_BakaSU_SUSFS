@@ -252,7 +252,7 @@ jobs:
           grep -qx 'CONFIG_KALLSYMS_ALL=y' out/.config
           # ReKernel-X
           grep -qx 'CONFIG_REKERNEL=y' out/.config
-          grep -qx '# CONFIG_REKERNEL_NETWORK is not set' out/.config
+          grep -qx 'CONFIG_REKERNEL_NETWORK=y' out/.config
           # rtl8812au/8821au/8814au out-of-tree USB Wi-Fi
           grep -qx 'CONFIG_88XXAU=y' out/.config
           required=(

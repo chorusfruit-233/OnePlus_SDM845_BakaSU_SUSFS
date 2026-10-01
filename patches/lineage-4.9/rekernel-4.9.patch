@@ -5,7 +5,7 @@ rekernel.c/rekernel.h/Kconfig/Makefile are identical in the ReKernel-X
 upstream/v9.2 fork), adapted for the LineageOS 4.9.337 base:
 
 - drivers/rekernel/{Kconfig,Makefile,rekernel.c,rekernel.h} verbatim
-  (GPL-2.0), with CONFIG_REKERNEL=y / CONFIG_REKERNEL_NETWORK=n;
+  (GPL-2.0), with CONFIG_REKERNEL=y / CONFIG_REKERNEL_NETWORK=y;
 - drivers/android/binder.c: frozen-process async transaction handling
   (binder_can_update_transaction()/
   binder_find_outdated_transaction_ilocked()) plus the

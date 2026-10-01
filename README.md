@@ -112,15 +112,17 @@ ramdisk、内核模块或 vendor 接口差异而不兼容。不要在未备份�
   rekernel 源码与 ReKernel-X upstream/v9.2 相同）以自包含补丁 vendored
   （`patches/lineage-4.9/rekernel-4.9.patch`）；
 - 新增 `drivers/rekernel/`（netlink 上报模块，`CONFIG_REKERNEL=y`，
-  `CONFIG_REKERNEL_NETWORK=n`）；
+  `CONFIG_REKERNEL_NETWORK=y`）；
 - `drivers/android/binder.c`：移植冻结进程的 async 事务合并处理
   （`binder_can_update_transaction`/`binder_find_outdated_transaction_ilocked`，
   4.9 变体不含 `binder_buffer->pid` 与 `proc->outstanding_txns`）+ 事务上报
   hook；`kernel/signal.c`：SIGKILL/SIGTERM/SIGABRT/SIGQUIT 上报；
 - 4.9 适配：`JOBCTL_TRAP_FREEZE` 为 4.11+ 引入，`jobctl_frozen()` 回退使用
   `frozen()/freezing()`；
+- 启用 IPv4/IPv6 入站 TCP 网络事件上报，通过 netlink 向 ReKernel 用户态
+  发送应用 UID、IP 版本与数据长度；纯 ACK 等无数据且无 SYN/FIN/RST 的包不触发上报；
 - 配合 ReKernel 用户态（tombstone 冻结优化）使用；Actions 检查
-  `CONFIG_REKERNEL`。
+  `CONFIG_REKERNEL` 与 `CONFIG_REKERNEL_NETWORK`。
 
 ### 网络与容器
 
