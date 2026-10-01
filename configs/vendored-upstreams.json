@@ -1,0 +1,17 @@
+{
+  "susfs": {
+    "version": "v2.3.0",
+    "repo": "https://gitlab.com/simonpunk/susfs4ksu.git",
+    "ref": "gki-android14-6.1",
+    "commit": "24743360ea08d98f6ad72b856851abed8de5854f",
+    "port_repo": "https://github.com/JackA1ltman/NonGKI_Kernel_Build_2nd.git",
+    "port_ref": "mainline",
+    "port_commit": "e2f895b357a2844f5dc8d4e7ad980c0c9b200345"
+  },
+  "nomount": {
+    "version": "20",
+    "repo": "https://github.com/maxsteeel/nomount.git",
+    "ref": "dev",
+    "commit": "e00741165d10f1a69d038aa53a8c436acb8f4340"
+  }
+}

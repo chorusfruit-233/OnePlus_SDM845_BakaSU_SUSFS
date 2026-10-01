@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SUSFS v2.2.0 inline-hook patcher for non-GKI kernels.
+# SUSFS v2.3.0 inline-hook patcher for non-GKI kernels.
 #
 # Based on Patches/susfs_inline_hook_patches.sh from
 # https://github.com/JackA1ltman/NonGKI_Kernel_Build_2nd
@@ -68,13 +68,18 @@ for i in "${patch_files[@]}"; do
         fi
 
         if grep -q "__do_execve_file" "fs/exec.c"; then
-            sed -i '/static int __do_execve_file(int fd, struct filename \*filename,/i #ifdef CONFIG_KSU_SUSFS\nextern struct static_key_true ksu_su_compat_enabled;\nextern struct static_key_true susfs_is_sdcard_android_data_not_decrypted;\nextern bool __ksu_is_allow_uid_for_current(uid_t uid);\nextern int ksu_handle_execveat(int *fd, struct filename **filename_ptr, void *argv,\n\t\t\tvoid *envp, int *flags);\nextern int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr, void *argv,\n\t\t\t\tvoid *envp, int *flags);\n#endif' fs/exec.c
+            sed -i '/static int __do_execve_file(int fd, struct filename \*filename,/i #ifdef CONFIG_KSU_SUSFS\nextern struct static_key_true ksu_su_compat_enabled;\nextern struct static_key_true susfs_is_sdcard_android_data_not_decrypted;\nextern bool __ksu_is_allow_uid_for_current(uid_t uid);\nextern int ksu_handle_execveat(int *fd, struct filename **filename_ptr, void *argv,\n\t\t\tvoid *envp, int *flags);\nextern int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr, void *argv,\n\t\t\t\tvoid *envp, int *flags);\nextern int ksu_handle_post_execveat_sucompat(int *fd, struct filename **filename_ptr,\n\t\t\tvoid *argv, void *envp, int *flags, int *retval);\n#endif' fs/exec.c
         else
-            sed -i '/^static int do_execveat_common(int fd, struct filename \*filename,/i\#ifdef CONFIG_KSU_SUSFS\nextern struct static_key_true ksu_su_compat_enabled;\nextern struct static_key_true susfs_is_sdcard_android_data_not_decrypted;\nextern bool __ksu_is_allow_uid_for_current(uid_t uid);\nextern int ksu_handle_execveat(int *fd, struct filename **filename_ptr, void *argv,\n\t\t\tvoid *envp, int *flags);\nextern int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr,\n\t\t\t\t void *argv, void *envp, int *flags);\n#endif\n' fs/exec.c
+            sed -i '/^static int do_execveat_common(int fd, struct filename \*filename,/i\#ifdef CONFIG_KSU_SUSFS\nextern struct static_key_true ksu_su_compat_enabled;\nextern struct static_key_true susfs_is_sdcard_android_data_not_decrypted;\nextern bool __ksu_is_allow_uid_for_current(uid_t uid);\nextern int ksu_handle_execveat(int *fd, struct filename **filename_ptr, void *argv,\n\t\t\tvoid *envp, int *flags);\nextern int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr,\n\t\t\t\t void *argv, void *envp, int *flags);\nextern int ksu_handle_post_execveat_sucompat(int *fd, struct filename **filename_ptr,\n\t\t\tvoid *argv, void *envp, int *flags, int *retval);\n#endif\n' fs/exec.c
         fi
-        sed -i '/return PTR_ERR(filename);/a\#ifdef CONFIG_KSU_SUSFS\n\tif (likely(susfs_is_current_proc_no_su()))\n\t\tgoto orig_flow;\n\tif (static_branch_likely(\&ksu_su_compat_enabled)) {\n\t\tif (static_branch_unlikely(\&susfs_is_sdcard_android_data_not_decrypted))\n\t\tksu_handle_execveat(\&fd, \&filename, \&argv, \&envp, \&flags);\n\telse\n\t\tksu_handle_execveat_sucompat(\&fd, \&filename, \&argv, \&envp, \&flags);\n\t}\norig_flow:\n#endif' fs/exec.c
+        sed -i '/if (IS_ERR(filename))/i\#ifdef CONFIG_KSU_SUSFS\n\tbool is_su_session = false;\n#endif' fs/exec.c
+        sed -i '/return PTR_ERR(filename);/a\#ifdef CONFIG_KSU_SUSFS\n\tif (likely(susfs_is_current_proc_no_su()))\n\t\tgoto orig_flow;\n\tif (static_branch_likely(\&ksu_su_compat_enabled)) {\n\t\tif (static_branch_unlikely(\&susfs_is_sdcard_android_data_not_decrypted))\n\t\t\tis_su_session = !ksu_handle_execveat(\&fd, \&filename, \&argv, \&envp, \&flags);\n\t\telse\n\t\t\tis_su_session = !ksu_handle_execveat_sucompat(\&fd, \&filename, \&argv, \&envp, \&flags);\n\t}\norig_flow:\n#endif' fs/exec.c
 
-        if grep -q "ksu_handle_execveat_sucompat" "fs/exec.c"; then
+        # Install the su fd only after exec succeeds, before filename is freed.
+        sed -i '/\/\* execve succeeded \*\//a\#ifdef CONFIG_KSU_SUSFS\n\tif (unlikely(is_su_session))\n\t\t(void)ksu_handle_post_execveat_sucompat(\&fd, \&filename, \&argv, \&envp, \&flags, \&retval);\n#endif' fs/exec.c
+
+        if grep -q '^[[:space:]]*(void)ksu_handle_post_execveat_sucompat' fs/exec.c &&
+           grep -q "ksu_handle_execveat_sucompat" "fs/exec.c"; then
             echo "[+] fs/exec.c Patched!"
             echo "[+] Count: $(grep -c "ksu_handle_execveat_sucompat" "fs/exec.c")"
         else

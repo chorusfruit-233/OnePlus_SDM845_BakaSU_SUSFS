@@ -8,6 +8,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <linux/stat.h>
+#include <sys/inotify.h>
 #include <sys/syscall.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -87,6 +89,9 @@ static void test_hidden_path(const char *path)
 	printf("Testing hidden SUS_PATH: %s\n", path);
 	check(stat(path, &(struct stat){0}) < 0 && errno == ENOENT,
 		"hidden stat -> ENOENT");
+	expect_missing("hidden statx -> ENOENT",
+		syscall(SYS_statx, AT_FDCWD, path, 0, STATX_BASIC_STATS,
+			&(struct statx){0}));
 	fd = open(path, O_RDONLY | O_CLOEXEC);
 	expect_missing("hidden open -> ENOENT", fd);
 	if (fd >= 0)
@@ -114,13 +119,71 @@ static void test_hidden_path(const char *path)
 		close(fd);
 }
 
+static void test_statx(const char *path, uint64_t expected_ino)
+{
+	struct statx stx = {0};
+	int rc = syscall(SYS_statx, AT_FDCWD, path, 0, STATX_BASIC_STATS, &stx);
+
+	check(rc == 0, "statx readable");
+	if (rc == 0) {
+		check((stx.stx_mask & STATX_INO) && stx.stx_ino == expected_ino,
+			"statx inode agrees with expected inode");
+		check(!(stx.stx_mask & 0x30000000U),
+			"statx does not expose internal SUSFS discriminator bits");
+	}
+}
+
+static void test_inotify_inode(const char *path, uint64_t expected_ino)
+{
+	char fdinfo[PATH_MAX], token[128];
+	int fd = inotify_init1(IN_CLOEXEC);
+	int wd;
+
+	check(fd >= 0, "inotify_init1");
+	if (fd < 0)
+		return;
+	wd = inotify_add_watch(fd, path, IN_ATTRIB);
+	check(wd >= 0, "inotify_add_watch");
+	if (wd >= 0) {
+		snprintf(fdinfo, sizeof(fdinfo), "/proc/self/fdinfo/%d", fd);
+		snprintf(token, sizeof(token), "inotify wd:%x ino:%llx ", wd,
+			(unsigned long long)expected_ino);
+		check(contains_file(fdinfo, token), "inotify fdinfo expected inode");
+		inotify_rm_watch(fd, wd);
+	}
+	close(fd);
+}
+
+static void test_kstat_path(const char *path, uint64_t expected_ino)
+{
+	struct stat st = {0};
+	char fdinfo[PATH_MAX], token[128];
+	int fd;
+
+	check(stat(path, &st) == 0 && (uint64_t)st.st_ino == expected_ino,
+		"SUS_KSTAT stat expected inode");
+	test_statx(path, expected_ino);
+	test_inotify_inode(path, expected_ino);
+	fd = open(path, O_RDONLY | O_CLOEXEC);
+	check(fd >= 0, "SUS_KSTAT open");
+	if (fd < 0)
+		return;
+	check(fstat(fd, &st) == 0 && (uint64_t)st.st_ino == expected_ino,
+		"SUS_KSTAT fstat expected inode");
+	snprintf(fdinfo, sizeof(fdinfo), "/proc/self/fdinfo/%d", fd);
+	snprintf(token, sizeof(token), "ino:\t%llu\n",
+		(unsigned long long)expected_ino);
+	check(contains_file(fdinfo, token), "SUS_KSTAT fdinfo expected inode");
+	close(fd);
+}
+
 static int test_visible_tree(const char *root, const char *mount_token,
 		const char *fdinfo_token)
 {
 	char file[PATH_MAX], link[PATH_MAX], dir[PATH_MAX], entry[PATH_MAX];
 	char renamed[PATH_MAX], fdinfo[PATH_MAX];
 	char dents[1024];
-	struct stat st;
+	struct stat st = {0};
 	int fd, dirfd, found = 0;
 	ssize_t n;
 
@@ -137,6 +200,8 @@ static int test_visible_tree(const char *root, const char *mount_token,
 	check(write(fd, "susfs", 5) == 5, "write fixture");
 	close(fd);
 	check(stat(file, &st) == 0 && st.st_size == 5, "stat fixture");
+	test_statx(file, (uint64_t)st.st_ino);
+	test_inotify_inode(file, (uint64_t)st.st_ino);
 	check(access(file, R_OK | W_OK) == 0, "access fixture");
 	fd = open(file, O_RDONLY | O_CLOEXEC);
 	check(fd >= 0 && read(fd, dents, 5) == 5, "open/read fixture");
@@ -201,6 +266,8 @@ int main(int argc, char **argv)
 	char root_template[] = "/data/local/tmp/susfs-regression.XXXXXX";
 	const char *hidden = NULL, *mount_token = NULL, *fdinfo_token = NULL;
 	char *root = NULL;
+	const char *kstat_path = NULL;
+	uint64_t kstat_ino = 0;
 	int i, rc;
 
 	for (i = 1; i < argc; ++i) {
@@ -210,22 +277,35 @@ int main(int argc, char **argv)
 			mount_token = argv[++i];
 		else if (!strcmp(argv[i], "--fdinfo-token") && i + 1 < argc)
 			fdinfo_token = argv[++i];
+		else if (!strcmp(argv[i], "--kstat") && i + 2 < argc) {
+			char *end;
+			kstat_path = argv[++i];
+			errno = 0;
+			kstat_ino = strtoull(argv[++i], &end, 0);
+			if (errno || *end || !*argv[i] || argv[i][0] == '-') {
+				fprintf(stderr, "invalid KSTAT inode: %s\n", argv[i]);
+				return 2;
+			}
+		}
 		else if (!strcmp(argv[i], "--root") && i + 1 < argc)
 			root = argv[++i];
 		else {
 			fprintf(stderr, "usage: %s [--root DIR] [--hidden PATH] "
-				"[--mount-token TOKEN] [--fdinfo-token TOKEN]\n", argv[0]);
+				"[--mount-token TOKEN] [--fdinfo-token TOKEN] "
+				"[--kstat PATH EXPECTED_INO]\n", argv[0]);
 			return 2;
 		}
 	}
-	if (!root) {
+	if (!root && !kstat_path) {
 		root = mkdtemp(root_template);
 		if (!root) {
 			perror("mkdtemp");
 			return 2;
 		}
 	}
-	rc = test_visible_tree(root, mount_token, fdinfo_token);
+	rc = root ? test_visible_tree(root, mount_token, fdinfo_token) : 0;
+	if (kstat_path)
+		test_kstat_path(kstat_path, kstat_ino);
 	if (hidden)
 		test_hidden_path(hidden);
 	if (rc < 0)

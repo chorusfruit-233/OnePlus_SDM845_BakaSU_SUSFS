@@ -45,10 +45,14 @@ ramdisk、内核模块或 vendor 接口差异而不兼容。不要在未备份�
 - 动态拉取 ReSukiSU `main` 的最新提交；
 - SUSFS **v2.3.0** 以自包含补丁形式 vendored（`patches/lineage-4.9/susfs-4.9.patch`，
   基于 [JackA1ltman/NonGKI_Kernel_Build_2nd](https://github.com/JackA1ltman/NonGKI_Kernel_Build_2nd)
-  的 `susfs_patch_to_4.9.patch` 移植并修正），构建不再依赖 GitLab 上游；
+  的 `susfs_patch_to_4.9.patch` 移植，并同步官方
+  `gki-android14-6.1 @ 24743360ea08` 的修复），构建不再依赖 GitLab 上游；
 - 使用 SUSFS 官方 inline hook 方式（`scripts/susfs-inline-hook.sh`）替换 KernelSU
   的 kprobe 钩子，覆盖 exec、faccessat、stat/fstat、read、input、reboot、
   setresuid 与 selinux 路径，构建产物无 kprobe 依赖；
+- 同步 KSTAT 的 statfs、inotify fdinfo 与普通 fdinfo 处理、cmdline 快照读取、
+  KSTAT 更新失败释放与 enabled-features 分配失败处理；exec 后置 hook 仅在
+  exec 成功后安装 su fd，避免提前安装；
 - 启用 SUS_PATH、SUS_MOUNT、SUS_KSTAT、SPOOF_UNAME、SUS_MAP、cmdline spoof、
   符号隐藏与 **OPEN_REDIRECT**；
 - SUS_PATH 覆盖 open、stat、access、readlink、getdents64、unlink、rename、
@@ -58,13 +62,15 @@ ramdisk、内核模块或 vendor 接口差异而不兼容。不要在未备份�
 ### NoMount
 
 - [maxsteeel/NoMount](https://github.com/maxsteeel/nomount)（dev @
-  `0288c11263e6`）以自包含补丁 vendored（`patches/lineage-4.9/nomount-4.9.patch`）；
+  `e00741165d10`）以自包含补丁 vendored（`patches/lineage-4.9/nomount-4.9.patch`）；
 - NoMount 通过劫持目录 inode 操作实现路径重定向与虚拟文件注入，不需要真正的
   mount，配合 SUSFS 的 SUS_MOUNT 使用可进一步隐藏模块挂载痕迹；
 - 内核侧启用 `CONFIG_NOMOUNT=y`（同时启用 `CONFIG_KEYS=y` 提供 keyring
   用户态接口），userspace 规则通过 `nomount` 密钥类型下发；
+- 同步 dev 的规则/UID 数据结构调整及 dentry 固定，防止劫持的目录项被
+  dcache 回收；
 - 针对本树回移的 statx API 做了适配：`-DNOMOUNT_HAS_STATX` 强制走四参数
-  `vfs_getattr_nosec()` 路径，`-std=gnu99` 兼容 C99 循环声明（4.9 默认
+  `vfs_getattr_nosec()` 路径，保留上游 `-std=gnu11` 兼容新实现（4.9 默认
   `-std=gnu89`）。
 
 ### USB Wi-Fi（Kali/渗透测试）
@@ -199,13 +205,15 @@ SUSFS 补丁的哈希）和所有上游 commit 共同组成 build key：
 | Kernel | [LineageOS/android_kernel_oneplus_sdm845](https://github.com/LineageOS/android_kernel_oneplus_sdm845) | 固定基线 commit |
 | ReSukiSU | [ReSukiSU/ReSukiSU](https://github.com/ReSukiSU/ReSukiSU) | 默认跟踪 `main` |
 | SUSFS v2.3.0 | 自包含补丁（源自 [JackA1ltman/NonGKI_Kernel_Build_2nd](https://github.com/JackA1ltman/NonGKI_Kernel_Build_2nd)） | vendored，随仓库版本变化 |
-| NoMount | [maxsteeel/nomount](https://github.com/maxsteeel/nomount)（dev 分支） | vendored，固定 `0288c11263e6` |
+| NoMount | [maxsteeel/nomount](https://github.com/maxsteeel/nomount)（dev 分支） | vendored，固定 `e00741165d10` |
 | RTL8812AU/8821AU/8814AU | [aircrack-ng/rtl8812au](https://github.com/aircrack-ng/rtl8812au) | 默认跟踪 `v5.6.4.2`（构建时克隆 + 适配补丁） |
 | CAKE | [dtaht/sch_cake](https://github.com/dtaht/sch_cake) | 固定最后一版兼容旧 qdisc API 的基线 |
 | BBRv3 patches | [WildKernels/kernel_patches](https://github.com/WildKernels/kernel_patches) | 稀疏拉取 `common/bbrv3` |
 | Baseband Guard | [vc-teahouse/Baseband-guard](https://github.com/vc-teahouse/Baseband-guard) | 默认跟踪 `main` |
 | AnyKernel3 | [osm0sis/AnyKernel3](https://github.com/osm0sis/AnyKernel3) | 默认跟踪 `master` |
 
+vendored 组件的确切来源记录在 `configs/vendored-upstreams.json`。SUSFS 官方来源、
+4.9 移植来源和 NoMount dev 均固定到提交；同一 SUSFS 版本号内也可能存在源码差异。
 每次构建的确切版本以 artifact 内的 `build-info.txt` 为准，不应只根据 branch 名推断。
 
 ## 真机回归测试
@@ -226,8 +234,9 @@ adb shell su -c '/data/local/tmp/run-susfs-regression.sh \
   /data/local/tmp/susfs_syscall_test --hidden /path/to/marked-entry'
 ```
 
-测试覆盖 `stat/open/access/readlink/getdents64/unlink/rename/O_PATH/O_TRUNC`，以及
-SUS_MOUNT 的 `/proc/self/mountinfo` 和 fdinfo。完整参数见
+测试覆盖 `stat/statx/open/access/readlink/getdents64/unlink/rename/O_PATH/O_TRUNC`，
+以及 SUS_MOUNT 的 `/proc/self/mountinfo` 和 fdinfo。`--kstat` 可检查伪装 inode 在
+stat、fstat、statx、普通 fdinfo 和 inotify fdinfo 中的一致性。完整参数见
 [`tests/device/README.md`](tests/device/README.md)。
 
 ## 已知限制
