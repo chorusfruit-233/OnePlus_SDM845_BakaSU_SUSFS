@@ -253,6 +253,10 @@ jobs:
           # ReKernel-X
           grep -qx 'CONFIG_REKERNEL=y' out/.config
           grep -qx 'CONFIG_REKERNEL_NETWORK=y' out/.config
+          # zram LZ4 backend and its built-in dependencies
+          for option in CONFIG_ZRAM CONFIG_ZSMALLOC CONFIG_SWAP CONFIG_CRYPTO_LZ4 CONFIG_LZ4_COMPRESS CONFIG_LZ4_DECOMPRESS; do
+            grep -qx "${option}=y" out/.config
+          done
           # rtl8812au/8821au/8814au out-of-tree USB Wi-Fi
           grep -qx 'CONFIG_88XXAU=y' out/.config
           required=(

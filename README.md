@@ -126,6 +126,10 @@ ramdisk、内核模块或 vendor 接口差异而不兼容。不要在未备份�
 
 ### 网络与容器
 
+- zram 支持 LZO 与 LZ4，LZ4 压缩/解压后端内置于内核；默认算法仍为 LZO，
+  ROM 或管理工具可在 zram 初始化前通过 `/sys/block/zram0/comp_algorithm`
+  选择 `lz4`；该节点也可用于查看可用算法及当前算法（方括号标记）；
+
 - BBRv1 与 BBRv3，可在运行时保留 BBRv1 作为回退；
 - CAKE、FQ、FQ_CODEL 与 PIE qdisc；
 - TTL/HL target、IPSet、IPv6 NAT；
