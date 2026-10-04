@@ -126,9 +126,11 @@ ramdisk、内核模块或 vendor 接口差异而不兼容。不要在未备份�
 
 ### 网络与容器
 
-- zram 支持 LZO 与 LZ4，LZ4 压缩/解压后端内置于内核；默认算法仍为 LZO，
+- zram 支持 LZO、LZ4 与 Zstd，LZ4/Zstd 压缩与解压后端内置于内核；默认算法仍为 LZO，
   ROM 或管理工具可在 zram 初始化前通过 `/sys/block/zram0/comp_algorithm`
-  选择 `lz4`；该节点也可用于查看可用算法及当前算法（方括号标记）；
+  选择 `lz4` 或 `zstd`；该节点也可用于查看可用算法及当前算法（方括号标记）；
+- PSI 压力监测默认启用，提供 `/proc/pressure/cpu`、`memory`、`io` 统计及
+  poll 触发器；Android LMKD 是否使用 PSI 还取决于 ROM 的配置与运行状态；
 
 - BBRv1 与 BBRv3，可在运行时保留 BBRv1 作为回退；
 - CAKE、FQ、FQ_CODEL 与 PIE qdisc；
