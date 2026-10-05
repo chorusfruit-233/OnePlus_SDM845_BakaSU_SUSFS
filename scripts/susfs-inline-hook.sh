@@ -5,10 +5,10 @@
 # https://github.com/JackA1ltman/NonGKI_Kernel_Build_2nd
 # (patch author: simonpunk @ Gitlab, backslashxx @ Github)
 #
-# Adapted for ReSukiSU on Linux 4.9:
-#  - ksu_handle_sys_read() uses ReSukiSU's three-argument signature
+# Adapted for BakaSU on Linux 4.9:
+#  - ksu_handle_sys_read() uses BakaSU's three-argument signature
 #    (unsigned int fd, char __user **buf_ptr, size_t *count_ptr);
-#  - the security/security.c section is dropped: ReSukiSU registers its
+#  - the security/security.c section is dropped: BakaSU registers its
 #    own LSM hooks and does not export ksu_bprm_check()/cred-based
 #    ksu_handle_setuid();
 #  - any section that fails to apply aborts the build instead of

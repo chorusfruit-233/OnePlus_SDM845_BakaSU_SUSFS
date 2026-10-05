@@ -3,8 +3,8 @@ name: Build OnePlus 6/6T Lineage 4.9 AK3
 on:
   workflow_dispatch:
     inputs:
-      resukisu_ref:
-        description: ReSukiSU branch, tag, or commit
+      bakasu_ref:
+        description: BakaSU branch, tag, or commit
         required: false
         default: main
         type: string
@@ -60,7 +60,7 @@ jobs:
       build_key: ${{ steps.meta.outputs.build_key }}
       skip: ${{ steps.decide.outputs.skip }}
       marker_hit: ${{ steps.marker.outputs.cache-hit }}
-      resukisu_sha: ${{ steps.meta.outputs.resukisu_sha }}
+      bakasu_sha: ${{ steps.meta.outputs.bakasu_sha }}
       cake_sha: ${{ steps.meta.outputs.cake_sha }}
       bbg_sha: ${{ steps.meta.outputs.bbg_sha }}
       kernel_patches_sha: ${{ steps.meta.outputs.kernel_patches_sha }}
@@ -68,7 +68,7 @@ jobs:
       anykernel_sha: ${{ steps.meta.outputs.anykernel_sha }}
     env:
       CONFIG: configs/enchilada.json
-      RESUKISU_REF: ${{ inputs.resukisu_ref || 'main' }}
+      BAKASU_REF: ${{ inputs.bakasu_ref || 'main' }}
       BBG_REF: ${{ inputs.bbg_ref || 'main' }}
       KERNEL_PATCHES_REF: ${{ inputs.kernel_patches_ref || 'main' }}
       RTL8812AU_REF: ${{ inputs.rtl8812au_ref || 'v5.6.4.2' }}
@@ -101,7 +101,7 @@ jobs:
           }
 
           kernel_base=$(jq -r .kernel_base "$CONFIG")
-          resukisu_sha=$(resolve_ref "$(jq -r .resukisu_repo "$CONFIG")" "$RESUKISU_REF")
+          bakasu_sha=$(resolve_ref "$(jq -r .bakasu_repo "$CONFIG")" "$BAKASU_REF")
           cake_sha=$(resolve_ref "$(jq -r .cake_repo "$CONFIG")" "$(jq -r .cake_ref "$CONFIG")")
           bbg_sha=$(resolve_ref "$(jq -r .bbg_repo "$CONFIG")" "$BBG_REF")
           kernel_patches_sha=$(resolve_ref "$(jq -r .kernel_patches_repo "$CONFIG")" "$KERNEL_PATCHES_REF")
@@ -109,10 +109,10 @@ jobs:
           anykernel_sha=$(resolve_ref "$(jq -r .anykernel_repo "$CONFIG")" "$ANYKERNEL_REF")
           builder_sha=$(git rev-parse HEAD)
           patch_sha=$(sha256sum patches/lineage-4.9/*.patch | sha256sum | cut -d' ' -f1)
-          build_key="${kernel_base}-${resukisu_sha}-${cake_sha}-${bbg_sha}-${kernel_patches_sha}-${rtl8812au_sha}-${anykernel_sha}-${builder_sha}-${patch_sha}"
+          build_key="${kernel_base}-${bakasu_sha}-${cake_sha}-${bbg_sha}-${kernel_patches_sha}-${rtl8812au_sha}-${anykernel_sha}-${builder_sha}-${patch_sha}"
 
           {
-            echo "resukisu_sha=$resukisu_sha"
+            echo "bakasu_sha=$bakasu_sha"
             echo "cake_sha=$cake_sha"
             echo "bbg_sha=$bbg_sha"
             echo "kernel_patches_sha=$kernel_patches_sha"
@@ -151,7 +151,7 @@ jobs:
     timeout-minutes: 120
     env:
       CONFIG: configs/enchilada.json
-      RESUKISU_REF: ${{ needs.resolve-inputs.outputs.resukisu_sha }}
+      BAKASU_REF: ${{ needs.resolve-inputs.outputs.bakasu_sha }}
       CAKE_REF: ${{ needs.resolve-inputs.outputs.cake_sha }}
       BBG_REF: ${{ needs.resolve-inputs.outputs.bbg_sha }}
       KERNEL_PATCHES_REF: ${{ needs.resolve-inputs.outputs.kernel_patches_sha }}
@@ -169,7 +169,7 @@ jobs:
           set -euo pipefail
           jq -e . "$CONFIG" >/dev/null
           for key in kernel_repo kernel_ref kernel_base defconfig arch cross_compile \
-                     resukisu_repo cake_repo bbg_repo \
+                     bakasu_repo cake_repo bbg_repo \
                      kernel_patches_repo rtl8812au_repo anykernel_repo; do
             echo "$key=$(jq -r .$key "$CONFIG")" >> "$GITHUB_OUTPUT"
           done
@@ -217,7 +217,7 @@ jobs:
           git -C kernel apply --whitespace=nowarn \
             "$GITHUB_WORKSPACE/patches/lineage-4.9/kernel-4.9-adaptation.patch"
           scripts/prepare-sources.sh kernel \
-            '${{ steps.config.outputs.resukisu_repo }}' "$RESUKISU_REF" \
+            '${{ steps.config.outputs.bakasu_repo }}' "$BAKASU_REF" \
             "$GITHUB_WORKSPACE/patches/lineage-4.9" \
             '${{ steps.config.outputs.cake_repo }}' "$CAKE_REF" "$RUNNER_TEMP/sch_cake" \
             '${{ steps.config.outputs.bbg_repo }}' "$BBG_REF" \
@@ -241,7 +241,12 @@ jobs:
           make O=out ARCH='${{ steps.config.outputs.arch }}' olddefconfig
           grep -E '^CONFIG_KSU(|_SUSFS.*)=y$' out/.config
           grep -qx 'CONFIG_KSU_SUSFS_OPEN_REDIRECT=y' out/.config
-          grep -qx 'CONFIG_NOMOUNT=y' out/.config
+          grep -qx 'CONFIG_HYBRIDMOUNT=y' out/.config
+          grep -qx 'CONFIG_KEYS=y' out/.config
+          if grep -Eq '^CONFIG_NOMOUNT=[ym]$' out/.config; then
+            echo '::error::NoMount must not coexist with Hybrid Mount VFS'
+            exit 1
+          fi
           grep -qx 'CONFIG_MAC80211=y' out/.config
           grep -qx 'CONFIG_ATH9K_HTC=y' out/.config
           grep -qx 'CONFIG_RT2800USB=y' out/.config
@@ -308,9 +313,9 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p artifacts
-          resukisu_sha=$(git -C kernel/KernelSU rev-parse --short=8 HEAD)
+          bakasu_sha=$(git -C kernel/KernelSU rev-parse --short=8 HEAD)
           susfs_sha=$(sha256sum patches/lineage-4.9/susfs-4.9.patch | cut -c1-8)
-          package="OnePlus6-6T-ReSukiSU-${resukisu_sha}-SUSFS-${susfs_sha}-AK3.zip"
+          package="OnePlus6-6T-BakaSU-${bakasu_sha}-SUSFS-${susfs_sha}-AK3.zip"
           scripts/package-ak3.sh anykernel3 \
             kernel/out/arch/arm64/boot/Image.gz-dtb \
             ak3/anykernel.sh "artifacts/$package"
@@ -318,9 +323,10 @@ jobs:
           cp kernel/out/arch/arm64/boot/Image.gz-dtb artifacts/
           {
             echo "kernel=$(git -C kernel rev-parse HEAD)"
-            echo "resukisu=$(git -C kernel/KernelSU rev-parse HEAD)"
+            echo "bakasu_repo=${{ steps.config.outputs.bakasu_repo }}"
+            echo "bakasu=$(git -C kernel/KernelSU rev-parse HEAD)"
             echo "susfs=v2.3.0-vendored ($(sha256sum patches/lineage-4.9/susfs-4.9.patch | cut -c1-12))"
-            echo "nomount=dev@$(jq -r .nomount.commit configs/vendored-upstreams.json) ($(sha256sum patches/lineage-4.9/nomount-4.9.patch | cut -c1-12))"
+            echo "hybridmount=$(jq -r .hybridmount.version configs/vendored-upstreams.json)@$(jq -r .hybridmount.commit configs/vendored-upstreams.json) ($(sha256sum patches/lineage-4.9/hybridmount-4.9.patch | cut -c1-12))"
             echo "susfs_upstream=$(jq -r .susfs.commit configs/vendored-upstreams.json)"
             echo "susfs_port=$(jq -r .susfs.port_commit configs/vendored-upstreams.json)"
             echo "cake=$(git -C "$RUNNER_TEMP/sch_cake" rev-parse HEAD)"
@@ -363,7 +369,7 @@ jobs:
           gh release create "$tag" \
             artifacts/*-AK3.zip artifacts/SHA256SUMS \
             artifacts/build-info.txt artifacts/Image.gz-dtb \
-            --title "OnePlus 6/6T ReSukiSU + SUSFS $(date +%Y-%m-%d)" \
+            --title "OnePlus 6/6T BakaSU + SUSFS $(date +%Y-%m-%d)" \
             --notes "$notes"
           echo "Created release: $tag"
 

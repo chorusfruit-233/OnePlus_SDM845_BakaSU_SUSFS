@@ -1,12 +1,12 @@
 <div align="center">
 
-# OnePlus 6/6T ReSukiSU + SUSFS
+# OnePlus 6/6T BakaSU + SUSFS
 
 基于 LineageOS Linux 4.9.337 的可复现 AnyKernel3 自动构建项目
 
 [![Build AK3](https://github.com/chorusfruit-233/OnePlus_SDM845_ReSukiSU_SUSFS/actions/workflows/build-ak3.yml/badge.svg)](https://github.com/chorusfruit-233/OnePlus_SDM845_ReSukiSU_SUSFS/actions/workflows/build-ak3.yml)
 [![Kernel](https://img.shields.io/badge/kernel-4.9.337-informational)](https://github.com/LineageOS/android_kernel_oneplus_sdm845)
-[![ReSukiSU](https://img.shields.io/badge/ReSukiSU-integrated-success)](https://github.com/ReSukiSU/ReSukiSU)
+[![BakaSU](https://img.shields.io/badge/BakaSU-integrated-success)](https://github.com/Baka-SU/BakaSU)
 [![SUSFS](https://img.shields.io/badge/SUSFS-v2.3.0_inline_hook-orange)](https://github.com/JackA1ltman/NonGKI_Kernel_Build_2nd)
 [![Devices](https://img.shields.io/badge/devices-OnePlus_6%20%7C%206T-blue)](#兼容性)
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue)](#许可证)
@@ -40,9 +40,13 @@ ramdisk、内核模块或 vendor 接口差异而不兼容。不要在未备份�
 
 ## 已集成功能
 
-### ReSukiSU 与 SUSFS
+### BakaSU 与 SUSFS
 
-- 动态拉取 ReSukiSU `main` 的最新提交；
+- 动态拉取 [BakaSU](https://github.com/Baka-SU/BakaSU) `main` 的最新提交（原 ReSukiSU）；
+- 使用 BakaSU 管理器；当前上游在 `CONFIG_KSU_MULTI_MANAGER_SUPPORT=y` 时还支持
+  官方 KernelSU 与 KOWSU 管理器，已移除 MKSU、RKSU 和 SukiSU-Ultra 的签名支持；
+- BakaSU 用户空间向模块脚本提供 `BAKASU=true`，取代旧的 `KSU_SUKISU=true`；
+  依赖旧变量判断分支的模块需同步更新；
 - SUSFS **v2.3.0** 以自包含补丁形式 vendored（`patches/lineage-4.9/susfs-4.9.patch`，
   基于 [JackA1ltman/NonGKI_Kernel_Build_2nd](https://github.com/JackA1ltman/NonGKI_Kernel_Build_2nd)
   的 `susfs_patch_to_4.9.patch` 移植，并同步官方
@@ -59,19 +63,23 @@ ramdisk、内核模块或 vendor 接口差异而不兼容。不要在未备份�
   `O_PATH` 与 `O_TRUNC`，open redirect 覆盖普通 open、`O_PATH`、`O_TMPFILE`、
   readlink、`/proc/self/fd`、maps/smaps 与 statfs。
 
-### NoMount
+### Hybrid Mount VFS（内建）
 
-- [maxsteeel/NoMount](https://github.com/maxsteeel/nomount)（dev @
-  `e00741165d10`）以自包含补丁 vendored（`patches/lineage-4.9/nomount-4.9.patch`）；
-- NoMount 通过劫持目录 inode 操作实现路径重定向与虚拟文件注入，不需要真正的
-  mount，配合 SUSFS 的 SUS_MOUNT 使用可进一步隐藏模块挂载痕迹；
-- 内核侧启用 `CONFIG_NOMOUNT=y`（同时启用 `CONFIG_KEYS=y` 提供 keyring
-  用户态接口），userspace 规则通过 `nomount` 密钥类型下发；
-- 同步 dev 的规则/UID 数据结构调整及 dentry 固定，防止劫持的目录项被
-  dcache 回收；
-- 针对本树回移的 statx API 做了适配：`-DNOMOUNT_HAS_STATX` 强制走四参数
-  `vfs_getattr_nosec()` 路径，保留上游 `-std=gnu11` 兼容新实现（4.9 默认
-  `-std=gnu89`）。
+- [Hybrid-Mount/meta-hybrid_mount](https://github.com/Hybrid-Mount/meta-hybrid_mount)
+  的 VFS 驱动固定到 `dev @ 1af06a616e12`，以自包含补丁
+  `patches/lineage-4.9/hybridmount-4.9.patch` vendored；
+- 启用 `CONFIG_HYBRIDMOUNT=y` 和 `CONFIG_KEYS=y`，驱动内建到内核镜像，
+  使用 `hybridmount` keyring 接口与 **hm1** 协议；支持路径注入、重定向、
+  whiteout、opaque 目录与 UID 隔离；
+- 已移除 NoMount 驱动、配置和补丁。两个驱动均劫持 inode 操作，不能共存；
+  NoMount 的模块、`nm` 工具和旧规则不能直接控制 Hybrid Mount；
+- 4.9 适配保留上游 gnu11，并处理本树回移的四参数 statx/getattr ABI 和旧版
+  `name_snapshot` 字符串结构；保留上游的目录引用与 RCU/SRCU 生命周期逻辑；
+- 刷入内核后仍需安装 Hybrid Mount 元模块，选择 VFS 后端，或在其配置中设置
+  `default_mode = "vfs"`。本仓库不打包元模块或用户态程序；
+- 安装后以 root 执行 `/data/adb/modules/hybrid_mount/hybrid-mount vfs-doctor`
+  和 `/data/adb/modules/hybrid_mount/hybrid-mount vfs version`，应确认内建
+  provider 可用且协议为 `hm1`；上游通过 keyring 探测内建 provider，无需加载 `.ko`。
 
 ### USB Wi-Fi（Kali/渗透测试）
 
@@ -95,7 +103,7 @@ ramdisk、内核模块或 vendor 接口差异而不兼容。不要在未备份�
 
 ### KPM（KPatch-Next）
 
-- 内核启用 `CONFIG_KALLSYMS=y` + `CONFIG_KALLSYMS_ALL=y`（ReSukiSU 自动
+- 内核启用 `CONFIG_KALLSYMS=y` + `CONFIG_KALLSYMS_ALL=y`（BakaSU 自动
   select），满足 [KPatch-Next](https://github.com/KernelSU-Next/KPatch-Next)
   的镜像静态 patch 要求 —— KPatch-Next 直接 patch 编译好的内核镜像，
   **不需要任何内核源码补丁**；
@@ -163,7 +171,7 @@ artifact 包含：
 
 | 文件 | 用途 |
 | --- | --- |
-| `OnePlus6-6T-ReSukiSU-*-SUSFS-*-AK3.zip` | 可刷入的 AnyKernel3 包 |
+| `OnePlus6-6T-BakaSU-*-SUSFS-*-AK3.zip` | 可刷入的 AnyKernel3 包 |
 | `Image.gz-dtb` | 编译得到的内核镜像 |
 | `SHA256SUMS` | AK3 ZIP 的 SHA256 校验值 |
 | `build-info.txt` | 本次构建使用的全部上游 commit |
@@ -181,7 +189,7 @@ artifact 包含：
 2. 确认下载的包与设备、Android 版本和当前 ROM 匹配；
 3. 用 `SHA256SUMS` 校验 AK3 ZIP；
 4. 刷入 `*-AK3.zip`；
-5. 重启后检查内核版本、ReSukiSU 管理器状态和基本网络功能。
+5. 重启后检查内核版本、BakaSU 管理器状态和基本网络功能。
 
 出现 bootloop 时，刷回备份的原始 `boot.img`。本项目不会修改 system/vendor 分区，
 但这并不能替代可靠的 boot 备份。
@@ -192,7 +200,7 @@ artifact 包含：
 
 | 输入 | 默认值 | 说明 |
 | --- | --- | --- |
-| `resukisu_ref` | `main` | ReSukiSU branch、tag 或完整 commit |
+| `bakasu_ref` | `main` | BakaSU branch、tag 或完整 commit |
 | `bbg_ref` | `main` | Baseband Guard branch、tag 或完整 commit |
 | `kernel_patches_ref` | `main` | WildKernels patches branch、tag 或完整 commit |
 | `anykernel_ref` | `master` | AnyKernel3 branch、tag 或完整 commit |
@@ -211,9 +219,9 @@ SUSFS 补丁的哈希）和所有上游 commit 共同组成 build key：
 | 组件 | 上游 | 策略 |
 | --- | --- | --- |
 | Kernel | [LineageOS/android_kernel_oneplus_sdm845](https://github.com/LineageOS/android_kernel_oneplus_sdm845) | 固定基线 commit |
-| ReSukiSU | [ReSukiSU/ReSukiSU](https://github.com/ReSukiSU/ReSukiSU) | 默认跟踪 `main` |
+| BakaSU | [Baka-SU/BakaSU](https://github.com/Baka-SU/BakaSU) | 默认跟踪 `main` |
 | SUSFS v2.3.0 | 自包含补丁（源自 [JackA1ltman/NonGKI_Kernel_Build_2nd](https://github.com/JackA1ltman/NonGKI_Kernel_Build_2nd)） | vendored，随仓库版本变化 |
-| NoMount | [maxsteeel/nomount](https://github.com/maxsteeel/nomount)（dev 分支） | vendored，固定 `e00741165d10` |
+| Hybrid Mount VFS | [Hybrid-Mount/meta-hybrid_mount](https://github.com/Hybrid-Mount/meta-hybrid_mount)（dev 分支） | vendored，固定 `1af06a616e12`，内建 hm1 provider |
 | RTL8812AU/8821AU/8814AU | [aircrack-ng/rtl8812au](https://github.com/aircrack-ng/rtl8812au) | 默认跟踪 `v5.6.4.2`（构建时克隆 + 适配补丁） |
 | CAKE | [dtaht/sch_cake](https://github.com/dtaht/sch_cake) | 固定最后一版兼容旧 qdisc API 的基线 |
 | BBRv3 patches | [WildKernels/kernel_patches](https://github.com/WildKernels/kernel_patches) | 稀疏拉取 `common/bbrv3` |
@@ -221,7 +229,7 @@ SUSFS 补丁的哈希）和所有上游 commit 共同组成 build key：
 | AnyKernel3 | [osm0sis/AnyKernel3](https://github.com/osm0sis/AnyKernel3) | 默认跟踪 `master` |
 
 vendored 组件的确切来源记录在 `configs/vendored-upstreams.json`。SUSFS 官方来源、
-4.9 移植来源和 NoMount dev 均固定到提交；同一 SUSFS 版本号内也可能存在源码差异。
+4.9 移植来源和 Hybrid Mount VFS 均固定到提交；同一 SUSFS 版本号内也可能存在源码差异。
 每次构建的确切版本以 artifact 内的 `build-info.txt` 为准，不应只根据 branch 名推断。
 
 ## 真机回归测试
@@ -260,8 +268,9 @@ stat、fstat、statx、普通 fdinfo 和 inotify fdinfo 中的一致性。完整
 - `susfs-4.9.patch` 内嵌 SUSFS v2.3.0 源码；升级 SUSFS 版本时需要重新移植
   `fs/susfs.c`、`include/linux/susfs.h`、`include/linux/susfs_def.h` 及内核钩子，
   并同步更新 `scripts/susfs-inline-hook.sh` 的版本说明；
-- `nomount-4.9.patch` 内嵌 NoMount `dev` 分支快照；NoMount 用户态组件（模块
-  ZIP 与 `nomount` 工具）不属于本仓库构建产物，需要从上游 release 单独获取；
+- `hybridmount-4.9.patch` 内嵌 Hybrid Mount VFS `dev` 分支快照；元模块需要从
+  [Hybrid Mount Releases](https://github.com/Hybrid-Mount/meta-hybrid_mount/releases)
+  单独获取。升级驱动时需核对其用户态协议及 4.9 ABI 适配；
 - USB Wi-Fi 覆盖 4.9 树内驱动（AR9271/RT3070/5370/5572/MT7601U 等）与树外的
   rtl8812au/8821au/8814au；RTL8188EUS、MT76x2U、MT7921U、RTW88/RTW89 等仍需
   各自第三方驱动或较新内核，不在支持范围；
@@ -285,7 +294,7 @@ tests/device/        SUSFS 设备端 syscall 回归测试
 ## 许可证
 
 本仓库（构建脚本、workflow 与 4.9 适配补丁）以 [GPL-3.0](LICENSE) 发布。
-集成的各上游组件（内核基线、ReSukiSU、SUSFS、NoMount、AnyKernel3、Baseband
+集成的各上游组件（内核基线、BakaSU、SUSFS、Hybrid Mount VFS、AnyKernel3、Baseband
 Guard、CAKE、BBRv3 补丁等）的许可证以**各自上游仓库声明为准**，本仓库不代为
 声明。
 
@@ -306,7 +315,7 @@ Guard、CAKE、BBRv3 补丁等）的许可证以**各自上游仓库声明为准
 
 ## 致谢
 
-- [ReSukiSU Team](https://github.com/ReSukiSU/ReSukiSU)
+- [BakaSU Team](https://github.com/Baka-SU/BakaSU)
 - [simonpunk / SUSFS](https://gitlab.com/simonpunk/susfs4ksu)
 - [LineageOS](https://github.com/LineageOS)
 - [WildKernels](https://github.com/WildKernels)
@@ -316,4 +325,5 @@ Guard、CAKE、BBRv3 补丁等）的许可证以**各自上游仓库声明为准
 - [ravindu644 / Droidspaces](https://github.com/ravindu644/Droidspaces-OSS)
 - [huangdihd / OnePlus_ReSukiSU_SUSFS](https://github.com/huangdihd/OnePlus_ReSukiSU_SUSFS)
 - [JackA1ltman / NonGKI_Kernel_Build_2nd](https://github.com/JackA1ltman/NonGKI_Kernel_Build_2nd)
-- [maxsteeel / NoMount](https://github.com/maxsteeel/nomount)
+- [Hybrid-Mount / Hybrid Mount](https://github.com/Hybrid-Mount/meta-hybrid_mount)
+- [maxsteeel / NoMount](https://github.com/maxsteeel/nomount)（Hybrid Mount VFS 原始来源）

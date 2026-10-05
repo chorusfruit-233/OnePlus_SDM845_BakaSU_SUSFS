@@ -1,8 +1,8 @@
 ### AnyKernel3 Ramdisk Mod Script
-## OnePlus 6/6T ReSukiSU + SUSFS
+## OnePlus 6/6T BakaSU + SUSFS
 
 properties() { '
-kernel.string=OnePlus SDM845 ReSukiSU + SUSFS
+kernel.string=OnePlus SDM845 BakaSU + SUSFS
 do.devicecheck=1
 do.modules=0
 do.systemless=1

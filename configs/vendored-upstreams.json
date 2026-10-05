@@ -8,10 +8,12 @@
     "port_ref": "mainline",
     "port_commit": "e2f895b357a2844f5dc8d4e7ad980c0c9b200345"
   },
-  "nomount": {
-    "version": "20",
-    "repo": "https://github.com/maxsteeel/nomount.git",
+  "hybridmount": {
+    "version": "hm1",
+    "repo": "https://github.com/Hybrid-Mount/meta-hybrid_mount.git",
     "ref": "dev",
-    "commit": "e00741165d10f1a69d038aa53a8c436acb8f4340"
+    "commit": "1af06a616e1278be7fbf496b16e2b44e1862e2eb",
+    "source_path": "module/vfs/src",
+    "license": "GPL-2.0-only"
   }
 }

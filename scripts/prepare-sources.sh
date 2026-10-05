@@ -2,8 +2,8 @@
 set -euo pipefail
 
 kernel_root=${1:?kernel source directory is required}
-resukisu_repo=${2:?ReSukiSU repository is required}
-resukisu_ref=${3:?ReSukiSU ref is required}
+bakasu_repo=${2:?BakaSU repository is required}
+bakasu_ref=${3:?BakaSU ref is required}
 patch_root=${4:?patch directory is required}
 cake_repo=${5:?CAKE repository is required}
 cake_ref=${6:?CAKE ref is required}
@@ -37,7 +37,7 @@ clone_sparse_ref() {
     git -C "$destination" checkout --detach FETCH_HEAD
 }
 
-clone_ref "$resukisu_repo" "$resukisu_ref" "$kernel_root/KernelSU"
+clone_ref "$bakasu_repo" "$bakasu_ref" "$kernel_root/KernelSU"
 ln -sfn ../KernelSU/kernel "$kernel_root/drivers/kernelsu"
 
 # SUSFS v2.3.0 is vendored as a self-contained 4.9 patch (based on
@@ -45,9 +45,15 @@ ln -sfn ../KernelSU/kernel "$kernel_root/drivers/kernelsu"
 git -C "$kernel_root" apply --whitespace=nowarn \
     "$patch_root/susfs-4.9.patch"
 
-# NoMount path redirection subsystem (vendored from maxsteeel/nomount).
+# Hybrid Mount VFS provider: vendored, independent hm1 keyring protocol.
+# NoMount and Hybrid Mount both replace inode operations and must not coexist.
+if [[ -d "$kernel_root/fs/nomount" ]] ||
+   grep -Eq 'CONFIG_NOMOUNT|fs/nomount/' "$kernel_root/fs/Makefile" "$kernel_root/fs/Kconfig"; then
+    echo "Remove NoMount before integrating Hybrid Mount VFS" >&2
+    exit 1
+fi
 git -C "$kernel_root" apply --whitespace=nowarn \
-    "$patch_root/nomount-4.9.patch"
+    "$patch_root/hybridmount-4.9.patch"
 
 # Rename ath9k_htc HTC symbols so the in-tree USB Wi-Fi drivers can
 # coexist with the OnePlus qcacld-3.0 WLAN (same htc_* symbol names).
@@ -115,8 +121,8 @@ test -L "$kernel_root/drivers/kernelsu"
 test -f "$kernel_root/fs/susfs.c"
 test -f "$kernel_root/include/linux/susfs.h"
 test -f "$kernel_root/include/linux/susfs_def.h"
-test -f "$kernel_root/fs/nomount/nomount.c"
-test -f "$kernel_root/fs/nomount/nomount.h"
+test -f "$kernel_root/fs/hybridmount/hybridmount.c"
+test -f "$kernel_root/fs/hybridmount/hybridmount.h"
 test -f "$kernel_root/net/sched/sch_cake.c"
 test -f "$kernel_root/net/ipv4/tcp_bbr3.c"
 test -L "$kernel_root/security/baseband-guard"
@@ -134,7 +140,9 @@ grep -q 'ksu_handle_execveat_sucompat' "$kernel_root/fs/exec.c"
 grep -q '^[[:space:]]*(void)ksu_handle_post_execveat_sucompat' "$kernel_root/fs/exec.c"
 grep -q 'susfs_sus_kstat_spoof_inotify_fdinfo' "$kernel_root/fs/notify/fdinfo.c"
 grep -q 'susfs_sus_kstat_spoof_proc_fd_seq_show' "$kernel_root/fs/proc/fd.c"
-grep -q 'pinned_dentry = dget' "$kernel_root/fs/nomount/nomount.c"
+grep -q 'HYBRIDMOUNT_VERSION "hm1"' "$kernel_root/fs/hybridmount/hybridmount.h"
+grep -q '.name = "hybridmount"' "$kernel_root/fs/hybridmount/hybridmount.c"
+grep -q 'HYBRIDMOUNT_HAS_STATX' "$kernel_root/fs/hybridmount/Makefile"
 grep -q 'ksu_handle_faccessat' "$kernel_root/fs/open.c"
 grep -q 'ksu_handle_stat' "$kernel_root/fs/stat.c"
 grep -q 'ksu_handle_sys_reboot' "$kernel_root/kernel/reboot.c"
@@ -145,9 +153,9 @@ grep -q 'CONFIG_RTW_CFG80211_NEW_ABI' \
     "$kernel_root/drivers/net/wireless/realtek/rtl8812au/Makefile"
 grep -q 'rtl8812au' "$kernel_root/drivers/net/wireless/realtek/Makefile"
 
-echo "ReSukiSU commit: $(git -C "$kernel_root/KernelSU" rev-parse HEAD)"
+echo "BakaSU commit: $(git -C "$kernel_root/KernelSU" rev-parse HEAD)"
 echo "SUSFS patch: $patch_root/susfs-4.9.patch ($(sha256sum "$patch_root/susfs-4.9.patch" | cut -c1-12))"
-echo "NoMount patch: $patch_root/nomount-4.9.patch ($(sha256sum "$patch_root/nomount-4.9.patch" | cut -c1-12))"
+echo "Hybrid Mount VFS patch: $patch_root/hybridmount-4.9.patch ($(sha256sum "$patch_root/hybridmount-4.9.patch" | cut -c1-12))"
 echo "rtl8812au commit: $(git -C "$rtl8812au_checkout" rev-parse HEAD)"
 echo "CAKE commit: $(git -C "$cake_checkout" rev-parse HEAD)"
 echo "Baseband Guard commit: $(git -C "$kernel_root/Baseband-guard" rev-parse HEAD)"
