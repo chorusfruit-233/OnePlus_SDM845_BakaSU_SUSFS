@@ -47,6 +47,10 @@ git -C "$kernel_root/KernelSU" apply --check "$patch_root/bakasu-selinux-4.9.pat
 git -C "$kernel_root/KernelSU" apply --whitespace=nowarn "$patch_root/bakasu-selinux-4.9.patch"
 ln -sfn ../KernelSU/kernel "$kernel_root/drivers/kernelsu"
 
+# Supplement the base container configuration for the recorded Droidspaces release.
+git -C "$kernel_root" apply --check "$patch_root/droidspaces-4.9.patch"
+git -C "$kernel_root" apply --whitespace=nowarn "$patch_root/droidspaces-4.9.patch"
+
 # SUSFS v2.3.0 is vendored as a self-contained 4.9 patch (based on
 # JackA1ltman/NonGKI_Kernel_Build_2nd), so no upstream git fetch is needed.
 git -C "$kernel_root" apply --whitespace=nowarn \

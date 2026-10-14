@@ -294,6 +294,9 @@ jobs:
           done
           grep -qx '# CONFIG_ANDROID_PARANOID_NETWORK is not set' out/.config
           "$GITHUB_WORKSPACE/scripts/check-susfs-4.9.sh" . --config out/.config
+          python3 "$GITHUB_WORKSPACE/scripts/check-droidspaces-config.py" . \
+            --config out/.config > "$GITHUB_WORKSPACE/droidspaces-config-check.json"
+          cat "$GITHUB_WORKSPACE/droidspaces-config-check.json"
 
       - name: Test SELinux hook failure handling
         run: python3 tests/host/test-selinux-cleanup.py
@@ -317,8 +320,11 @@ jobs:
             -o artifacts/device-tests/selinux_hide_test \
             tests/device/selinux_hide_test.c
           cp tests/device/run-susfs-regression.sh tests/device/README.md \
-            tests/device/compare-selinux-results.py artifacts/device-tests/
-          chmod 0755 artifacts/device-tests/run-susfs-regression.sh
+            tests/device/compare-selinux-results.py tests/device/run-droidspaces-check.sh \
+            artifacts/device-tests/
+          cp droidspaces-config-check.json artifacts/
+          chmod 0755 artifacts/device-tests/run-susfs-regression.sh \
+            artifacts/device-tests/run-droidspaces-check.sh
 
       - name: Package AnyKernel3
         run: |
@@ -326,7 +332,8 @@ jobs:
           mkdir -p artifacts
           bakasu_sha=$(git -C kernel/KernelSU rev-parse --short=8 HEAD)
           susfs_sha=$(sha256sum patches/lineage-4.9/susfs-4.9.patch | cut -c1-8)
-          package="OnePlus6-6T-BakaSU-${bakasu_sha}-SUSFS-${susfs_sha}-AK3.zip"
+          droidspaces_sha=$(sha256sum patches/lineage-4.9/droidspaces-4.9.patch | cut -c1-8)
+          package="OnePlus6-6T-BakaSU-${bakasu_sha}-SUSFS-${susfs_sha}-DS7-${droidspaces_sha}-AK3.zip"
           scripts/package-ak3.sh anykernel3 \
             kernel/out/arch/arm64/boot/Image.gz-dtb \
             ak3/anykernel.sh "artifacts/$package"
@@ -344,6 +351,9 @@ jobs:
             echo "bakasu_selinux_patch=$(sha256sum patches/lineage-4.9/bakasu-selinux-4.9.patch | cut -c1-12)"
             echo "selinux_integration=$(jq -r .susfs.selinux_integration configs/vendored-upstreams.json)"
             echo "selinux_runtime=not-tested-by-ci"
+            echo "droidspaces=$(jq -r .version configs/droidspaces.json)@$(jq -r .commit configs/droidspaces.json)"
+            echo "droidspaces_patch=$(sha256sum patches/lineage-4.9/droidspaces-4.9.patch | cut -c1-12)"
+            echo "droidspaces_cpu_quota_policy=$(jq -r .cpu_quota_policy configs/droidspaces.json)"
             echo "cake=$(git -C "$RUNNER_TEMP/sch_cake" rev-parse HEAD)"
             echo "baseband_guard=$(git -C kernel/Baseband-guard rev-parse HEAD)"
             echo "kernel_patches=$(git -C "$RUNNER_TEMP/kernel_patches" rev-parse HEAD)"

@@ -131,3 +131,41 @@ missing prerequisites. The comparison script has the same distinction for
 captured invariant failures and malformed/incomplete captures, and sets no
 invented timing pass threshold. These checks require a device booted with the
 candidate kernel; compilation and host help checks do not validate SELinux.
+
+
+## Droidspaces v7.0.0 running-kernel check
+
+The build records the reviewed upstream requirements in `configs/droidspaces.json`
+and packages a static config report as `droidspaces-config-check.json`. That report
+cannot see Android boot arguments, cgroup mounts or SELinux restrictions.
+
+After installing the official v7.0.0 backend and booting this kernel, run its own
+capability probes. The packaged helper sets `DS_NO_PROXY=1`, so a daemon left running
+with an older backend does not answer for the selected binary:
+
+```sh
+adb push device-tests/run-droidspaces-check.sh /data/local/tmp/
+adb shell su <<'EOF'
+chmod 0755 /data/local/tmp/run-droidspaces-check.sh
+/data/local/tmp/run-droidspaces-check.sh
+EOF
+```
+
+The helper also accepts the path to a separately installed v7 backend. Its stdout is
+the official `--format check` JSON, including `requirements_met` and individual
+probe results. Inspect `requirements_met`, not just the process exit code: the
+upstream check can exit successfully while reporting missing requirements.
+Upstream checks temporarily create and remove probe interfaces;
+they do not start a container or rewrite its configuration.
+
+Expect the core requirements, macvlan, IPv6 NAT, CPU accounting, memory limits and
+process limits to pass on a correctly booted device. `cpu_limit` is intentionally
+unavailable: the selected Qualcomm WALT scheduler excludes CFS bandwidth in this
+4.9 tree. If a resource controller fails despite its kernel option, inspect the
+actual `/proc/cmdline` for `cgroup_disable=` and Android policy/mount restrictions.
+Never treat a missing runtime controller as enabled just because the config is `y`.
+
+A systemd 258+ rootfs still requires newer kernel APIs. Use a compatible rootfs,
+such as Ubuntu 24.04, Debian 12/13, Alpine or Void. The optional Force cgroup v1
+setting can help old systemd rootfs images on this kernel; change it explicitly
+per container rather than changing saved settings as part of a capability check.

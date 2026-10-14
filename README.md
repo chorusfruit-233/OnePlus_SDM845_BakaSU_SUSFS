@@ -167,9 +167,23 @@ CI 在编译前执行 `tests/host/test-selinux-cleanup.py`，从已准备的 Bak
 - BBRv1 与 BBRv3，可在运行时保留 BBRv1 作为回退；
 - CAKE、FQ、FQ_CODEL 与 PIE qdisc；
 - TTL/HL target、IPSet、IPv6 NAT；
-- Droidspaces/LXC 所需的 namespaces、cgroups、seccomp、veth、bridge、netfilter、
-  overlayfs、TMPFS XATTR/POSIX ACL 等基础配置；
-- Actions 会在编译前逐项检查关键 Droidspaces 配置，缺失时直接终止构建。
+- 对照 Droidspaces **v7.0.0**（`37e8b45de5dd`）的正式内核要求启用
+  namespaces、cgroups、seccomp、veth、bridge、IPv4/IPv6 NAT、macvlan、
+  overlayfs、TMPFS XATTR/POSIX ACL、CPU 使用统计、内存和进程数限额；
+- 补齐 macvlan 与 UFW/Fail2Ban 使用的 `xt_recent`；4.9 的 netfilter 旧配置名
+  记录在 `configs/droidspaces.json`，不加入本树不存在的通用选项；
+- 保留 Qualcomm WALT。该树的 `CONFIG_CFS_BANDWIDTH` 依赖 `!SCHED_WALT`，
+  所以 Droidspaces 的 `--cpus` 配额不可用，CPU 使用统计与 cpuset 仍可用；
+- 官方 NonGKI cgroup 前缀修复已在基础补丁内适配；本基线没有 `xt_qtaguid.c`，
+  对它的 panic 修复不适用。4.9 没有压缩固件加载器，使用未压缩固件；
+- CI 运行 `scripts/check-droidspaces-config.py`，核对 v7 配置和资源控制器，
+  保存 `droidspaces-config-check.json` 并将要求来源记录到 `build-info.txt`。
+
+Droidspaces 本身支持这个 4.9 内核。发行版仍须使用 systemd **低于 258** 或
+OpenRC/runit 等其他 init；升级 Droidspaces 不会补齐新发行版需要的 5.x 系统调用。
+若 systemd 误判旧内核的 cgroup v2，可在容器设置中使用 Force cgroup v1。
+刷入后的实际能力用 v7 后端的 `droidspaces --format check` 检查，操作见
+[`tests/device/README.md`](tests/device/README.md)。配置检查不代表真机已经启动容器。
 
 ### 安全与通用优化
 
