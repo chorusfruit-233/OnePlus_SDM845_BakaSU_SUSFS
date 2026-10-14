@@ -11,6 +11,8 @@
 #  - the security/security.c section is dropped: BakaSU registers its
 #    own LSM hooks and does not export ksu_bprm_check()/cred-based
 #    ksu_handle_setuid();
+#  - SELinux hide uses BakaSU's four-argument NonGKI automatic hook,
+#    with the separate bakasu-selinux-4.9.patch; no GKI manual hook is added;
 #  - any section that fails to apply aborts the build instead of
 #    silently continuing.
 set -euo pipefail
@@ -252,30 +254,16 @@ for i in "${patch_files[@]}"; do
             fail "security/selinux/hooks.c patch failed for unknown reasons."
         fi
 
-        if grep -rq --include="*.c" --include="*.h" "ksu_hide_setprocattr" "drivers/kernelsu/" >/dev/null 2>&1; then
-            if [ "$FIRST_VERSION" -lt 4 ] && [ "$SECOND_VERSION" -lt 19 ]; then
-                echo "[-] Kernel could not hook ksu_hide_setprocattr, Skipped."
-
-            elif [ "$FIRST_VERSION" -lt 5 ] && [ "$SECOND_VERSION" -lt 10 ]; then
-                sed -i '/static int selinux_setprocattr(struct task_struct \*p,/i\#ifdef CONFIG_KSU\nextern int ksu_hide_setprocattr(const char *name, void *value, size_t size);\n#endif\n' security/selinux/hooks.c
-            else
-                sed -i '/static int selinux_setprocattr(const char \*name, void \*value, size_t size)/i\#ifdef CONFIG_KSU\nextern int ksu_hide_setprocattr(const char *name, void *value, size_t size);\n#endif\n' security/selinux/hooks.c
-            fi
-
-            if grep -q "char \*str = value;" "security/selinux/hooks.c"; then
-                sed -i '/char \*str = value;/a\#ifdef CONFIG_KSU\n\tksu_hide_setprocattr(name, value, size);\n#endif\n' security/selinux/hooks.c
-            else
-                sed -i '0,/char \*str = value;/b; /char \*str = value;/a\#ifdef CONFIG_KSU\n    ksu_hide_setprocattr(name, value, size);\n#endif\n' security/selinux/hooks.c
-            fi
-
-            if grep -q "ksu_hide_setprocattr" "security/selinux/hooks.c"; then
-                echo "[+] security/selinux/hooks.c Part II Patched!"
-                echo "[+] Count: $(grep -c "ksu_hide_setprocattr" "security/selinux/hooks.c")"
-            else
-                fail "security/selinux/hooks.c patch failed for unknown reasons."
-            fi
+        # Linux 4.9 uses BakaSU's automatic SELinux hook. The old
+        # ksu_hide_setprocattr helper is not ABI-compatible with its current
+        # four-argument handler; adding it here would duplicate the LSM hook.
+        if ! grep -q 'ksu_handle_selinux_setprocattr(struct task_struct \*p' \
+                drivers/kernelsu/feature/selinux_hide.c; then
+            fail "BakaSU's Linux 4.9 automatic SELinux hook is missing."
+        elif grep -q 'ksu_hide_setprocattr\|ksu_selinux_hide_running' security/selinux/hooks.c; then
+            fail "Manual SELinux hooks must not coexist with the Linux 4.9 automatic hook."
         else
-            echo "[-] KernelSU needn't ksu_hide_setprocattr, Skipped."
+            echo "[+] SELinux: keeping BakaSU's Linux 4.9 automatic hook."
         fi
 
         echo "======================================"

@@ -42,7 +42,9 @@ ramdisk、内核模块或 vendor 接口差异而不兼容。不要在未备份�
 
 ### BakaSU 与 SUSFS
 
-- 动态拉取 [BakaSU](https://github.com/Baka-SU/BakaSU) `main` 的最新提交（原 ReSukiSU）；
+- BakaSU 固定到 `d7260ca1e5c128061122924d0d48754e361e135c`，包含 SELinux hide
+  时间侧信道修复与旧内核 SID 修正；Linux 4.9 的配套补丁随本仓库维护，
+  不再无条件跟踪 `main`；
 - 使用 BakaSU 管理器；当前上游在 `CONFIG_KSU_MULTI_MANAGER_SUPPORT=y` 时还支持
   官方 KernelSU 与 KOWSU 管理器，已移除 MKSU、RKSU 和 SukiSU-Ultra 的签名支持；
 - BakaSU 用户空间向模块脚本提供 `BAKASU=true`，取代旧的 `KSU_SUKISU=true`；
@@ -50,7 +52,9 @@ ramdisk、内核模块或 vendor 接口差异而不兼容。不要在未备份�
 - SUSFS **v2.3.0** 以自包含补丁形式 vendored（`patches/lineage-4.9/susfs-4.9.patch`，
   基于 [JackA1ltman/NonGKI_Kernel_Build_2nd](https://github.com/JackA1ltman/NonGKI_Kernel_Build_2nd)
   的 `susfs_patch_to_4.9.patch` 移植，并同步官方
-  `gki-android14-6.1 @ 24743360ea08` 的修复），构建不再依赖 GitLab 上游；
+  `gki-android14-6.1 @ 5192aa2d33b3` 的接入更新），构建不再依赖 GitLab 上游。
+  这两次官方更新没有修改 SUSFS 核心文件；核心仍基于 `24743360ea08`。
+  官方 GKI 手动 SELinux hooks 在本树由以下 NonGKI 自动接入替代；
 - 使用 SUSFS 官方 inline hook 方式（`scripts/susfs-inline-hook.sh`）替换 KernelSU
   的 kprobe 钩子，覆盖 exec、faccessat、stat/fstat、read、input、reboot、
   setresuid 与 selinux 路径，构建产物无 kprobe 依赖；
@@ -62,6 +66,26 @@ ramdisk、内核模块或 vendor 接口差异而不兼容。不要在未备份�
 - SUS_PATH 覆盖 open、stat、access、readlink、getdents64、unlink、rename、
   `O_PATH` 与 `O_TRUNC`，open redirect 覆盖普通 open、`O_PATH`、`O_TMPFILE`、
   readlink、`/proc/self/fd`、maps/smaps 与 statfs。
+
+### Linux 4.9 SELinux 接入
+
+`patches/lineage-4.9/bakasu-selinux-4.9.patch` 保留新版 BakaSU 的 NonGKI
+自动 SELinux hooks 和双策略/SID 转换，不向本树添加 GKI 6.1 的 `fake_state`
+手动接入。旧内核没有带 `policydb` 参数的 AV/MLS 接口，因此配套适配必须显式
+使用备份策略，避免查询落回已经修改的全局策略。
+
+准备源码时应用该补丁并运行 `scripts/check-susfs-4.9.sh`，核对固定内核、BakaSU
+提交、完整补丁、四参数 `setprocattr` ABI 和 inline hooks。构建放行仅限
+这套 Linux 4.9 / ARM64 / KALLSYMS_ALL / SUSFS v2.3.0 自动接入；其他组合
+仍保留上游暂停。更换 BakaSU 提交前必须重新移植、审查和验证配套补丁。
+
+CI 在编译前执行 `tests/host/test-selinux-cleanup.py`，从已准备的 BakaSU 源码
+提取真实清理/切换函数，注入回调恢复失败，检查原回调、备份资源、错误状态和重试。
+源码检查、主机回归和编译成功均不能证明真机 SELinux hide 的行为或时间特性。
+`device-tests/selinux_hide_test` 用于从真实普通应用 UID/SELinux 域采集接口语义与
+重复时延；root 或 adb shell 不能代替该验证。测试说明和两次运行的对比方法见
+[`tests/device/README.md`](tests/device/README.md)。测试不修改 SELinux 策略，也不
+将未覆盖的接口或统计结果自动宣称为修复成功。
 
 ### Hybrid Mount VFS（内建）
 
@@ -175,7 +199,7 @@ artifact 包含：
 | `Image.gz-dtb` | 编译得到的内核镜像 |
 | `SHA256SUMS` | AK3 ZIP 的 SHA256 校验值 |
 | `build-info.txt` | 本次构建使用的全部上游 commit |
-| `device-tests/` | AArch64 SUSFS syscall 真机回归测试 |
+| `device-tests/` | AArch64 SUSFS syscall 与 SELinux 行为/时延真机回归工具 |
 
 > [!NOTE]
 > Actions artifact 是一个下载容器。刷入前需要先解压 artifact，再刷其中名称以
@@ -200,7 +224,7 @@ artifact 包含：
 
 | 输入 | 默认值 | 说明 |
 | --- | --- | --- |
-| `bakasu_ref` | `main` | BakaSU branch、tag 或完整 commit |
+| `bakasu_ref` | `d7260ca1e5c128061122924d0d48754e361e135c` | 已适配的 BakaSU commit；其他版本需配套补丁 |
 | `bbg_ref` | `main` | Baseband Guard branch、tag 或完整 commit |
 | `kernel_patches_ref` | `main` | WildKernels patches branch、tag 或完整 commit |
 | `anykernel_ref` | `master` | AnyKernel3 branch、tag 或完整 commit |
@@ -219,7 +243,7 @@ SUSFS 补丁的哈希）和所有上游 commit 共同组成 build key：
 | 组件 | 上游 | 策略 |
 | --- | --- | --- |
 | Kernel | [LineageOS/android_kernel_oneplus_sdm845](https://github.com/LineageOS/android_kernel_oneplus_sdm845) | 固定基线 commit |
-| BakaSU | [Baka-SU/BakaSU](https://github.com/Baka-SU/BakaSU) | 默认跟踪 `main` |
+| BakaSU | [Baka-SU/BakaSU](https://github.com/Baka-SU/BakaSU) | 固定已适配提交 `d7260ca1` |
 | SUSFS v2.3.0 | 自包含补丁（源自 [JackA1ltman/NonGKI_Kernel_Build_2nd](https://github.com/JackA1ltman/NonGKI_Kernel_Build_2nd)） | vendored，随仓库版本变化 |
 | Hybrid Mount VFS | [Hybrid-Mount/meta-hybrid_mount](https://github.com/Hybrid-Mount/meta-hybrid_mount)（dev 分支） | vendored，固定 `1af06a616e12`，内建 hm1 provider |
 | RTL8812AU/8821AU/8814AU | [aircrack-ng/rtl8812au](https://github.com/aircrack-ng/rtl8812au) | 默认跟踪 `v5.6.4.2`（构建时克隆 + 适配补丁） |

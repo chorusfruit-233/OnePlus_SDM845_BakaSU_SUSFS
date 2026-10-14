@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       bakasu_ref:
-        description: BakaSU branch, tag, or commit
+        description: BakaSU commit supported by the local 4.9 SELinux adaptation
         required: false
-        default: main
+        default: d7260ca1e5c128061122924d0d48754e361e135c
         type: string
       bbg_ref:
         description: Baseband Guard branch, tag, or commit
@@ -68,7 +68,7 @@ jobs:
       anykernel_sha: ${{ steps.meta.outputs.anykernel_sha }}
     env:
       CONFIG: configs/enchilada.json
-      BAKASU_REF: ${{ inputs.bakasu_ref || 'main' }}
+      BAKASU_REF: ${{ inputs.bakasu_ref || '' }}
       BBG_REF: ${{ inputs.bbg_ref || 'main' }}
       KERNEL_PATCHES_REF: ${{ inputs.kernel_patches_ref || 'main' }}
       RTL8812AU_REF: ${{ inputs.rtl8812au_ref || 'v5.6.4.2' }}
@@ -101,7 +101,11 @@ jobs:
           }
 
           kernel_base=$(jq -r .kernel_base "$CONFIG")
-          bakasu_sha=$(resolve_ref "$(jq -r .bakasu_repo "$CONFIG")" "$BAKASU_REF")
+          bakasu_sha=$(resolve_ref "$(jq -r .bakasu_repo "$CONFIG")" "${BAKASU_REF:-$(jq -r .bakasu_ref "$CONFIG")}")
+          if [[ "$bakasu_sha" != "$(jq -r .susfs.bakasu_compat_commit configs/vendored-upstreams.json)" ]]; then
+            echo '::error::This BakaSU revision needs a reviewed Linux 4.9 SELinux adaptation.'
+            exit 1
+          fi
           cake_sha=$(resolve_ref "$(jq -r .cake_repo "$CONFIG")" "$(jq -r .cake_ref "$CONFIG")")
           bbg_sha=$(resolve_ref "$(jq -r .bbg_repo "$CONFIG")" "$BBG_REF")
           kernel_patches_sha=$(resolve_ref "$(jq -r .kernel_patches_repo "$CONFIG")" "$KERNEL_PATCHES_REF")
@@ -289,6 +293,10 @@ jobs:
             }
           done
           grep -qx '# CONFIG_ANDROID_PARANOID_NETWORK is not set' out/.config
+          "$GITHUB_WORKSPACE/scripts/check-susfs-4.9.sh" . --config out/.config
+
+      - name: Test SELinux hook failure handling
+        run: python3 tests/host/test-selinux-cleanup.py
 
       - name: Build Image.gz-dtb
         working-directory: kernel
@@ -305,8 +313,11 @@ jobs:
           aarch64-linux-gnu-gcc -static -O2 -Wall -Wextra \
             -o artifacts/device-tests/susfs_syscall_test \
             tests/device/susfs_syscall_test.c
+          aarch64-linux-gnu-gcc -static -O2 -Wall -Wextra \
+            -o artifacts/device-tests/selinux_hide_test \
+            tests/device/selinux_hide_test.c
           cp tests/device/run-susfs-regression.sh tests/device/README.md \
-            artifacts/device-tests/
+            tests/device/compare-selinux-results.py artifacts/device-tests/
           chmod 0755 artifacts/device-tests/run-susfs-regression.sh
 
       - name: Package AnyKernel3
@@ -329,6 +340,10 @@ jobs:
             echo "hybridmount=$(jq -r .hybridmount.version configs/vendored-upstreams.json)@$(jq -r .hybridmount.commit configs/vendored-upstreams.json) ($(sha256sum patches/lineage-4.9/hybridmount-4.9.patch | cut -c1-12))"
             echo "susfs_upstream=$(jq -r .susfs.commit configs/vendored-upstreams.json)"
             echo "susfs_port=$(jq -r .susfs.port_commit configs/vendored-upstreams.json)"
+            echo "susfs_core=$(jq -r .susfs.core_commit configs/vendored-upstreams.json)"
+            echo "bakasu_selinux_patch=$(sha256sum patches/lineage-4.9/bakasu-selinux-4.9.patch | cut -c1-12)"
+            echo "selinux_integration=$(jq -r .susfs.selinux_integration configs/vendored-upstreams.json)"
+            echo "selinux_runtime=not-tested-by-ci"
             echo "cake=$(git -C "$RUNNER_TEMP/sch_cake" rev-parse HEAD)"
             echo "baseband_guard=$(git -C kernel/Baseband-guard rev-parse HEAD)"
             echo "kernel_patches=$(git -C "$RUNNER_TEMP/kernel_patches" rev-parse HEAD)"

@@ -1,6 +1,10 @@
 SUSFS v2.3.0 updated self-contained LineageOS 4.9 port
 
-Official: simonpunk/susfs4ksu gki-android14-6.1 @ 24743360ea08d98f6ad72b856851abed8de5854f
+Official: simonpunk/susfs4ksu gki-android14-6.1 @ 5192aa2d33b381b58c1051532f9e1dfa5de6e8d3
+Core: unchanged upstream since 24743360ea08d98f6ad72b856851abed8de5854f.
+The October SELinux hook updates target GKI 6.1. This 4.9 tree keeps
+BakaSU's NonGKI automatic SELinux hooks, adapted separately by
+bakasu-selinux-4.9.patch against d7260ca1e5c128061122924d0d48754e361e135c.
 4.9 hooks: JackA1ltman/NonGKI_Kernel_Build_2nd mainline @ e2f895b357a2844f5dc8d4e7ad980c0c9b200345
 
 Retains non-GKI inode i_state storage, fsnotify ABI, LineageOS proc layouts,

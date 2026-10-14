@@ -37,7 +37,14 @@ clone_sparse_ref() {
     git -C "$destination" checkout --detach FETCH_HEAD
 }
 
+expected_bakasu=$(jq -er .susfs.bakasu_compat_commit "$script_dir/../configs/vendored-upstreams.json")
 clone_ref "$bakasu_repo" "$bakasu_ref" "$kernel_root/KernelSU"
+if [[ $(git -C "$kernel_root/KernelSU" rev-parse HEAD) != "$expected_bakasu" ]]; then
+    echo "BakaSU revision has no reviewed Linux 4.9 SELinux adaptation: $bakasu_ref" >&2
+    exit 1
+fi
+git -C "$kernel_root/KernelSU" apply --check "$patch_root/bakasu-selinux-4.9.patch"
+git -C "$kernel_root/KernelSU" apply --whitespace=nowarn "$patch_root/bakasu-selinux-4.9.patch"
 ln -sfn ../KernelSU/kernel "$kernel_root/drivers/kernelsu"
 
 # SUSFS v2.3.0 is vendored as a self-contained 4.9 patch (based on
@@ -153,7 +160,10 @@ grep -q 'CONFIG_RTW_CFG80211_NEW_ABI' \
     "$kernel_root/drivers/net/wireless/realtek/rtl8812au/Makefile"
 grep -q 'rtl8812au' "$kernel_root/drivers/net/wireless/realtek/Makefile"
 
+bash "$script_dir/check-susfs-4.9.sh" "$kernel_root" --prepare
+
 echo "BakaSU commit: $(git -C "$kernel_root/KernelSU" rev-parse HEAD)"
+echo "BakaSU SELinux adaptation: $(sha256sum "$patch_root/bakasu-selinux-4.9.patch" | cut -c1-12)"
 echo "SUSFS patch: $patch_root/susfs-4.9.patch ($(sha256sum "$patch_root/susfs-4.9.patch" | cut -c1-12))"
 echo "Hybrid Mount VFS patch: $patch_root/hybridmount-4.9.patch ($(sha256sum "$patch_root/hybridmount-4.9.patch" | cut -c1-12))"
 echo "rtl8812au commit: $(git -C "$rtl8812au_checkout" rev-parse HEAD)"

@@ -1,0 +1,647 @@
+# BakaSU SELinux auto-hook adaptation for the pinned Lineage ARM64 4.9 port.
+# Base: d7260ca1e5c128061122924d0d48754e361e135c (includes fa12ffde time-side-channel fix).
+# Preserve dual policy/SID conversion; avoid legacy global-policy helpers for
+# backup queries, preserve 4.9 setprocattr permissions, and require reviewed ABI.
+# MLS formatting helpers are adapted from this GPL-2.0 Lineage kernel's
+# security/selinux/ss/mls.c with an explicit policydb parameter.
+# The build marker means source review only, not device validation.
+
+diff --git a/kernel/feature/selinux_hide.c b/kernel/feature/selinux_hide.c
+index 9864c9cf..b5490a05 100644
+--- a/kernel/feature/selinux_hide.c
++++ b/kernel/feature/selinux_hide.c
+@@ -56,6 +56,8 @@ static DEFINE_MUTEX(selinux_hide_mutex);
+ __maybe_static bool ksu_selinux_hide_enabled __read_mostly = false;
+ // remove static in susfs
+ __maybe_static bool ksu_selinux_hide_running __read_mostly = false;
++/* A failed restore can leave callbacks using the backup policy. */
++static bool ksu_selinux_hide_cleanup_pending;
+ 
+ #ifdef KSU_COMPAT_USE_STATIC_KEY
+ // We should talk to you, susfs
+@@ -118,55 +120,17 @@ static __nocfi void ksu_security_compute_av_user(struct policydb *policydb, stru
+                                                 struct context *tcontext, u16 tclass, struct av_decision *avd,
+                                                 struct extended_perms *xperms) = NULL;
+ #else
+-    // mostly 4.14-
+-    struct sidtab* sidtab_ptr;
++    struct sidtab *sidtab_ptr;
+ 
+-    // compat wrapper
+-    static void (*legacy_security_dump_masked_av_fn)(struct context *scontext, struct context *tcontext,
+-                                            u16 tclass, u32 permissions, const char *reason) = NULL;
+-    #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 3, 0) || defined(KSU_COMPAT_HAS_EXTENDED_PERMS)
+-        // extended_perms add in 4.3
+-        static void (*legacy_context_struct_compute_av_fn)(struct context *scontext,
+-                                                    struct context *tcontext, u16 tclass, struct av_decision *avd,
+-                                                    struct extended_perms *xperms) = NULL;
+-
+-        static void ksu_context_struct_compute_av_fn(struct policydb *policydb, struct context *scontext,
+-                                                    struct context *tcontext, u16 tclass, struct av_decision *avd,
+-                                                    struct extended_perms *xperms)
+-        {
+-            if (legacy_context_struct_compute_av_fn) {
+-                legacy_context_struct_compute_av_fn(scontext, tcontext, tclass, avd, xperms);
+-            }
+-        }
+-    #else
+-        struct extended_perms {
+-            /* I am a placeholder, I just want to make the compiler happy */   
+-        }
+-        static void (*legacy_context_struct_compute_av_fn)(struct context *scontext,
+-                                                    struct context *tcontext, u16 tclass, struct av_decision *avd) = NULL;
+-
+-        static void ksu_context_struct_compute_av_fn(struct policydb *policydb, struct context *scontext,
+-                                                    struct context *tcontext, u16 tclass, struct av_decision *avd,
+-                                                    struct extended_perms *xperms)
+-        {
+-            if (legacy_security_dump_masked_av_fn) {
+-                legacy_security_dump_masked_av_fn(scontext, tcontext, tclass, avd);
+-            }
+-        }
+-    #endif
+-    static void ksu_security_dump_masked_av(struct policydb *policydb, struct context *scontext, struct context *tcontext,
+-                                            u16 tclass, u32 permissions, const char *reason)
+-    {
+-        if (legacy_security_dump_masked_av_fn) {
+-            legacy_security_dump_masked_av_fn(scontext, tcontext, tclass, permissions, reason);
+-        }
+-    }
+-
+-    static void (*security_dump_masked_av_fn)(struct policydb *policydb, struct context *scontext, struct context *tcontext,
+-                                            u16 tclass, u32 permissions, const char *reason) = ksu_security_dump_masked_av;
++    /* The legacy helpers use the live global policydb. Backup decisions
++     * must use the policy-aware fallback; its optional audit dump is omitted.
++     */
++    static void (*security_dump_masked_av_fn)(struct policydb *policydb, struct context *scontext,
++                                            struct context *tcontext, u16 tclass, u32 permissions,
++                                            const char *reason) = NULL;
+     static void (*context_struct_compute_av_fn)(struct policydb *policydb, struct context *scontext,
+                                                 struct context *tcontext, u16 tclass, struct av_decision *avd,
+-                                                struct extended_perms *xperms) = ksu_context_struct_compute_av_fn;
++                                                struct extended_perms *xperms) = NULL;
+ #endif
+ // clang-format on
+ 
+@@ -451,6 +415,11 @@ int __nocfi ksu_handle_selinux_setprocattr(const char *name, void *value, size_t
+ int __nocfi ksu_handle_selinux_setprocattr(struct task_struct *p, char *name, void *value, size_t size)
+ #endif
+ {
++#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 11, 0) && !defined(KSU_COMPAT_SETPROCATTR_USE_NEW_PROTOTYPE)
++    /* Preserve the legacy SELinux check before inspecting the requested attr. */
++    if (current != p)
++        return -EACCES;
++#endif
+     if (likely(ksu_get_uid_t(current_uid()) < 10000)) {
+         goto call_orig;
+     }
+@@ -577,10 +546,10 @@ static int my_sel_open_handle_status(struct inode *inode, struct file *filp)
+     return ret;
+ }
+ 
+-static void hook_selinux_status_open()
++static int hook_selinux_status_open()
+ {
+     if (orig_sel_open_handle_status)
+-        return;
++        return 0;
+     if (!sel_open_handle_status_slot) {
+ #ifdef CONFIG_KALLSYMS_ALL
+         struct file_operations *ops = (struct file_operations *)find_kernel_symbol_exact("sel_handle_status_ops");
+@@ -590,7 +559,7 @@ static void hook_selinux_status_open()
+ #endif
+         if (!ops) {
+             pr_err("selinux_hide: sel_handle_status_ops not found, fake status will not work\n");
+-            return;
++            return -ENOENT;
+         }
+         sel_open_handle_status_slot = &ops->open;
+     }
+@@ -602,26 +571,32 @@ static void hook_selinux_status_open()
+         sel_open_handle_status_slot = NULL;
+         orig_sel_open_handle_status = NULL;
+     }
++    return ret;
+ }
+ 
+ extern void ksu_unregister_setprocattr_lsm_hook();
+ 
+-static void ksu_selinux_hide_unhook()
++static int ksu_selinux_hide_unhook()
+ {
+-    int ret;
++    int ret, error = 0;
+     if (orig_context_write) {
+         ret =
+             ksu_patch_text(context_write, &orig_context_write, sizeof(orig_context_write), KSU_PATCH_TEXT_FLUSH_DCACHE);
+-        orig_context_write = NULL;
+         if (ret) {
+             pr_err("selinux_hide: exit: patch_text context_write err: %d\n", ret);
++            error = ret;
++        } else {
++            orig_context_write = NULL;
+         }
+     }
+     if (orig_access_write) {
+         ret = ksu_patch_text(access_write, &orig_access_write, sizeof(orig_access_write), KSU_PATCH_TEXT_FLUSH_DCACHE);
+-        orig_access_write = NULL;
+         if (ret) {
+             pr_err("selinux_hide: exit: patch_text access_write err: %d\n", ret);
++            if (!error)
++                error = ret;
++        } else {
++            orig_access_write = NULL;
+         }
+     }
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
+@@ -630,21 +605,28 @@ static void ksu_selinux_hide_unhook()
+     if (ksu_orig_setprocattr) {
+         ret = ksu_patch_text((void *)selinux_setprocattr_hook_ptr, &ksu_orig_setprocattr, sizeof(ksu_orig_setprocattr),
+                              KSU_PATCH_TEXT_FLUSH_DCACHE);
+-        ksu_orig_setprocattr = NULL;
+         if (ret) {
+             pr_err("selinux_hide: exit: patch_text setprocattr err: %d\n", ret);
++            if (!error)
++                error = ret;
++        } else {
++            ksu_orig_setprocattr = NULL;
++            selinux_setprocattr_hook_ptr = 0;
+         }
+     }
+ #else
+     stop_machine(ksu_unregister_setprocattr_lsm_hook, NULL, NULL);
+ #endif
++    ksu_selinux_hide_cleanup_pending = error != 0;
++    return error;
+ }
+ 
+ extern void ksu_register_setprocattr_lsm_hook();
+ #else
+-#define ksu_selinux_hide_unhook()                                                                                      \
+-    do {                                                                                                               \
+-    } while (0)
++static inline int ksu_selinux_hide_unhook(void)
++{
++    return 0;
++}
+ #endif // #ifndef KSU_COMPAT_HAS_SUSFS_FEATURE_SELINUX_HIDE
+ 
+ static int ksu_selinux_hide_enable()
+@@ -669,7 +651,13 @@ static int ksu_selinux_hide_enable()
+ #endif
+ 
+ #ifndef KSU_COMPAT_HAS_SUSFS_FEATURE_SELINUX_HIDE
+-    hook_selinux_status_open();
++    if (!fake_status || !ksu_selinux_status_lock) {
++        pr_err("selinux_hide: status snapshot is not available\n");
++        return -EAGAIN;
++    }
++    ret = hook_selinux_status_open();
++    if (ret)
++        return ret;
+ #endif
+ 
+     // clang-format off
+@@ -683,22 +671,13 @@ static int ksu_selinux_hide_enable()
+         if (!context_struct_compute_av_fn) {
+             pr_warn("context_struct_compute_av not found!\n");
+         }
+-    #else
+-        legacy_security_dump_masked_av_fn = ksu_resolve_symbol_for_functable_hook("security_dump_masked_av");
+-        if (!legacy_security_dump_masked_av_fn) {
+-            pr_warn("security_dump_masked_av not found!\n");
+-        }
+-        legacy_context_struct_compute_av_fn = ksu_resolve_symbol_for_functable_hook("context_struct_compute_av");
+-        if (!legacy_context_struct_compute_av_fn) {
+-            pr_warn("context_struct_compute_av not found!\n");
+-        }
+     #endif
+ 
+     #if LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0) && !defined(KSU_COMPAT_USE_SELINUX_STATE)
+         sidtab_ptr = ksu_resolve_symbol_for_functable_hook("sidtab");
+         if (!sidtab_ptr) {
+             pr_err("sidtab can not find!");
+-            return -EFAULT;
++            goto unhook;
+         }
+     #endif
+ #else
+@@ -718,27 +697,6 @@ static int ksu_selinux_hide_enable()
+         if (!context_struct_compute_av_fn) {
+             pr_warn("context_struct_compute_av not found!\n");
+         }
+-    #else
+-        extern void security_dump_masked_av(struct context *scontext, struct context *tcontext,
+-                                                        u16 tclass, u32 permissions, const char *reason);
+-        #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 3, 0) || defined(KSU_COMPAT_HAS_EXTENDED_PERMS)
+-        extern void context_struct_compute_av(struct context *scontext,
+-                                                struct context *tcontext, u16 tclass, struct av_decision *avd,
+-                                                struct extended_perms *xperms);
+-        #else
+-        extern void context_struct_compute_av(struct context *scontext, 
+-                                                struct context *tcontext, u16 tclass, struct av_decision *avd);
+-        #endif
+-
+-        legacy_security_dump_masked_av_fn = &security_dump_masked_av;
+-        if (!legacy_security_dump_masked_av_fn) {
+-            pr_warn("security_dump_masked_av not found!\n");
+-        }
+-
+-        legacy_context_struct_compute_av_fn = &context_struct_compute_av;
+-        if (!legacy_context_struct_compute_av_fn) {
+-            pr_warn("context_struct_compute_av not found!\n");
+-        }
+     #endif
+ 
+     #if LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0) && !defined(KSU_COMPAT_USE_SELINUX_STATE)
+@@ -759,7 +717,7 @@ static int ksu_selinux_hide_enable()
+ #endif
+     if (!selinux_write_op) {
+         pr_err("selinux_hide: no write_op found!\n");
+-        return -ENOSYS;
++        goto unhook;
+     }
+ 
+     context_write = &selinux_write_op[SEL_CONTEXT];
+@@ -790,6 +748,13 @@ static int ksu_selinux_hide_enable()
+     }
+ #elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 2, 0) || defined(KSU_COMPAT_HAS_LIST_OF_LSM_HOOKS)
+     struct security_hook_list *hp;
++#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 11, 0) && !defined(KSU_COMPAT_REQUIRE_PROVIDE_LSM_NAME)
++    void *selinux_setprocattr = ksu_resolve_symbol_for_functable_hook("selinux_setprocattr");
++    if (!selinux_setprocattr) {
++        pr_err("selinux_hide: selinux_setprocattr not found\n");
++        goto unhook;
++    }
++#endif
+ 
+     // https://github.com/torvalds/linux/commit/df0ce17331e2501dbffc060041dfc6c5f85227b5
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 17, 0) || defined(KSU_COMPAT_HLIST_FOR_SECURITY_HOOK_LIST)
+@@ -805,6 +770,9 @@ static int ksu_selinux_hide_enable()
+         // when we are in 4.11+, we can ensure we are control "selinux" LSM by that
+         if (strcmp("selinux", hp->lsm))
+             continue;
++#else
++        if ((void *)hp->hook.setprocattr != selinux_setprocattr)
++            continue;
+ #endif // #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0)
+         selinux_setprocattr_hook_ptr = (unsigned long)&hp->hook.setprocattr;
+         ksu_orig_setprocattr = hp->hook.setprocattr;
+@@ -818,6 +786,9 @@ static int ksu_selinux_hide_enable()
+         goto out;
+     }
+ 
++    pr_err("selinux_hide: SELinux setprocattr hook not found\n");
++    goto unhook;
++
+ #undef ksu_for_each_lsm_entry
+ out:
+ #else
+@@ -833,19 +804,25 @@ out:
+ #ifndef KSU_COMPAT_HAS_SUSFS_FEATURE_SELINUX_HIDE
+ unhook:
+ #endif
+-    ksu_selinux_hide_unhook();
++    ret = ksu_selinux_hide_unhook();
++    if (ret) {
++        pr_err("selinux_hide: initialization rollback is incomplete: %d\n", ret);
++        return ret;
++    }
+     return -ENOSYS;
+ }
+ 
+-static void ksu_selinux_hide_disable()
++static int ksu_selinux_hide_disable()
+ {
+     pr_info("selinux_hide: exit selinux hide\n");
+ 
+-    ksu_selinux_hide_unhook();
++    return ksu_selinux_hide_unhook();
+ }
+ 
+ static int selinux_hide_feature_get(u64 *value)
+ {
++    if (ksu_selinux_hide_cleanup_pending)
++        return -EAGAIN;
+     *value = ksu_selinux_hide_enabled ? 1 : 0;
+     return 0;
+ }
+@@ -856,7 +833,13 @@ static int selinux_hide_feature_set(u64 value)
+     int ret = 0;
+     pr_info("selinux_hide: set to %d\n", enable);
+     mutex_lock(&selinux_hide_mutex);
+-    ksu_selinux_hide_enabled = enable;
++    if (ksu_selinux_hide_cleanup_pending) {
++        ret = ksu_selinux_hide_unhook();
++        if (ret)
++            goto out;
++        ksu_selinux_hide_running = false;
++        ksu_selinux_hide_enabled = false;
++    }
+     if (enable) {
+         if (!ksu_selinux_hide_running) {
+             ret = ksu_selinux_hide_enable();
+@@ -864,12 +847,18 @@ static int selinux_hide_feature_set(u64 value)
+                 ksu_selinux_hide_running = true;
+             }
+         }
++        if (!ret)
++            ksu_selinux_hide_enabled = true;
+     } else {
+         if (ksu_selinux_hide_running) {
+-            ksu_selinux_hide_disable();
++            ret = ksu_selinux_hide_disable();
++            if (ret)
++                goto out;
+             ksu_selinux_hide_running = false;
+         }
++        ksu_selinux_hide_enabled = false;
+     }
++out:
+     mutex_unlock(&selinux_hide_mutex);
+     return ret;
+ }
+@@ -929,13 +918,23 @@ void __init ksu_selinux_hide_init()
+ 
+ void __exit ksu_selinux_hide_exit()
+ {
++    int ret = 0;
+     mutex_lock(&selinux_hide_mutex);
+-    if (ksu_selinux_hide_running) {
+-        ksu_selinux_hide_disable();
+-        ksu_selinux_hide_running = false;
++    if (ksu_selinux_hide_running || ksu_selinux_hide_cleanup_pending) {
++        ret = ksu_selinux_hide_disable();
++        if (!ret) {
++            ksu_selinux_hide_running = false;
++            ksu_selinux_hide_enabled = false;
++        }
+     }
+     mutex_unlock(&selinux_hide_mutex);
++    if (ret) {
++        pr_err("selinux_hide: callbacks remain installed; retain their resources\n");
++        return;
++    }
+     ksu_unregister_feature_handler(KSU_FEATURE_SELINUX_HIDE);
++    if (!ksu_selinux_status_lock)
++        return;
+     mutex_lock(ksu_selinux_status_lock);
+     if (fake_status)
+         __free_page(fake_status);
+@@ -947,7 +946,7 @@ void ksu_selinux_hide_drop_backup_if_unused()
+ {
+     mutex_lock(&selinux_hide_mutex);
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0) || defined(KSU_COMPAT_HAS_SELINUX_POLICY_STRUCT)
+-    if (!ksu_selinux_hide_running && backup_sepolicy) {
++    if (!ksu_selinux_hide_running && !ksu_selinux_hide_cleanup_pending && backup_sepolicy) {
+         pr_info("selinux_hide is not enabled - drop backup_sepolicy\n");
+         sidtab_destroy(backup_sepolicy->sidtab);
+         kfree(backup_sepolicy->sidtab);
+@@ -955,7 +954,7 @@ void ksu_selinux_hide_drop_backup_if_unused()
+         backup_sepolicy = NULL;
+     }
+ #elif defined(KSU_COMPAT_USE_SELINUX_STATE)
+-    if (!ksu_selinux_hide_running && backup_policydb && backup_sidtab) {
++    if (!ksu_selinux_hide_running && !ksu_selinux_hide_cleanup_pending && backup_policydb && backup_sidtab) {
+         pr_info("selinux_hide is not enabled - drop backup_policydb\n");
+         sidtab_destroy(backup_sidtab);
+         kfree(backup_sidtab);
+@@ -965,7 +964,7 @@ void ksu_selinux_hide_drop_backup_if_unused()
+         backup_sidtab = NULL;
+     }
+ #else
+-    if (!ksu_selinux_hide_running && backup_policydb && backup_sidtab) {
++    if (!ksu_selinux_hide_running && !ksu_selinux_hide_cleanup_pending && backup_policydb && backup_sidtab) {
+         sidtab_destroy(backup_sidtab);
+         kfree(backup_sidtab);
+         ksu_destroy_policydb(backup_policydb);
+@@ -996,6 +995,21 @@ __maybe_static void initialize_fake_status()
+     ksu_selinux_status_lock = &selinux_status_lock;
+ #endif
+ 
++    if (!ksu_selinux_status_lock) {
++        pr_err("initialize_fake_status: selinux_status_lock not found\n");
++        return;
++    }
++
++#ifdef KSU_COMPAT_SUSFS_4_9_AUTO
++    /* Linux 4.9 creates this page lazily. Capture the real status before
++     * second-stage init applies KernelSU rules, even if no process opened it.
++     */
++    if (!selinux_kernel_status_page()) {
++        pr_err("initialize_fake_status: failed to create kernel status page\n");
++        return;
++    }
++#endif
++
+     mutex_lock(ksu_selinux_status_lock);
+     if (fake_status)
+         goto out;
+@@ -1009,7 +1023,12 @@ __maybe_static void initialize_fake_status()
+     // because some compiler add suffix for that
+     // e.g:
+     // 0000000000000000 b selinux_status_page.llvm.9985633631847037644
+-    struct page *selinux_status_page = *((struct page **)ksu_resolve_symbol_for_functable_hook("selinux_status_page"));
++    struct page **selinux_status_page_ptr = ksu_resolve_symbol_for_functable_hook("selinux_status_page");
++    if (!selinux_status_page_ptr) {
++        pr_err("initialize_fake_status: selinux_status_page symbol not found\n");
++        goto out;
++    }
++    struct page *selinux_status_page = *selinux_status_page_ptr;
+ #else
+     extern struct page *selinux_status_page;
+ #endif
+@@ -1300,6 +1319,135 @@ static int ksu_security_context_to_sid(struct policydb *orig_policydb, struct si
+     return rc;
+ }
+ 
++#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 17, 0) && !defined(KSU_COMPAT_USE_SELINUX_STATE)
++/* Legacy MLS formatters use the global policydb; keep backup queries isolated. */
++static int ksu_mls_compute_context_len(struct policydb *p, struct context *context)
++{
++	int i, l, len, head, prev;
++	char *nm;
++	struct ebitmap *e;
++	struct ebitmap_node *node;
++
++	if (!p->mls_enabled)
++		return 0;
++
++	len = 1; /* for the beginning ":" */
++	for (l = 0; l < 2; l++) {
++		int index_sens = context->range.level[l].sens;
++		len += strlen(sym_name(p, SYM_LEVELS, index_sens - 1));
++
++		/* categories */
++		head = -2;
++		prev = -2;
++		e = &context->range.level[l].cat;
++		ebitmap_for_each_positive_bit(e, node, i) {
++			if (i - prev > 1) {
++				/* one or more negative bits are skipped */
++				if (head != prev) {
++					nm = sym_name(p, SYM_CATS, prev);
++					len += strlen(nm) + 1;
++				}
++				nm = sym_name(p, SYM_CATS, i);
++				len += strlen(nm) + 1;
++				head = i;
++			}
++			prev = i;
++		}
++		if (prev != head) {
++			nm = sym_name(p, SYM_CATS, prev);
++			len += strlen(nm) + 1;
++		}
++		if (l == 0) {
++			if (mls_level_eq(&context->range.level[0],
++					 &context->range.level[1]))
++				break;
++			else
++				len++;
++		}
++	}
++
++	return len;
++}
++
++/*
++ * Write the security context string representation of
++ * the MLS fields of `context' into the string `*scontext'.
++ * Update `*scontext' to point to the end of the MLS fields.
++ */
++static void ksu_mls_sid_to_context(struct policydb *p, struct context *context,
++			char **scontext)
++{
++	char *scontextp, *nm;
++	int i, l, head, prev;
++	struct ebitmap *e;
++	struct ebitmap_node *node;
++
++	if (!p->mls_enabled)
++		return;
++
++	scontextp = *scontext;
++
++	*scontextp = ':';
++	scontextp++;
++
++	for (l = 0; l < 2; l++) {
++		strcpy(scontextp, sym_name(p, SYM_LEVELS,
++					   context->range.level[l].sens - 1));
++		scontextp += strlen(scontextp);
++
++		/* categories */
++		head = -2;
++		prev = -2;
++		e = &context->range.level[l].cat;
++		ebitmap_for_each_positive_bit(e, node, i) {
++			if (i - prev > 1) {
++				/* one or more negative bits are skipped */
++				if (prev != head) {
++					if (prev - head > 1)
++						*scontextp++ = '.';
++					else
++						*scontextp++ = ',';
++					nm = sym_name(p, SYM_CATS, prev);
++					strcpy(scontextp, nm);
++					scontextp += strlen(nm);
++				}
++				if (prev < 0)
++					*scontextp++ = ':';
++				else
++					*scontextp++ = ',';
++				nm = sym_name(p, SYM_CATS, i);
++				strcpy(scontextp, nm);
++				scontextp += strlen(nm);
++				head = i;
++			}
++			prev = i;
++		}
++
++		if (prev != head) {
++			if (prev - head > 1)
++				*scontextp++ = '.';
++			else
++				*scontextp++ = ',';
++			nm = sym_name(p, SYM_CATS, prev);
++			strcpy(scontextp, nm);
++			scontextp += strlen(nm);
++		}
++
++		if (l == 0) {
++			if (mls_level_eq(&context->range.level[0],
++					 &context->range.level[1]))
++				break;
++			else
++				*scontextp++ = '-';
++		}
++	}
++
++	*scontext = scontextp;
++	return;
++}
++
++#endif
++
+ /*
+  * Write the security context string representation of
+  * the context structure `context' into a dynamically
+@@ -1332,7 +1480,7 @@ static int context_struct_to_string(struct policydb *p, struct context *context,
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 17, 0) || defined(KSU_COMPAT_USE_SELINUX_STATE)
+     *scontext_len += mls_compute_context_len(p, context);
+ #else
+-    *scontext_len += mls_compute_context_len(context);
++    *scontext_len += ksu_mls_compute_context_len(p, context);
+ #endif
+ 
+     if (!scontext)
+@@ -1353,7 +1501,7 @@ static int context_struct_to_string(struct policydb *p, struct context *context,
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 17, 0) || defined(KSU_COMPAT_USE_SELINUX_STATE)
+     mls_sid_to_context(p, context, &scontextp);
+ #else
+-    mls_sid_to_context(context, &scontextp);
++    ksu_mls_sid_to_context(p, context, &scontextp);
+ #endif
+ 
+     *scontextp = 0;
+@@ -1471,7 +1619,7 @@ static void __nocfi type_attribute_bounds_av(struct policydb *policydb, struct c
+     }
+ 
+     if (context_struct_compute_av_fn) {
+-        context_struct_compute_av_fn(policydb, scontext, tcontext, tclass, avd, NULL);
++        context_struct_compute_av_fn(policydb, &lo_scontext, tcontextp, tclass, &lo_avd, NULL);
+     } else {
+         ksu_context_struct_compute_av_fallback(policydb, &lo_scontext, tcontextp, tclass, &lo_avd, NULL);
+     }
+diff --git a/kernel/tools/susfs_compat.mk b/kernel/tools/susfs_compat.mk
+index 9a70255d..123c25ce 100644
+--- a/kernel/tools/susfs_compat.mk
++++ b/kernel/tools/susfs_compat.mk
+@@ -15,6 +15,24 @@ $(info -- $(REPO_NAME)/compat: ksu_install_su_fd direct call found)
+ ccflags-y += -DKSU_COMPAT_HAS_SUSFS_INSTALL_SU_FD_DIRECT_CALL
+ endif
+ 
++# Only the pinned Lineage 4.9 ARM64 port has been reviewed for the NonGKI
++# automatic SELinux hooks. prepare-sources.sh writes this marker after checking
++# the kernel ABI and the adaptation patch; it does not certify device testing.
++SUSFS_4_9_AUTO_REVIEWED := $(shell \
++    test "$(VERSION).$(PATCHLEVEL)" = "4.9" && \
++    test "$(CONFIG_ARM64)" = "y" && \
++    test "$(CONFIG_KSU)" = "y" && \
++    test "$(CONFIG_KALLSYMS_ALL)" = "y" && \
++    grep -qx 'lineage-4.9-auto-v1' $(KSU_SRC)/.susfs-4.9-auto-reviewed 2>/dev/null && \
++    grep -qx '\#define SUSFS_VERSION "v2.3.0"' $(srctree)/include/linux/susfs.h && \
++    ! grep -Eq 'ksu_selinux_hide_running|ksu_hide_setprocattr|fake_state' \
++        $(srctree)/security/selinux/hooks.c $(srctree)/security/selinux/selinuxfs.c && echo y)
++
++ifeq ($(SUSFS_4_9_AUTO_REVIEWED),y)
++$(info -- $(REPO_NAME): using reviewed Lineage 4.9 SUSFS automatic SELinux hooks)
++ccflags-y += -DKSU_COMPAT_SUSFS_4_9_AUTO
++else
+ $(info -- $(REPO_NAME): susfs has NOT update with latest KernelSU source)
+ $(info -- $(REPO_NAME): Please wait simonpunk update)
+-$(error Please wait susfs update.)
+\ No newline at end of file
++$(error Please wait susfs update.)
++endif
