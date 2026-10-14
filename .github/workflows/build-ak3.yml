@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       bakasu_ref:
-        description: BakaSU commit supported by the local 4.9 SELinux adaptation
+        description: BakaSU branch, tag, or commit
         required: false
-        default: d7260ca1e5c128061122924d0d48754e361e135c
+        default: main
         type: string
       bbg_ref:
         description: Baseband Guard branch, tag, or commit
@@ -102,10 +102,6 @@ jobs:
 
           kernel_base=$(jq -r .kernel_base "$CONFIG")
           bakasu_sha=$(resolve_ref "$(jq -r .bakasu_repo "$CONFIG")" "${BAKASU_REF:-$(jq -r .bakasu_ref "$CONFIG")}")
-          if [[ "$bakasu_sha" != "$(jq -r .susfs.bakasu_compat_commit configs/vendored-upstreams.json)" ]]; then
-            echo '::error::This BakaSU revision needs a reviewed Linux 4.9 SELinux adaptation.'
-            exit 1
-          fi
           cake_sha=$(resolve_ref "$(jq -r .cake_repo "$CONFIG")" "$(jq -r .cake_ref "$CONFIG")")
           bbg_sha=$(resolve_ref "$(jq -r .bbg_repo "$CONFIG")" "$BBG_REF")
           kernel_patches_sha=$(resolve_ref "$(jq -r .kernel_patches_repo "$CONFIG")" "$KERNEL_PATCHES_REF")

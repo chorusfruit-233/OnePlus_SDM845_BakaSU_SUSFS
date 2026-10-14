@@ -8,7 +8,6 @@ mode=${2:---check}
 script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 builder_root=$(dirname "$script_dir")
 config="$builder_root/configs/enchilada.json"
-upstreams="$builder_root/configs/vendored-upstreams.json"
 ksu_root="$kernel_root/KernelSU"
 marker="$ksu_root/kernel/.susfs-4.9-auto-reviewed"
 
@@ -24,11 +23,8 @@ esac
 
 [[ $(git -C "$kernel_root" rev-parse HEAD) == "$(jq -er .kernel_base "$config")" ]] ||
     fail 'Kernel base changed; review the adaptation before building.'
-expected_bakasu=$(jq -er .susfs.bakasu_compat_commit "$upstreams")
-[[ $(git -C "$ksu_root" rev-parse HEAD) == "$expected_bakasu" ]] ||
-    fail 'BakaSU revision changed; review the adaptation before building.'
-[[ $(jq -er .bakasu_ref "$config") == "$expected_bakasu" ]] ||
-    fail 'The configured BakaSU ref must match the reviewed revision.'
+python3 "$script_dir/check-bakasu-4.9.py" "$ksu_root"
+actual_bakasu=$(git -C "$ksu_root" rev-parse HEAD)
 [[ $(awk '$1 == "VERSION" {print $3}' "$kernel_root/Makefile") == 4 &&
    $(awk '$1 == "PATCHLEVEL" {print $3}' "$kernel_root/Makefile") == 9 ]] ||
     fail 'Only the Linux 4.9 automatic SELinux path is supported.'
@@ -81,4 +77,4 @@ else
     [[ -f "$marker" && $(cat "$marker") == lineage-4.9-auto-v1 ]] ||
         fail 'Run source preparation to create the reviewed-source marker.'
 fi
-echo "SUSFS 4.9 source checks passed (BakaSU $expected_bakasu, automatic SELinux hooks)."
+echo "SUSFS 4.9 source checks passed (BakaSU $actual_bakasu, automatic SELinux hooks)."

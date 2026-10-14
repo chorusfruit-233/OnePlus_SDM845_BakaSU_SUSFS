@@ -42,9 +42,9 @@ ramdisk、内核模块或 vendor 接口差异而不兼容。不要在未备份�
 
 ### BakaSU 与 SUSFS
 
-- BakaSU 固定到 `d7260ca1e5c128061122924d0d48754e361e135c`，包含 SELinux hide
-  时间侧信道修复与旧内核 SID 修正；Linux 4.9 的配套补丁随本仓库维护，
-  不再无条件跟踪 `main`；
+- BakaSU 默认跟踪 `main`，每次构建先解析并记录实际提交。
+  Linux 4.9 配套补丁基于 `d7260ca1`，保留 SELinux hide 时间侧信道修复与
+  旧内核 SID 修正；该提交仅记录补丁来源，不限制后续构建的提交 SHA；
 - 使用 BakaSU 管理器；当前上游在 `CONFIG_KSU_MULTI_MANAGER_SUPPORT=y` 时还支持
   官方 KernelSU 与 KOWSU 管理器，已移除 MKSU、RKSU 和 SukiSU-Ultra 的签名支持；
 - BakaSU 用户空间向模块脚本提供 `BAKASU=true`，取代旧的 `KSU_SUKISU=true`；
@@ -74,10 +74,11 @@ ramdisk、内核模块或 vendor 接口差异而不兼容。不要在未备份�
 手动接入。旧内核没有带 `policydb` 参数的 AV/MLS 接口，因此配套适配必须显式
 使用备份策略，避免查询落回已经修改的全局策略。
 
-准备源码时应用该补丁并运行 `scripts/check-susfs-4.9.sh`，核对固定内核、BakaSU
-提交、完整补丁、四参数 `setprocattr` ABI 和 inline hooks。构建放行仅限
-这套 Linux 4.9 / ARM64 / KALLSYMS_ALL / SUSFS v2.3.0 自动接入；其他组合
-仍保留上游暂停。更换 BakaSU 提交前必须重新移植、审查和验证配套补丁。
+准备源码时对 BakaSU 当前提交的 SELinux、sucompat、初始化和兼容层文件做内容检查，
+再应用补丁并运行 `scripts/check-susfs-4.9.sh`，核对固定内核、完整补丁、
+四参数 `setprocattr` ABI 和 inline hooks。与这些实现无关的 `main` 更新可以继续
+构建；相关实现变更时明确报错，需要重新适配和验证，而不是按整个提交 SHA 阻止更新。
+构建放行仍仅限 Linux 4.9 / ARM64 / KALLSYMS_ALL / SUSFS v2.3.0 自动接入。
 
 CI 在编译前执行 `tests/host/test-selinux-cleanup.py`，从已准备的 BakaSU 源码
 提取真实清理/切换函数，注入回调恢复失败，检查原回调、备份资源、错误状态和重试。
@@ -238,7 +239,7 @@ artifact 包含：
 
 | 输入 | 默认值 | 说明 |
 | --- | --- | --- |
-| `bakasu_ref` | `d7260ca1e5c128061122924d0d48754e361e135c` | 已适配的 BakaSU commit；其他版本需配套补丁 |
+| `bakasu_ref` | `main` | BakaSU branch、tag 或完整 commit；相关实现须通过兼容检查 |
 | `bbg_ref` | `main` | Baseband Guard branch、tag 或完整 commit |
 | `kernel_patches_ref` | `main` | WildKernels patches branch、tag 或完整 commit |
 | `anykernel_ref` | `master` | AnyKernel3 branch、tag 或完整 commit |
@@ -257,7 +258,7 @@ SUSFS 补丁的哈希）和所有上游 commit 共同组成 build key：
 | 组件 | 上游 | 策略 |
 | --- | --- | --- |
 | Kernel | [LineageOS/android_kernel_oneplus_sdm845](https://github.com/LineageOS/android_kernel_oneplus_sdm845) | 固定基线 commit |
-| BakaSU | [Baka-SU/BakaSU](https://github.com/Baka-SU/BakaSU) | 固定已适配提交 `d7260ca1` |
+| BakaSU | [Baka-SU/BakaSU](https://github.com/Baka-SU/BakaSU) | 默认跟踪 `main`，校验配套实现 |
 | SUSFS v2.3.0 | 自包含补丁（源自 [JackA1ltman/NonGKI_Kernel_Build_2nd](https://github.com/JackA1ltman/NonGKI_Kernel_Build_2nd)） | vendored，随仓库版本变化 |
 | Hybrid Mount VFS | [Hybrid-Mount/meta-hybrid_mount](https://github.com/Hybrid-Mount/meta-hybrid_mount)（dev 分支） | vendored，固定 `1af06a616e12`，内建 hm1 provider |
 | RTL8812AU/8821AU/8814AU | [aircrack-ng/rtl8812au](https://github.com/aircrack-ng/rtl8812au) | 默认跟踪 `v5.6.4.2`（构建时克隆 + 适配补丁） |

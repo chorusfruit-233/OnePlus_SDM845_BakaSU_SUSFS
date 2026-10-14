@@ -37,12 +37,8 @@ clone_sparse_ref() {
     git -C "$destination" checkout --detach FETCH_HEAD
 }
 
-expected_bakasu=$(jq -er .susfs.bakasu_compat_commit "$script_dir/../configs/vendored-upstreams.json")
 clone_ref "$bakasu_repo" "$bakasu_ref" "$kernel_root/KernelSU"
-if [[ $(git -C "$kernel_root/KernelSU" rev-parse HEAD) != "$expected_bakasu" ]]; then
-    echo "BakaSU revision has no reviewed Linux 4.9 SELinux adaptation: $bakasu_ref" >&2
-    exit 1
-fi
+python3 "$script_dir/check-bakasu-4.9.py" "$kernel_root/KernelSU"
 git -C "$kernel_root/KernelSU" apply --check "$patch_root/bakasu-selinux-4.9.patch"
 git -C "$kernel_root/KernelSU" apply --whitespace=nowarn "$patch_root/bakasu-selinux-4.9.patch"
 ln -sfn ../KernelSU/kernel "$kernel_root/drivers/kernelsu"

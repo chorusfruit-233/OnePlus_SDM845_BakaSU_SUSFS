@@ -9,7 +9,19 @@
     "port_commit": "e2f895b357a2844f5dc8d4e7ad980c0c9b200345",
     "core_commit": "24743360ea08d98f6ad72b856851abed8de5854f",
     "selinux_integration": "BakaSU NonGKI automatic hooks; LineageOS 4.9 adaptation",
-    "bakasu_compat_commit": "d7260ca1e5c128061122924d0d48754e361e135c"
+    "bakasu_patch_base": "d7260ca1e5c128061122924d0d48754e361e135c",
+    "bakasu_reviewed_files": {
+      "kernel/feature/selinux_hide.c": "e4299d4db52b3e761413928d733076dc497104cee0cd5ab27e165364cd773c5c",
+      "kernel/feature/sucompat.c": "e4701fb89fdbea6b07e5a2fc6923ff9462c2170fb17e8c365f37d4993182b4b4",
+      "kernel/selinux/sepolicy.c": "504c73cfe3170e71b3356a27cd1751e29717f141681f69d9a7e133924ee9b339",
+      "kernel/selinux/rules.c": "d599f97877dcff4a59201ca32dd9f765f734823d043b9569504f6eb66397b2e5",
+      "kernel/selinux/selinux.c": "8e7636fff8de19b17d5529f017eae8f7180527c434552b8350191d25d25f8ce7",
+      "kernel/runtime/ksud_integration.c": "15213ebd26c0086ee9f475fcd3908bfbc99b1817cc1f2711e292f895ab416893",
+      "kernel/core/init.c": "becd6c50e017d4aee18ae9ce27dbae7eb4b97a7f6721b6a5b19a4189beba343c",
+      "kernel/tools/kernel_compat.mk": "0045b59d0689d1cc4e3cef669622ec3443ea4e0d5f9099ac151625e602fc1983",
+      "kernel/compat/kernel_compat.h": "04271a53c8c7e5f57d87c607052d8ebbbc545f8fd8580d07af0deaa9555891e0",
+      "kernel/tools/susfs_compat.mk": "25eb93fe03d155f5cb19f1de8a4e291d88f0016ff0f7e53b558f63fae1a9e2a7"
+    }
   },
   "hybridmount": {
     "version": "hm1",
