@@ -91,8 +91,10 @@ CI 在编译前执行 `tests/host/test-selinux-cleanup.py`，从已准备的 Bak
 ### Hybrid Mount VFS（内建）
 
 - [Hybrid-Mount/meta-hybrid_mount](https://github.com/Hybrid-Mount/meta-hybrid_mount)
-  的 VFS 驱动固定到 `dev @ 1af06a616e12`，以自包含补丁
+  的 VFS 驱动固定到 `dev @ b2afc9130929`，以自包含补丁
   `patches/lineage-4.9/hybridmount-4.9.patch` vendored；
+- 本次快照更新中，VFS 源码树与此前版本一致，协议仍为 `hm1`，保留现有 4.9
+  适配。上游新增的 SUSFS LKM 冲突检查属于用户态元模块，需单独更新元模块；
 - 启用 `CONFIG_HYBRIDMOUNT=y` 和 `CONFIG_KEYS=y`，驱动内建到内核镜像，
   使用 `hybridmount` keyring 接口与 **hm1** 协议；支持路径注入、重定向、
   whiteout、opaque 目录与 UID 隔离；
@@ -260,7 +262,7 @@ SUSFS 补丁的哈希）和所有上游 commit 共同组成 build key：
 | Kernel | [LineageOS/android_kernel_oneplus_sdm845](https://github.com/LineageOS/android_kernel_oneplus_sdm845) | 固定基线 commit |
 | BakaSU | [Baka-SU/BakaSU](https://github.com/Baka-SU/BakaSU) | 默认跟踪 `main`，校验配套实现 |
 | SUSFS v2.3.0 | 自包含补丁（源自 [JackA1ltman/NonGKI_Kernel_Build_2nd](https://github.com/JackA1ltman/NonGKI_Kernel_Build_2nd)） | vendored，随仓库版本变化 |
-| Hybrid Mount VFS | [Hybrid-Mount/meta-hybrid_mount](https://github.com/Hybrid-Mount/meta-hybrid_mount)（dev 分支） | vendored，固定 `1af06a616e12`，内建 hm1 provider |
+| Hybrid Mount VFS | [Hybrid-Mount/meta-hybrid_mount](https://github.com/Hybrid-Mount/meta-hybrid_mount)（dev 分支） | vendored，固定 `b2afc9130929`，内建 hm1 provider |
 | RTL8812AU/8821AU/8814AU | [aircrack-ng/rtl8812au](https://github.com/aircrack-ng/rtl8812au) | 默认跟踪 `v5.6.4.2`（构建时克隆 + 适配补丁） |
 | CAKE | [dtaht/sch_cake](https://github.com/dtaht/sch_cake) | 固定最后一版兼容旧 qdisc API 的基线 |
 | BBRv3 patches | [WildKernels/kernel_patches](https://github.com/WildKernels/kernel_patches) | 稀疏拉取 `common/bbrv3` |

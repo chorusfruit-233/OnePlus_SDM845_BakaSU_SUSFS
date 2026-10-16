@@ -27,8 +27,9 @@
     "version": "hm1",
     "repo": "https://github.com/Hybrid-Mount/meta-hybrid_mount.git",
     "ref": "dev",
-    "commit": "1af06a616e1278be7fbf496b16e2b44e1862e2eb",
+    "commit": "b2afc9130929689ed3c932addb3b6bdb9f339022",
     "source_path": "module/vfs/src",
-    "license": "GPL-2.0-only"
+    "license": "GPL-2.0-only",
+    "source_tree": "345990de510f996f081f99dc20402be5c0cb051a"
   }
 }

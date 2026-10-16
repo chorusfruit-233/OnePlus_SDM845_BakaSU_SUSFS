@@ -1,6 +1,6 @@
-Hybrid Mount VFS built-in snapshot @ 1af06a616e1278be7fbf496b16e2b44e1862e2eb
+Hybrid Mount VFS built-in snapshot @ b2afc9130929689ed3c932addb3b6bdb9f339022
 
-Source: https://github.com/Hybrid-Mount/meta-hybrid_mount/tree/1af06a616e1278be7fbf496b16e2b44e1862e2eb/module/vfs/src
+Source: https://github.com/Hybrid-Mount/meta-hybrid_mount/tree/b2afc9130929689ed3c932addb3b6bdb9f339022/module/vfs/src
 Protocol: hm1; key type/module identity: hybridmount.
 4.9 adaptations: backported statx/getattr ABI, explicit slab.h, KEYS dependency.
 License/provenance retained with the kernel sources.
@@ -397,7 +397,7 @@ index 0000000..2b5f896
 @@ -0,0 +1,11 @@
 +# LineageOS SDM845 4.9 adaptations
 +
-+Source: Hybrid-Mount/meta-hybrid_mount dev @ 1af06a616e1278be7fbf496b16e2b44e1862e2eb, module/vfs/src.
++Source: Hybrid-Mount/meta-hybrid_mount dev @ b2afc9130929689ed3c932addb3b6bdb9f339022, module/vfs/src.
 +
 +- In-tree Makefile retains upstream gnu11 flags and builds CONFIG_HYBRIDMOUNT.
 +- HYBRIDMOUNT_HAS_STATX selects the four-argument getattr ABI backported to this kernel.
