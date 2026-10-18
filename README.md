@@ -45,6 +45,9 @@ ramdisk、内核模块或 vendor 接口差异而不兼容。不要在未备份�
 - BakaSU 默认跟踪 `main`，每次构建先解析并记录实际提交。
   Linux 4.9 配套补丁基于 `d7260ca1`，保留 SELinux hide 时间侧信道修复与
   旧内核 SID 修正；该提交仅记录补丁来源，不限制后续构建的提交 SHA；
+- 已审查 `main @ 896e8981` 的 32 位用户空间兼容更新：保留 SUSFS inline hooks，
+  使用上游系统调用号生成器，原有 4.9 SELinux 配套补丁继续适用。CI 同时检查
+  原生/32 位寄存器、指针及系统调用号处理；设备端兼容行为仍需真机验证；
 - 使用 BakaSU 管理器；当前上游在 `CONFIG_KSU_MULTI_MANAGER_SUPPORT=y` 时还支持
   官方 KernelSU 与 KOWSU 管理器，已移除 MKSU、RKSU 和 SukiSU-Ultra 的签名支持；
 - BakaSU 用户空间向模块脚本提供 `BAKASU=true`，取代旧的 `KSU_SUKISU=true`；
@@ -74,7 +77,7 @@ ramdisk、内核模块或 vendor 接口差异而不兼容。不要在未备份�
 手动接入。旧内核没有带 `policydb` 参数的 AV/MLS 接口，因此配套适配必须显式
 使用备份策略，避免查询落回已经修改的全局策略。
 
-准备源码时对 BakaSU 当前提交的 SELinux、sucompat、初始化和兼容层文件做内容检查，
+准备源码时对 BakaSU 当前提交的 SELinux、sucompat、初始化、兼容层和代码生成器做内容检查，
 再应用补丁并运行 `scripts/check-susfs-4.9.sh`，核对固定内核、完整补丁、
 四参数 `setprocattr` ABI 和 inline hooks。与这些实现无关的 `main` 更新可以继续
 构建；相关实现变更时明确报错，需要重新适配和验证，而不是按整个提交 SHA 阻止更新。

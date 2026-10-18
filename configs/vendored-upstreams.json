@@ -12,16 +12,25 @@
     "bakasu_patch_base": "d7260ca1e5c128061122924d0d48754e361e135c",
     "bakasu_reviewed_files": {
       "kernel/feature/selinux_hide.c": "e4299d4db52b3e761413928d733076dc497104cee0cd5ab27e165364cd773c5c",
-      "kernel/feature/sucompat.c": "e4701fb89fdbea6b07e5a2fc6923ff9462c2170fb17e8c365f37d4993182b4b4",
+      "kernel/feature/sucompat.c": "c66f711cc3bb6a6bc1a5ec361a81465924b3b05562fb2283ff1713abe2c6a783",
       "kernel/selinux/sepolicy.c": "504c73cfe3170e71b3356a27cd1751e29717f141681f69d9a7e133924ee9b339",
       "kernel/selinux/rules.c": "d599f97877dcff4a59201ca32dd9f765f734823d043b9569504f6eb66397b2e5",
       "kernel/selinux/selinux.c": "8e7636fff8de19b17d5529f017eae8f7180527c434552b8350191d25d25f8ce7",
-      "kernel/runtime/ksud_integration.c": "15213ebd26c0086ee9f475fcd3908bfbc99b1817cc1f2711e292f895ab416893",
+      "kernel/runtime/ksud_integration.c": "87987c82240ab17c5348f04ca565c84b22ed47745dae24358a4b8c251270504e",
       "kernel/core/init.c": "becd6c50e017d4aee18ae9ce27dbae7eb4b97a7f6721b6a5b19a4189beba343c",
-      "kernel/tools/kernel_compat.mk": "0045b59d0689d1cc4e3cef669622ec3443ea4e0d5f9099ac151625e602fc1983",
-      "kernel/compat/kernel_compat.h": "04271a53c8c7e5f57d87c607052d8ebbbc545f8fd8580d07af0deaa9555891e0",
-      "kernel/tools/susfs_compat.mk": "25eb93fe03d155f5cb19f1de8a4e291d88f0016ff0f7e53b558f63fae1a9e2a7"
-    }
+      "kernel/tools/kernel_compat.mk": "bc495b3bb19cd3fa6b3fd4e28198447bf98f1cc8a135babde3a2d6ca4052e590",
+      "kernel/compat/kernel_compat.h": "1b6e98749a08c5a88e18f1b6a8ea35977c04904388e7c72d16eb331fd038d04d",
+      "kernel/tools/susfs_compat.mk": "25eb93fe03d155f5cb19f1de8a4e291d88f0016ff0f7e53b558f63fae1a9e2a7",
+      "kernel/Kbuild": "fd8b74ba56e63b9295f85794c254495b2cd99873a614c8542b27db94f0826b79",
+      "kernel/include/arch.h": "84cd3804faab495620913616236e20c2ffc8f7ad4ca591fd0383d835cf7194b9",
+      "kernel/feature/sucompat.h": "e18cda16748775dc9a3d53710fe2601a20c3a81c207114f127ad84eb61539473",
+      "kernel/hook/setuid_hook.c": "7395311570e6a9bf882c81eacc91fe7ae69527c163981eba98107a24e1aeadfb",
+      "kernel/supercall/supercall.c": "160fbdd08bffe91a5337eadb8e2336ad209c4ecde7cb4eb7939069cf3bb8f3bc",
+      "kernel/tools/code_generation/code_generation.mk": "71fbe726f695a5f06f40cf3ce683ea50da94ea4005745346f3e3b3df1cb3b7d6",
+      "kernel/tools/code_generation/syscall_no/syscall_no.c": "92b1ef09e02b6b0c069c7ab2ffe64ddc90943df39f2f5963b83a29fcc0365226",
+      "kernel/tools/code_generation/syscall_no/syscall_no.mk": "8671fbfde72b78ec24d8bcf04b4000fed0670c2bba8c0e261bf6424caf7aa86a"
+    },
+    "bakasu_reviewed_commit": "896e8981e0ed76ec14d1dcb39ab793438b304886"
   },
   "hybridmount": {
     "version": "hm1",

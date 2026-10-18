@@ -1,4 +1,17 @@
-# Host SELinux cleanup regression
+# Host BakaSU regressions
+
+```sh
+python3 tests/host/test-bakasu-compat.py --source kernel
+```
+
+The ABI test compiles the actual upstream syscall-number generator against this
+kernel's ARM64 `unistd32.h`, then exercises the actual BakaSU `arch.h` helpers
+with mocked register/task services. It checks native and compat syscall numbers,
+32-bit user-pointer truncation, writable native register slots, and preservation
+of the native kernel C-call ABI. Both CONFIG_COMPAT=y and n are exercised.
+This does not execute AArch32 programs or syscalls on a device.
+
+## SELinux cleanup
 
 ```sh
 python3 tests/host/test-selinux-cleanup.py

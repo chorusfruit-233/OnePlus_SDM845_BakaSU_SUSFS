@@ -294,8 +294,10 @@ jobs:
             --config out/.config > "$GITHUB_WORKSPACE/droidspaces-config-check.json"
           cat "$GITHUB_WORKSPACE/droidspaces-config-check.json"
 
-      - name: Test SELinux hook failure handling
-        run: python3 tests/host/test-selinux-cleanup.py
+      - name: Test BakaSU ABI compatibility and SELinux hook failure handling
+        run: |
+          python3 tests/host/test-bakasu-compat.py
+          python3 tests/host/test-selinux-cleanup.py
 
       - name: Build Image.gz-dtb
         working-directory: kernel
