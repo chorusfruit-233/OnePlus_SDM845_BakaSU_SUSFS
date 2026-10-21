@@ -1,5 +1,24 @@
 # Host BakaSU regressions
 
+## Kernel-only installation
+
+```sh
+python3 tests/host/test-ak3-ramdisk.py --anykernel anykernel3
+```
+
+Requires `qemu-arm` from qemu-user (or set QEMU_ARM). Runs the fetched AK3
+`split_boot` / `flash_boot` functions and its ARM magiskboot on temporary boot
+v0/v2 images with gzip/lz4 ramdisks. It checks kernel/appended-DTB replacement,
+header/cmdline retention and byte-identical ramdisk CPIO, including symlinks,
+ownership, modes and hardlink records. Ramdisk extraction/rebuild is rejected;
+no mkbootfs is provided, matching the new manager's installation path.
+
+Partition discovery, blockdev and zero-fill are mocked. All reads/writes use
+temporary regular files; no device is flashed. This does not prove device boot
+or exercise the manager's slot selection, AVB signing or Magisk ramdisk handling.
+
+## BakaSU ABI
+
 ```sh
 python3 tests/host/test-bakasu-compat.py --source kernel
 ```

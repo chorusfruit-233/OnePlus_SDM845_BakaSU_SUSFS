@@ -17,11 +17,6 @@ supported.patchlevels=
 supported.vendorpatchlevels=
 '; }
 
-boot_attributes() {
-set_perm_recursive 0 0 755 644 $RAMDISK/*;
-set_perm_recursive 0 0 750 750 $RAMDISK/init* $RAMDISK/sbin;
-}
-
 BLOCK=boot;
 IS_SLOT_DEVICE=1;
 RAMDISK_COMPRESSION=auto;
@@ -29,5 +24,7 @@ PATCH_VBMETA_FLAG=auto;
 
 . tools/ak3-core.sh;
 
-dump_boot;
-write_boot;
+# Kernel-only install: preserve the ROM's ramdisk archive and its metadata.
+# These are AnyKernel3's documented entry points for omitting ramdisk changes.
+split_boot;
+flash_boot;

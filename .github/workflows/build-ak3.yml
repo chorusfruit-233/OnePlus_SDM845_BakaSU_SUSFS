@@ -180,7 +180,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             bc bison build-essential cpio flex gcc-aarch64-linux-gnu \
             libc6-dev-arm64-cross ccache git libelf-dev libssl-dev python3 \
-            rsync unzip zip
+            qemu-user rsync unzip zip
 
       - name: Restore compiler cache
         id: ccache
@@ -299,6 +299,9 @@ jobs:
           python3 tests/host/test-bakasu-compat.py
           python3 tests/host/test-selinux-cleanup.py
 
+      - name: Test kernel-only boot image installation
+        run: python3 tests/host/test-ak3-ramdisk.py --anykernel anykernel3
+
       - name: Build Image.gz-dtb
         working-directory: kernel
         run: |
@@ -341,6 +344,8 @@ jobs:
             echo "kernel=$(git -C kernel rev-parse HEAD)"
             echo "bakasu_repo=${{ steps.config.outputs.bakasu_repo }}"
             echo "bakasu=$(git -C kernel/KernelSU rev-parse HEAD)"
+            echo "ak3_installer=$(sha256sum ak3/anykernel.sh | cut -c1-12)"
+            echo "boot_installation=kernel-only-preserve-ramdisk"
             echo "susfs=v2.3.0-vendored ($(sha256sum patches/lineage-4.9/susfs-4.9.patch | cut -c1-12))"
             echo "hybridmount=$(jq -r .hybridmount.version configs/vendored-upstreams.json)@$(jq -r .hybridmount.commit configs/vendored-upstreams.json) ($(sha256sum patches/lineage-4.9/hybridmount-4.9.patch | cut -c1-12))"
             echo "susfs_upstream=$(jq -r .susfs.commit configs/vendored-upstreams.json)"

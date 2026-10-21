@@ -229,6 +229,10 @@ artifact 包含：
 
 推荐使用支持 AnyKernel3 的内核刷写工具或自定义 recovery：
 
+安装器使用 AnyKernel3 的 `split_boot` / `flash_boot` 流程，仅替换内核及其附带
+DTB，保留原 ROM 的 ramdisk CPIO。安装过程无需 `mkbootfs`，避免不同刷写工具
+重建 ramdisk 时引入额外变化。CI 使用模拟 boot 镜像验证内容保留，不代替真机启动。
+
 1. 备份当前可正常启动的 `boot.img`；
 2. 确认下载的包与设备、Android 版本和当前 ROM 匹配；
 3. 用 `SHA256SUMS` 校验 AK3 ZIP；
@@ -237,6 +241,10 @@ artifact 包含：
 
 出现 bootloop 时，刷回备份的原始 `boot.img`。本项目不会修改 system/vendor 分区，
 但这并不能替代可靠的 boot 备份。
+
+若原有 boot 已损坏，须先恢复当前 ROM/槽位对应的可开机 boot，再测试新包；
+保留 ramdisk 的安装方式不会修复已经损坏的 ramdisk。启动故障请同时保存刷写日志
+和 recovery 中的 `/sys/fs/pstore/`（若存在），以区分刷写和内核运行问题。
 
 ## 手动构建
 
