@@ -176,8 +176,15 @@ jobs:
 
       - name: Install build dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
+          # Prefer the public Ubuntu archive over the slow Azure mirror.
+          if [ -f /etc/apt/apt-mirrors.txt ]; then
+            printf '%s\n' 'https://archive.ubuntu.com/ubuntu/' |
+              sudo tee /etc/apt/apt-mirrors.txt >/dev/null
+          fi
+          sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 \
+            -o Acquire::https::Timeout=30 update
+          sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 \
+            -o Acquire::https::Timeout=30 install -y --no-install-recommends \
             bc bison build-essential cpio flex gcc-aarch64-linux-gnu \
             libc6-dev-arm64-cross ccache git libelf-dev libssl-dev python3 \
             qemu-user qemu-system-arm rsync unzip zip
