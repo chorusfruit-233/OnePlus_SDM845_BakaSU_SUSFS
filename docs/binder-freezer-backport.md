@@ -1,6 +1,6 @@
 # Binder 冻结实验回移
 
-分支：`work/cgroup-v2-freezer-4.9`。本轮在已回移的 cgroup v2 freezer 上，
+该回移已从 `work/cgroup-v2-freezer-4.9` 合入 `main`。本轮在 cgroup v2 freezer 上，
 增加 Android 标准 Binder 事务冻结接口。WALT、BakaSU 跟踪 `main`、SUSFS、
 Hybridmount、Droidspaces 和 Mihomo 配置继续保留。本轮 Binder 功能待真机验证。
 
@@ -94,4 +94,3 @@ NoActive 日志中有无 ioctl 错误、持续冻结失败或卡住。
 两个 ioctl 的存在不能证明 NoActive 已利用所有接口，也不能替代 ROM 的
 cgroup 分组、task profiles、访问权限与应用策略适配。
 本轮不据此宣称 Android 系统 API 冻结器或新版本 Binder 通知全部兼容。
-待 OnePlus 6T / LOS 22.2 验证本轮包后再考虑合入主分支。

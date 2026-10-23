@@ -17,12 +17,12 @@
 
 主分支 `main` 已合入 Mihomo 热点下联 `packet_rewrite`
 和本机 cgroup socket-address 的 BPF 回移，以及 TC `socket_assign` 的
-direct lookup 与隔离网络命名空间路径，ZIP 标记为 `TC-eBPF-experimental`。
+direct lookup 与隔离网络命名空间路径。
 范围、源码版本及 QEMU/真机验证方法见
 [Mihomo eBPF 实验说明](docs/mihomo-ebpf-backport.md)。
 
-`work/cgroup-v2-freezer-4.9` 分支另外回移 cgroup v2 freezer 和标准 Binder
-冻结接口，供 NoActive 试用，ZIP 带有 `FreezerV2-Binder-experimental` 标记。
+主分支同时集成 cgroup v2 freezer 和标准 Binder 冻结接口，供 NoActive
+试用，ZIP 带有 `TC-eBPF-FreezerV2-Binder-experimental` 标记。
 机制、验证范围与真机测试方法见 [V2 冻结回移说明](docs/cgroup-v2-freezer-backport.md)
 和 [Binder 冻结回移说明](docs/binder-freezer-backport.md)。
 

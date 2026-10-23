@@ -1,6 +1,6 @@
 # cgroup v2 冻结实验回移
 
-分支：`work/cgroup-v2-freezer-4.9`。以用户已经验证的 Mihomo 主分支为基础，
+该回移已从 `work/cgroup-v2-freezer-4.9` 合入 `main`，以用户已经验证的 Mihomo 为基础，
 增加 V2 冻结，保留 WALT、v1 freezer、BakaSU 跟踪 `main` 和现有网络功能。
 用户反馈 NoActive 已支持 V2；后续 [Binder 冻结回移](binder-freezer-backport.md)
 另有补丁和试用包，本轮 Binder 功能仍待真机验证。
@@ -156,5 +156,5 @@ profiles 和 NoActive 附加模块；内核补丁不会替 ROM 或模块修改�
 本树已集成 ReKernel，避免另外叠加重复的 Binder hook。先用一个普通、无重要
 后台任务的应用检查后台冻结、返回前台恢复、重复切换，再测试消息与网络解冻。
 框架界面显示已冻结之外，还要检查实际进程暂停/恢复及是否有系统卡顿。
-虚拟机测试不覆盖 SDM845 的休眠唤醒、Android Binder 通信或 NoActive 闭源实现，
-这些仍需 OnePlus 6T / LOS 22.2 真机确认后再考虑合入主分支。
+虚拟机测试不覆盖 SDM845 的休眠唤醒、Android 系统框架或 NoActive 闭源实现，
+这些仍需 OnePlus 6T / LOS 22.2 真机确认。
