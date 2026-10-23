@@ -21,6 +21,10 @@ direct lookup 与隔离网络命名空间路径，ZIP 标记为 `TC-eBPF-experim
 范围、源码版本及 QEMU/真机验证方法见
 [Mihomo eBPF 实验说明](docs/mihomo-ebpf-backport.md)。
 
+`work/cgroup-v2-freezer-4.9` 分支另外回移 cgroup v2 freezer，供 NoActive V2
+试用，ZIP 带有 `FreezerV2-experimental` 标记。机制、验证范围与真机测试方法见
+[V2 冻结回移说明](docs/cgroup-v2-freezer-backport.md)。
+
 每次有效构建都会从固定的 LineageOS 4.9 最新基线开始，解析各上游项目的实际提交，
 应用本仓库维护的 4.9 适配补丁（SUSFS 以自包含补丁形式 vendored 在仓库内），
 最终输出可刷入的 AnyKernel3 ZIP。
@@ -162,8 +166,8 @@ CI 在编译前执行 `tests/host/test-selinux-cleanup.py`，从已准备的 Bak
   （`binder_can_update_transaction`/`binder_find_outdated_transaction_ilocked`，
   4.9 变体不含 `binder_buffer->pid` 与 `proc->outstanding_txns`）+ 事务上报
   hook；`kernel/signal.c`：SIGKILL/SIGTERM/SIGABRT/SIGQUIT 上报；
-- 4.9 适配：`JOBCTL_TRAP_FREEZE` 为 4.11+ 引入，`jobctl_frozen()` 回退使用
-  `frozen()/freezing()`；
+- V2 实验分支使用回移的 `JOBCTL_TRAP_FREEZE` 识别冻结任务；按功能宏判断，
+  避免 4.9 版本号让检测落回仅适用于旧 freezer 的路径；v1 检测继续保留；
 - 启用 IPv4/IPv6 入站 TCP 网络事件上报，通过 netlink 向 ReKernel 用户态
   发送应用 UID、IP 版本与数据长度；纯 ACK 等无数据且无 SYN/FIN/RST 的包不触发上报；
 - 配合 ReKernel 用户态（tombstone 冻结优化）使用；Actions 检查

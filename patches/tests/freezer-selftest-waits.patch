@@ -1,0 +1,104 @@
+Make Linux 5.10.272 freezer self-test waits follow the asynchronous ABI.
+
+- Consume inotify events instead of polling the same unread event repeatedly;
+  return failure on timeout instead of waiting forever.
+- Wait for the requested state after populated/other notifications, and stop
+  the migration wait once that state is reached.
+- Synchronize SIGSTOP with waitpid(WUNTRACED) before testing an already stopped
+  task. A queued signal alone is not a completed stop.
+- Allow the documented temporary accounting transition after PTRACE_DETACH,
+  while still requiring frozen=1 within a bounded wait.
+
+The detach race and waiting approach were discussed upstream in July 2026:
+https://mail-archive.com/linux-kernel@vger.kernel.org/msg2642983.html
+https://mail-archive.com/linux-kernel@vger.kernel.org/msg2642957.html
+
+No freezer operations, ptrace operations, or final state checks are removed.
+Supplemental tests verify userspace makes no progress during freeze/detach,
+and that thawing the cgroup does not resume a SIGSTOPped thread group.
+---
+diff --git a/tools/testing/selftests/cgroup/test_freezer.c b/tools/testing/selftests/cgroup/test_freezer.c
+index 23d8fa4..685a04a 100644
+--- a/tools/testing/selftests/cgroup/test_freezer.c
++++ b/tools/testing/selftests/cgroup/test_freezer.c
+@@ -101,7 +101,14 @@ static int cg_wait_for(int fd)
+ 		}
+ 
+ 		if (ret > 0 && fds.revents & POLLIN) {
+-			ret = 0;
++			char events[4096];
++
++			/* Consume notifications before waiting for the next change. */
++			ret = read(fd, events, sizeof(events)) > 0 ? 0 : -1;
++			break;
++		}
++		if (ret == 0 || (ret > 0 && !(fds.revents & POLLIN))) {
++			ret = -1;
+ 			break;
+ 		}
+ 	}
+@@ -133,8 +140,8 @@ static int cg_enter_and_wait_for_frozen(const char *cgroup, int pid,
+ 			break;
+ 
+ 		ret = cg_check_frozen(cgroup, frozen);
+-		if (ret)
+-			continue;
++		if (!ret)
++			break;
+ 	}
+ 
+ out:
+@@ -161,11 +168,15 @@ static int cg_freeze_wait(const char *cgroup, bool freeze)
+ 		goto out;
+ 	}
+ 
+-	ret = cg_wait_for(fd);
+-	if (ret)
+-		goto out;
+-
+-	ret = cg_check_frozen(cgroup, freeze);
++	/* A populated notification may precede the freeze completion. */
++	for (int attempt = 0; attempt < 10; attempt++) {
++		ret = cg_wait_for(fd);
++		if (ret)
++			break;
++		ret = cg_check_frozen(cgroup, freeze);
++		if (!ret)
++			break;
++	}
+ out:
+ 	close(fd);
+ 	return ret;
+@@ -682,6 +693,13 @@ static int test_cgfreezer_ptrace(const char *root)
+ 	if (ptrace(PTRACE_DETACH, pid, NULL, NULL))
+ 		goto cleanup;
+ 
++	/* Detach may transiently leave and re-enter frozen accounting. */
++	for (int attempt = 0; attempt < 1000; attempt++) {
++		if (!cg_read_strstr(cgroup, "cgroup.events", "frozen 1"))
++			break;
++		usleep(1000);
++	}
++
+ 	if (cg_check_frozen(cgroup, true))
+ 		goto cleanup;
+ 
+@@ -721,7 +739,7 @@ static int proc_check_stopped(int pid)
+  */
+ static int test_cgfreezer_stopped(const char *root)
+ {
+-	int pid, ret = KSFT_FAIL;
++	int pid, status, ret = KSFT_FAIL;
+ 	char *cgroup = NULL;
+ 
+ 	cgroup = cg_name(root, "cg_test_stopped");
+@@ -738,6 +756,9 @@ static int test_cgfreezer_stopped(const char *root)
+ 
+ 	if (kill(pid, SIGSTOP))
+ 		goto cleanup;
++	/* This test needs an already stopped task, not a queued SIGSTOP. */
++	if (waitpid(pid, &status, WUNTRACED) != pid || !WIFSTOPPED(status))
++		goto cleanup;
+ 
+ 	if (cg_check_frozen(cgroup, false))
+ 		goto cleanup;

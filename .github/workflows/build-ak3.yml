@@ -355,6 +355,34 @@ jobs:
             --probe artifacts/ebpf-tests/ebpf-backport.test \
             --log artifacts/ebpf-tests/qemu.log
 
+      - name: Build pinned upstream cgroup freezer self-tests
+        run: |
+          set -euo pipefail
+          freezer_repo=$(jq -r .repository configs/freezer-test.json)
+          freezer_version=$(jq -r .version configs/freezer-test.json)
+          git clone --bare --filter=blob:none --depth=1 --branch "v${freezer_version}" \
+            "$freezer_repo" "$RUNNER_TEMP/freezer-upstream.git"
+          bash tests/host/build-freezer-tests.sh \
+            "$RUNNER_TEMP/freezer-upstream.git" artifacts/freezer-tests
+
+      - name: Test cgroup v2 freezing, signals, migration and v1 coexistence
+        run: |
+          python3 tests/host/run-freezer-qemu.py \
+            --kernel kernel/out-bpf-qemu/arch/arm64/boot/Image \
+            --busybox anykernel3/tools/busybox \
+            --upstream-test artifacts/freezer-tests/test_freezer \
+            --backport-test artifacts/freezer-tests/freezer-backport.test \
+            --log artifacts/freezer-tests/qemu.log
+
+      - name: Upload cgroup freezer execution results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: freezer-runtime-tests
+          path: artifacts/freezer-tests/
+          if-no-files-found: ignore
+          retention-days: 14
+
       - name: Upload BPF execution results
         if: always()
         uses: actions/upload-artifact@v7
@@ -389,7 +417,7 @@ jobs:
           susfs_sha=$(sha256sum patches/lineage-4.9/susfs-4.9.patch | cut -c1-8)
           droidspaces_sha=$(sha256sum patches/lineage-4.9/droidspaces-4.9.patch | cut -c1-8)
           package="OnePlus6-6T-BakaSU-${bakasu_sha}-SUSFS-${susfs_sha}-DS7-${droidspaces_sha}-AK3.zip"
-          package="${package%-AK3.zip}-TC-eBPF-experimental-AK3.zip"
+          package="${package%-AK3.zip}-TC-eBPF-FreezerV2-experimental-AK3.zip"
           scripts/package-ak3.sh anykernel3 \
             kernel/out/arch/arm64/boot/Image.gz-dtb \
             ak3/anykernel.sh "artifacts/$package"
@@ -405,6 +433,10 @@ jobs:
             echo "ebpf_patch=$(sha256sum patches/lineage-4.9/mihomo-ebpf-4.9.patch | cut -c1-12)"
             echo "ebpf_cgroup_patch=$(sha256sum patches/lineage-4.9/mihomo-cgroup-4.9.patch | cut -c1-12)"
             echo "ebpf_tc_patch=$(sha256sum patches/lineage-4.9/mihomo-tc-4.9.patch | cut -c1-12)"
+            echo "freezer_scope=experimental-cgroup-v2"
+            echo "freezer_patch=$(sha256sum patches/lineage-4.9/cgroup-v2-freezer-4.9.patch | cut -c1-12)"
+            echo "freezer_source=linux-$(jq -r .version configs/freezer-test.json)@$(jq -r .commit configs/freezer-test.json)"
+            echo "binder_freezer_ioctl=not-backported"
             echo "susfs=v2.3.0-vendored ($(sha256sum patches/lineage-4.9/susfs-4.9.patch | cut -c1-12))"
             echo "hybridmount=$(jq -r .hybridmount.version configs/vendored-upstreams.json)@$(jq -r .hybridmount.commit configs/vendored-upstreams.json) ($(sha256sum patches/lineage-4.9/hybridmount-4.9.patch | cut -c1-12))"
             echo "susfs_upstream=$(jq -r .susfs.commit configs/vendored-upstreams.json)"
