@@ -1,0 +1,8 @@
+{
+  "repository": "https://github.com/liuran001/mihomo.git",
+  "commit": "02581ff38100494f1d700612850b7611bdf2099e",
+  "go": "1.26.10",
+  "scope": "shared-network packet_rewrite, local cgroup socket-address and TC socket_assign with isolated namespaces (direct lookup)",
+  "supplemental_tests": "tests/host/mihomo-cgroup-runtime_test.go",
+  "supplemental_tc_tests": "tests/host/mihomo-tc-runtime_test.go"
+}
