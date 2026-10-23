@@ -2,7 +2,7 @@
 """Boot the backported 4.9 ARM64 Image and execute real BPF tests in QEMU.
 
 The guest is disposable. No disk, network interface, or host filesystem is
-attached. Both test binaries must be statically linked Linux/ARM64 executables.
+attached. All test binaries must be statically linked Linux/ARM64 executables.
 """
 import argparse
 import gzip
@@ -27,6 +27,18 @@ MIHOMO_TESTS = (
     "TestCgroupTakeFallbackRetainsRedirectIntegration",
     "TestCgroupSetUDPTimeoutReachesTheControlMapIntegration",
     "TestCgroupBackendsShareACgroupIntegration",
+    "TestBackportTCLegacyLoadIntegration",
+    "TestBackportTCFailedAssignmentRetainsFlowIntegration",
+    "TestBackportTCSocketDeliveryIntegration",
+    "TestBackportTCReturnLifetimeIntegration",
+    "TestTCProgramRunIntegration",
+    "TestTCIPv6PathIsolationIntegration",
+    "TestTCFragmentPolicyIntegration",
+    "TestTCScopedBypassTablesIntegration",
+    "TestTCUDPAssignmentRetirementIntegration",
+    "TestTCAssignmentSweepGenerationAndBudgetIntegration",
+    "TestTCIsolatedVerifierIntegration",
+    "TestTCLocalClassifierLoadIntegration",
 )
 # 4.19 reports the blinded translated bytecode when hardening is enabled.
 # Mihomo conservatively refuses to replace owners it cannot identify; test its
@@ -43,6 +55,11 @@ OWNER_TESTS = (
     "TestInspectPassThroughIntegration",
 )
 DEFAULT_TEST_SELECTOR = "^(" + "|".join(MIHOMO_TESTS + OWNER_TESTS) + ")$"
+INBOUND_TESTS = (
+    "TestTCIsolatedRoundTripIntegration",
+    "TestTCIsolatedListenerPortCollisionIntegration",
+)
+INBOUND_TEST_SELECTOR = "^(" + "|".join(INBOUND_TESTS) + ")$"
 PROBE_TESTS = (
     "TestSubprogramExecution", "TestAtomicMapUpdates", "TestLegacyEBPFPacketLoads",
     "TestLRUEviction", "TestLPMUpdateDelete", "TestVerifierRejectsInvalidAccess",
@@ -52,6 +69,9 @@ PROBE_TESTS = (
     "TestCgroupExclusiveParent",
     "TestMapLookupAndDelete",
     "TestLRUSmallMapCPUHandoff",
+    "TestSocketReferenceValidation", "TestSocketLookupAndAssign",
+    "TestPacketPointersInvalidatedByHelpers", "TestSKBChangeHead",
+    "TestBoundedScalarSpills",
 )
 
 
@@ -68,9 +88,10 @@ def main():
     parser.add_argument("--kernel", required=True, type=Path)
     parser.add_argument("--busybox", required=True, type=Path)
     parser.add_argument("--mihomo-test", required=True, type=Path)
+    parser.add_argument("--inbound-test", required=True, type=Path)
     parser.add_argument("--probe", required=True, type=Path)
     parser.add_argument("--log", required=True, type=Path)
-    parser.add_argument("--timeout", type=int, default=420)
+    parser.add_argument("--timeout", type=int, default=900)
     parser.add_argument("--cpu", default="cortex-a57")
     parser.add_argument("--cpus", type=int, choices=range(1, 9), default=2)
     parser.add_argument("--modes", nargs="+", choices=("interpreter", "jit", "hardened"),
@@ -94,6 +115,7 @@ mount -t bpf bpf /sys/fs/bpf || exit 1
 mount -t cgroup2 none /sys/fs/cgroup || exit 1
 export SING_BOX_EBPF_INTEGRATION=1
 export GOMAXPROCS=2
+ulimit -l unlimited || exit 1
 failed=0
 /probe.test -test.v -test.run='^TestQEMUNetworkSetup$' || failed=1
 for mode in {' '.join(args.modes)}; do
@@ -108,6 +130,7 @@ for mode in {' '.join(args.modes)}; do
         hardened) /mihomo.test -test.v -test.timeout=90s -test.run={hardened_tests} || failed=1;;
         *) /mihomo.test -test.v -test.timeout=90s -test.run={tests} || failed=1;;
     esac
+    /mihomo-inbound.test -test.v -test.timeout=180s -test.run={shlex.quote(INBOUND_TEST_SELECTOR)} || failed=1
 done
 if [ "$failed" = 0 ]; then echo EBPF_QEMU_PASS; else echo EBPF_QEMU_FAIL; fi
 BACKPORT_QEMU_SHUTDOWN=1 /probe.test -test.run='^TestQEMUShutdown$'
@@ -123,6 +146,7 @@ while :; do /bin/busybox sleep 1; done
         entries.append((f"bin/{command}", b"busybox", 0o120777, (0, 0)))
     entries.append(("probe.test", args.probe.read_bytes(), 0o100755, (0, 0)))
     entries.append(("mihomo.test", args.mihomo_test.read_bytes(), 0o100755, (0, 0)))
+    entries.append(("mihomo-inbound.test", args.inbound_test.read_bytes(), 0o100755, (0, 0)))
     entries.append(("TRAILER!!!", b"", 0, (0, 0)))
     archive = b"".join(cpio_entry(n, data, i, mode, rdev)
                        for i, (n, data, mode, rdev) in enumerate(entries, 1))
@@ -148,7 +172,7 @@ while :; do /bin/busybox sleep 1; done
             r"--- (SKIP|FAIL):|Kernel panic|BUG:|WARNING:|no tests to run", output):
         raise SystemExit(f"BPF regression failed; see {args.log}")
     for mode in args.modes:
-        expected = PROBE_TESTS
+        expected = PROBE_TESTS + INBOUND_TESTS
         if args.mihomo_run == DEFAULT_TEST_SELECTOR:
             expected += MIHOMO_TESTS + (() if mode == "hardened" else OWNER_TESTS)
         marker = f"BPF_EXECUTION_MODE={mode}\n"

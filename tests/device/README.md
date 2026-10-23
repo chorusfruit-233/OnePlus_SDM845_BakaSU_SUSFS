@@ -174,6 +174,7 @@ per container rather than changing saved settings as part of a capability check.
 
 `ebpf-backport/` 是运行在实验内核上的 ARM64 测试包。它需要 root、bpffs 和
 cgroup v2；若统一层级不在 `/sys/fs/cgroup`，用 `BACKPORT_CGROUP_ROOT` 指定。
+socket helper、引用跟踪、报文指针失效和有界标量栈保存用例也包含在此测试包中。
 它可在 QEMU 或手机上运行。补充 Mihomo 收发用例只允许在可丢弃的 QEMU 中
 添加测试地址和路由；上游原有用例按各自的运行条件执行。
 构建、运行和支持范围见 [回移说明](../../docs/mihomo-ebpf-backport.md)。

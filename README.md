@@ -16,8 +16,9 @@
 本仓库不是 kernel 源码仓库，而是一套独立的拉取、移植、编译、验证和打包流程。
 
 当前实验分支 `work/mihomo-ebpf-4.9` 包含 Mihomo 热点下联 `packet_rewrite`
-和本机 cgroup socket-address 的 BPF 回移，ZIP 标记为 `eBPF-experimental`。
-`socket_assign` 尚未适配；范围、源码版本及 QEMU/真机验证方法见
+和本机 cgroup socket-address 的 BPF 回移，以及 TC `socket_assign` 的
+direct lookup 与隔离网络命名空间路径，ZIP 标记为 `TC-eBPF-experimental`。
+范围、源码版本及 QEMU/真机验证方法见
 [Mihomo eBPF 实验说明](docs/mihomo-ebpf-backport.md)。
 
 每次有效构建都会从固定的 LineageOS 4.9 最新基线开始，解析各上游项目的实际提交，

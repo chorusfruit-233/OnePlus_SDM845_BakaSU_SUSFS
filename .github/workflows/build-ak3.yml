@@ -331,7 +331,7 @@ jobs:
           git -C "$RUNNER_TEMP/mihomo-ebpf" checkout --detach FETCH_HEAD
           bash tests/host/build-ebpf-tests.sh "$RUNNER_TEMP/mihomo-ebpf" artifacts/ebpf-tests
 
-      - name: Boot 4.9 ARM64 and test Mihomo packet-rewrite and cgroup
+      - name: Boot 4.9 ARM64 and test Mihomo packet-rewrite, cgroup and TC
         run: |
           set -euo pipefail
           mkdir -p kernel/out-bpf-qemu
@@ -344,6 +344,7 @@ jobs:
             --kernel kernel/out-bpf-qemu/arch/arm64/boot/Image \
             --busybox anykernel3/tools/busybox \
             --mihomo-test artifacts/ebpf-tests/mihomo-ebpf.test \
+            --inbound-test artifacts/ebpf-tests/mihomo-ebpf-inbound.test \
             --probe artifacts/ebpf-tests/ebpf-backport.test \
             --log artifacts/ebpf-tests/qemu.log
 
@@ -381,7 +382,7 @@ jobs:
           susfs_sha=$(sha256sum patches/lineage-4.9/susfs-4.9.patch | cut -c1-8)
           droidspaces_sha=$(sha256sum patches/lineage-4.9/droidspaces-4.9.patch | cut -c1-8)
           package="OnePlus6-6T-BakaSU-${bakasu_sha}-SUSFS-${susfs_sha}-DS7-${droidspaces_sha}-AK3.zip"
-          package="${package%-AK3.zip}-cgroup-eBPF-experimental-AK3.zip"
+          package="${package%-AK3.zip}-TC-eBPF-experimental-AK3.zip"
           scripts/package-ak3.sh anykernel3 \
             kernel/out/arch/arm64/boot/Image.gz-dtb \
             ak3/anykernel.sh "artifacts/$package"
@@ -393,9 +394,10 @@ jobs:
             echo "bakasu=$(git -C kernel/KernelSU rev-parse HEAD)"
             echo "ak3_installer=$(sha256sum ak3/anykernel.sh | cut -c1-12)"
             echo "boot_installation=kernel-only-preserve-ramdisk"
-            echo "ebpf_scope=experimental-shared-packet-rewrite-and-local-cgroup"
+            echo "ebpf_scope=experimental-packet-rewrite-cgroup-and-isolated-tc-direct-lookup"
             echo "ebpf_patch=$(sha256sum patches/lineage-4.9/mihomo-ebpf-4.9.patch | cut -c1-12)"
             echo "ebpf_cgroup_patch=$(sha256sum patches/lineage-4.9/mihomo-cgroup-4.9.patch | cut -c1-12)"
+            echo "ebpf_tc_patch=$(sha256sum patches/lineage-4.9/mihomo-tc-4.9.patch | cut -c1-12)"
             echo "susfs=v2.3.0-vendored ($(sha256sum patches/lineage-4.9/susfs-4.9.patch | cut -c1-12))"
             echo "hybridmount=$(jq -r .hybridmount.version configs/vendored-upstreams.json)@$(jq -r .hybridmount.commit configs/vendored-upstreams.json) ($(sha256sum patches/lineage-4.9/hybridmount-4.9.patch | cut -c1-12))"
             echo "susfs_upstream=$(jq -r .susfs.commit configs/vendored-upstreams.json)"
