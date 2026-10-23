@@ -162,11 +162,21 @@ bpffs 需挂载到 `/sys/fs/bpf`，cgroup 用例需要可写的统一 cgroup v2 
 `ebpf-backport.test` 可用 `BACKPORT_CGROUP_ROOT` 指定其挂载点。真机测试应
 保存完整输出和当前内核构建信息。
 
+## 真机反馈（2026-10-23）
+
+本轮提供的测试版本为 [CI #121](https://github.com/chorusfruit-233/OnePlus_SDM845_BakaSU_SUSFS/actions/runs/39941834264)，
+构建器提交 `3ee4f40bc0a961001cb951bb40de86c10db3c099`。
+用户在一加 **6T / LOS 22.2** 上反馈成功刷入并开机，随后对本轮提供的基础
+BPF 回归、本机 TC 接管、热点 `socket_assign` / `packet_rewrite` 和启停测试
+步骤反馈“全部正常”。本项记录为**用户反馈的真机冒烟通过**，原始逐项日志、
+IPv6 网络条件及长时间运行记录未随反馈提交。
+
 ## 支持边界
 
-QEMU 运行验证不能证明一加 6T 能开机，也不能覆盖 LOS 的 SELinux、netd、
-硬件 WLAN、IPv6 路由和热点防火墙组合。此前直接进入 fastboot 的故障仍需
-对应 boot/pstore 证据和真机复测，不能用 BPF 测试通过代替。
+本轮真机开机和冒烟状态以上述用户反馈为准。QEMU 与单台设备的反馈覆盖已
+执行的场景，其他 ROM、硬件 WLAN、IPv6 路由和热点防火墙组合，以及长期
+稳定性仍需分别验证。此前直接进入 fastboot 的具体根因尚无 boot/pstore
+定位证据，本轮成功开机不用于推断该故障的具体原因。
 
 第三阶段实验 CI 的 ZIP 文件名带 `TC-eBPF-experimental`。Mihomo 可使用
 shared-network 的 `packet_rewrite`、本机 cgroup，以及 TC `socket_assign`
