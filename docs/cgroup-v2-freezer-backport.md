@@ -7,17 +7,32 @@
 ## 验证记录
 
 实现提交：`553d4dcfe7c447e971e4ad1386a649db91cc1698`。
+验证工作流提交：`fafd6f93abffbe26996093ad8978053f8a196ab7`。
+完整构建：[CI #125，2026-10-23，成功](https://github.com/chorusfruit-233/OnePlus_SDM845_BakaSU_SUSFS/actions/runs/39970035191)。
 
 | 检查 | 结果 |
 | --- | --- |
-| 10 个上游 + 8 个补充冻结用例 | 本地双 CPU、四 CPU QEMU 全通过 |
-| Mihomo 原始程序及补充回归 | 最终源码的解释器、JIT、加固 JIT 三模式全通过 |
+| 10 个上游 + 8 个补充冻结用例 | 本地 QEMU 8.2.2 / 10.0.13 的双 CPU、四 CPU 均通过；CI #125 双 CPU 全通过 |
+| Mihomo 原始程序及补充回归 | 最终源码在本地和 CI #125 的解释器、JIT、加固 JIT 三模式全通过 |
 | `CGROUPS=n`、`DEBUG_ATOMIC_SLEEP=y` | fork、signal、scheduler 对象编译通过 |
 | `CGROUPS=y`、`CGROUP_FREEZER=n`、`FREEZER=n`、`DEBUG_ATOMIC_SLEEP=y` | cgroup、fork、signal、scheduler 对象编译通过 |
 | 从基线应用回移补丁 | 八个文件与实际构建源码逐字节一致 |
-| 手机 `Image.gz-dtb` | 本地最终构建、CI #124 编译均通过 |
-| CI #124 | 手机编译和 Mihomo 三模式通过；测试辅助函数缺少 `O_TMPFILE` mode 被 FORTIFY 拒绝，已修正，等待新 CI |
+| 手机 `Image.gz-dtb` | 本地最终构建、CI #125 编译均通过 |
+| CI #125 | FORTIFY 测试构建、BakaSU ABI / SELinux 清理、保留 ramdisk 的安装回归、手机编译、BPF / freezer 运行测试及 AK3 打包全部通过 |
 | OnePlus 6T / LOS 22.2 / NoActive | 待真机反馈 |
+
+CI #124 的手机编译和 Mihomo 三模式已经通过，但上游测试辅助函数缺少
+`O_TMPFILE` 的 mode，被 FORTIFY 拒绝。该测试构建问题已修正，CI #125
+也通过了原先未能执行的冻结运行测试。
+
+试用包在 [CI #125 的 AK3 artifact](https://github.com/chorusfruit-233/OnePlus_SDM845_BakaSU_SUSFS/actions/runs/39970035191/artifacts/12509602830)
+中。先解压 artifact，再核对其中的 `SHA256SUMS`；实际刷入的内层 ZIP 为
+`OnePlus6-6T-BakaSU-dac2d186-SUSFS-fcd842d8-DS7-b47b17db-TC-eBPF-FreezerV2-experimental-AK3.zip`。
+CI 已通过该 ZIP 的完整性检查，输出的 SHA256 为：
+
+```text
+c91eaba08b2d8dec53a2942c126d4d1d40cc8700ea891c8718465bbd2b8b2bfa
+```
 
 ## NoActive 的 V2 是什么
 
