@@ -4,6 +4,21 @@
 增加 V2 冻结，保留 WALT、v1 freezer、BakaSU 跟踪 `main` 和现有网络功能。
 本分支尚无真机开机或 NoActive 使用反馈。
 
+## 验证记录
+
+实现提交：`553d4dcfe7c447e971e4ad1386a649db91cc1698`。
+
+| 检查 | 结果 |
+| --- | --- |
+| 10 个上游 + 8 个补充冻结用例 | 本地双 CPU、四 CPU QEMU 全通过 |
+| Mihomo 原始程序及补充回归 | 最终源码的解释器、JIT、加固 JIT 三模式全通过 |
+| `CGROUPS=n`、`DEBUG_ATOMIC_SLEEP=y` | fork、signal、scheduler 对象编译通过 |
+| `CGROUPS=y`、`CGROUP_FREEZER=n`、`FREEZER=n`、`DEBUG_ATOMIC_SLEEP=y` | cgroup、fork、signal、scheduler 对象编译通过 |
+| 从基线应用回移补丁 | 八个文件与实际构建源码逐字节一致 |
+| 手机 `Image.gz-dtb` | 本地最终构建、CI #124 编译均通过 |
+| CI #124 | 手机编译和 Mihomo 三模式通过；测试辅助函数缺少 `O_TMPFILE` mode 被 FORTIFY 拒绝，已修正，等待新 CI |
+| OnePlus 6T / LOS 22.2 / NoActive | 待真机反馈 |
+
 ## NoActive 的 V2 是什么
 
 [NoActive 使用手册](https://app.myflv.cn/guide/app.html#冻结方式)中的 V2
@@ -63,6 +78,11 @@ trap 时显式设置 `TIF_SIGPENDING`，保证返回用户态前处理冻结。
 SIGSTOP 用例先以 `waitpid(WUNTRACED)` 确认任务确实已停止，避免只发送信号后
 立即冻结/解冻，又在信号尚未处理时读取进程状态。各用例的最终断言均保留。
 
+`freezer-selftest-fortify.patch` 为共享辅助函数的 `open(O_TMPFILE)` 补上
+必需的 `0600` 创建模式。构建显式启用 `_FORTIFY_SOURCE=3`，本地与 Ubuntu
+CI 使用相同校验。测试程序在手机内核编译前构建；后续测试失败时仍保存有效的
+编译器缓存，但不会打包未通过全部检查的内核。
+
 QEMU 执行 10 个上游用例：大量任务、分组树、fork、冻结期间创建/删除子组、
 迁移、ptrace、已停止/已跟踪任务和 vfork。另执行 8 个补充行为测试：
 
@@ -99,6 +119,7 @@ python3 tests/host/run-freezer-qemu.py \
 或 Binder 冻结通知**。现有 ReKernel 事务/网络上报与这些 ioctl 是不同的功能。
 因此先关闭 NoActive 的 `freezeBinder`，测试手动选择的 V2；不能据此宣称
 Android 系统 API 冻结器或所有 NoActive 选项已经兼容。
+`MasterConfig.json` 的修改需要重启生效。
 
 刷入后先以 root 检查已有挂载及文件：
 

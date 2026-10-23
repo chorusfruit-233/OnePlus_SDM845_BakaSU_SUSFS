@@ -314,6 +314,16 @@ jobs:
       - name: Test kernel-only boot image installation
         run: python3 tests/host/test-ak3-ramdisk.py --anykernel anykernel3
 
+      - name: Build pinned upstream cgroup freezer self-tests
+        run: |
+          set -euo pipefail
+          freezer_repo=$(jq -r .repository configs/freezer-test.json)
+          freezer_version=$(jq -r .version configs/freezer-test.json)
+          git clone --bare --filter=blob:none --depth=1 --branch "v${freezer_version}" \
+            "$freezer_repo" "$RUNNER_TEMP/freezer-upstream.git"
+          bash tests/host/build-freezer-tests.sh \
+            "$RUNNER_TEMP/freezer-upstream.git" artifacts/freezer-tests
+
       - name: Build Image.gz-dtb
         working-directory: kernel
         run: |
@@ -354,16 +364,6 @@ jobs:
             --inbound-test artifacts/ebpf-tests/mihomo-ebpf-inbound.test \
             --probe artifacts/ebpf-tests/ebpf-backport.test \
             --log artifacts/ebpf-tests/qemu.log
-
-      - name: Build pinned upstream cgroup freezer self-tests
-        run: |
-          set -euo pipefail
-          freezer_repo=$(jq -r .repository configs/freezer-test.json)
-          freezer_version=$(jq -r .version configs/freezer-test.json)
-          git clone --bare --filter=blob:none --depth=1 --branch "v${freezer_version}" \
-            "$freezer_repo" "$RUNNER_TEMP/freezer-upstream.git"
-          bash tests/host/build-freezer-tests.sh \
-            "$RUNNER_TEMP/freezer-upstream.git" artifacts/freezer-tests
 
       - name: Test cgroup v2 freezing, signals, migration and v1 coexistence
         run: |
@@ -495,7 +495,7 @@ jobs:
           echo "Created release: $tag"
 
       - name: Save compiler cache
-        if: success() && steps.ccache.outputs.cache-hit != 'true'
+        if: ${{ !cancelled() && steps.ccache.outcome == 'success' && steps.ccache.outputs.cache-hit != 'true' }}
         uses: actions/cache/save@v5
         with:
           path: .ccache

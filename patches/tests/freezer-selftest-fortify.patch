@@ -1,0 +1,15 @@
+Provide the required creation mode for the Linux 5.10 test utility's O_TMPFILE.
+
+Ubuntu 24.04's fortified libc rejects this two-argument open() call even
+though the freezer suite does not exercise the shared page-cache helper.
+Use a private temporary-file mode and keep FORTIFY enabled.
+---
+diff --git a/tools/testing/selftests/cgroup/cgroup_util.c b/tools/testing/selftests/cgroup/cgroup_util.c
+--- a/tools/testing/selftests/cgroup/cgroup_util.c
++++ b/tools/testing/selftests/cgroup/cgroup_util.c
+@@ -454,4 +454,4 @@
+ int get_temp_fd(void)
+ {
+-	return open(".", O_TMPFILE | O_RDWR | O_EXCL);
++	return open(".", O_TMPFILE | O_RDWR | O_EXCL, 0600);
+ }

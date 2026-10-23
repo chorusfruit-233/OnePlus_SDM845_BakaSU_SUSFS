@@ -24,16 +24,19 @@ for name in "${files[@]}"; do
     git -C "$upstream" show "$expected:$name" > "$stage/$name"
 done
 git -C "$stage" init -q
-git -C "$stage" apply --check "$repo/patches/tests/freezer-selftest-waits.patch"
-git -C "$stage" apply "$repo/patches/tests/freezer-selftest-waits.patch"
+for patch in freezer-selftest-waits.patch freezer-selftest-fortify.patch; do
+    git -C "$stage" apply --check "$repo/patches/tests/$patch"
+    git -C "$stage" apply "$repo/patches/tests/$patch"
+done
 compiler=${CROSS_COMPILE:-aarch64-linux-gnu-}gcc
-"$compiler" -O2 -Wall -Wextra -static -pthread \
+"$compiler" -O2 -D_FORTIFY_SOURCE=3 -Wall -Wextra -static -pthread \
     "$stage/tools/testing/selftests/cgroup/test_freezer.c" \
     "$stage/tools/testing/selftests/cgroup/cgroup_util.c" \
     -o "$output/test_freezer"
-"$compiler" -std=gnu11 -O2 -Wall -Wextra -Werror -static -pthread \
+"$compiler" -std=gnu11 -O2 -D_FORTIFY_SOURCE=3 -Wall -Wextra -Werror -static -pthread \
     "$repo/tests/host/freezer-backport.c" -o "$output/freezer-backport.test"
 cp "$repo/configs/freezer-test.json" "$output/upstream.json"
 cp "$repo/patches/tests/freezer-selftest-waits.patch" "$output/"
-(cd "$output" && sha256sum freezer-selftest-waits.patch test_freezer \
-    freezer-backport.test > SHA256SUMS)
+cp "$repo/patches/tests/freezer-selftest-fortify.patch" "$output/"
+(cd "$output" && sha256sum freezer-selftest-waits.patch \
+    freezer-selftest-fortify.patch test_freezer freezer-backport.test > SHA256SUMS)
