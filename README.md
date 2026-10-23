@@ -14,6 +14,12 @@
 </div>
 
 本仓库不是 kernel 源码仓库，而是一套独立的拉取、移植、编译、验证和打包流程。
+
+当前实验分支 `work/mihomo-ebpf-4.9` 包含 Mihomo 热点下联 `packet_rewrite`
+的 BPF 回移，ZIP 标记为 `eBPF-experimental`。本机接管和 `socket_assign`
+尚未适配；范围、源码版本及 QEMU/真机验证方法见
+[Mihomo eBPF 实验说明](docs/mihomo-ebpf-backport.md)。
+
 每次有效构建都会从固定的 LineageOS 4.9 最新基线开始，解析各上游项目的实际提交，
 应用本仓库维护的 4.9 适配补丁（SUSFS 以自包含补丁形式 vendored 在仓库内），
 最终输出可刷入的 AnyKernel3 ZIP。

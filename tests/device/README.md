@@ -169,3 +169,9 @@ A systemd 258+ rootfs still requires newer kernel APIs. Use a compatible rootfs,
 such as Ubuntu 24.04, Debian 12/13, Alpine or Void. The optional Force cgroup v1
 setting can help old systemd rootfs images on this kernel; change it explicitly
 per container rather than changing saved settings as part of a capability check.
+
+## Mihomo eBPF 实验回移测试
+
+`ebpf-backport/` 是运行在实验内核上的 ARM64 测试包。它需要 root 和 bpffs，
+可与 Mihomo 上游的真实报文集成测试一起在 QEMU 或手机上运行。
+构建、运行和支持范围见 [回移说明](../../docs/mihomo-ebpf-backport.md)。

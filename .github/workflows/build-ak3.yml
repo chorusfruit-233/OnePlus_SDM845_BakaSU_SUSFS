@@ -180,7 +180,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             bc bison build-essential cpio flex gcc-aarch64-linux-gnu \
             libc6-dev-arm64-cross ccache git libelf-dev libssl-dev python3 \
-            qemu-user rsync unzip zip
+            qemu-user qemu-system-arm rsync unzip zip
 
       - name: Restore compiler cache
         id: ccache
@@ -238,7 +238,12 @@ jobs:
         run: |
           make O=out ARCH='${{ steps.config.outputs.arch }}' \
             '${{ steps.config.outputs.defconfig }}'
+          bash scripts/kconfig/merge_config.sh -m -O out out/.config \
+            "$GITHUB_WORKSPACE/configs/mihomo-ebpf-4.9.fragment"
           make O=out ARCH='${{ steps.config.outputs.arch }}' olddefconfig
+          grep -qx 'CONFIG_BPF_JIT=y' out/.config
+          grep -qx 'CONFIG_BPF_UNPRIV_DEFAULT_OFF=y' out/.config
+          grep -qx 'CONFIG_SCHED_WALT=y' out/.config
           grep -E '^CONFIG_KSU(|_SUSFS.*)=y$' out/.config
           grep -qx 'CONFIG_KSU_SUSFS_OPEN_REDIRECT=y' out/.config
           grep -qx 'CONFIG_HYBRIDMOUNT=y' out/.config
@@ -310,6 +315,47 @@ jobs:
             KCFLAGS=-Wno-error -j"$(nproc)" Image.gz-dtb
           ccache --show-stats
 
+      - name: Set up Go for real Mihomo BPF regression tests
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.26.10'
+          cache-dependency-path: tests/device/ebpf-backport/go.sum
+
+      - name: Build pinned Mihomo integration tests
+        run: |
+          set -euo pipefail
+          mihomo_repo=$(jq -r .repository configs/mihomo-ebpf-test.json)
+          mihomo_commit=$(jq -r .commit configs/mihomo-ebpf-test.json)
+          git init -q "$RUNNER_TEMP/mihomo-ebpf"
+          git -C "$RUNNER_TEMP/mihomo-ebpf" fetch --depth=1 "$mihomo_repo" "$mihomo_commit"
+          git -C "$RUNNER_TEMP/mihomo-ebpf" checkout --detach FETCH_HEAD
+          bash tests/host/build-ebpf-tests.sh "$RUNNER_TEMP/mihomo-ebpf" artifacts/ebpf-tests
+
+      - name: Boot 4.9 ARM64 and test BPF interpreter and JIT
+        run: |
+          set -euo pipefail
+          mkdir -p kernel/out-bpf-qemu
+          cp tests/host/bpf-qemu.config kernel/out-bpf-qemu/.config
+          make -C kernel O=out-bpf-qemu ARCH=arm64 olddefconfig
+          make -C kernel O=out-bpf-qemu ARCH=arm64 \
+            CROSS_COMPILE="ccache aarch64-linux-gnu-" \
+            KCFLAGS=-Wno-error -j"$(nproc)" Image
+          python3 tests/host/run-ebpf-qemu.py \
+            --kernel kernel/out-bpf-qemu/arch/arm64/boot/Image \
+            --busybox anykernel3/tools/busybox \
+            --mihomo-test artifacts/ebpf-tests/mihomo-ebpf.test \
+            --probe artifacts/ebpf-tests/ebpf-backport.test \
+            --log artifacts/ebpf-tests/qemu.log
+
+      - name: Upload BPF execution results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ebpf-runtime-tests
+          path: artifacts/ebpf-tests/
+          if-no-files-found: ignore
+          retention-days: 14
+
       - name: Build device syscall regression test
         run: |
           set -euo pipefail
@@ -335,6 +381,7 @@ jobs:
           susfs_sha=$(sha256sum patches/lineage-4.9/susfs-4.9.patch | cut -c1-8)
           droidspaces_sha=$(sha256sum patches/lineage-4.9/droidspaces-4.9.patch | cut -c1-8)
           package="OnePlus6-6T-BakaSU-${bakasu_sha}-SUSFS-${susfs_sha}-DS7-${droidspaces_sha}-AK3.zip"
+          package="${package%-AK3.zip}-eBPF-experimental-AK3.zip"
           scripts/package-ak3.sh anykernel3 \
             kernel/out/arch/arm64/boot/Image.gz-dtb \
             ak3/anykernel.sh "artifacts/$package"
@@ -346,6 +393,8 @@ jobs:
             echo "bakasu=$(git -C kernel/KernelSU rev-parse HEAD)"
             echo "ak3_installer=$(sha256sum ak3/anykernel.sh | cut -c1-12)"
             echo "boot_installation=kernel-only-preserve-ramdisk"
+            echo "ebpf_scope=experimental-shared-packet-rewrite"
+            echo "ebpf_patch=$(sha256sum patches/lineage-4.9/mihomo-ebpf-4.9.patch | cut -c1-12)"
             echo "susfs=v2.3.0-vendored ($(sha256sum patches/lineage-4.9/susfs-4.9.patch | cut -c1-12))"
             echo "hybridmount=$(jq -r .hybridmount.version configs/vendored-upstreams.json)@$(jq -r .hybridmount.commit configs/vendored-upstreams.json) ($(sha256sum patches/lineage-4.9/hybridmount-4.9.patch | cut -c1-12))"
             echo "susfs_upstream=$(jq -r .susfs.commit configs/vendored-upstreams.json)"
@@ -368,7 +417,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: OnePlus6-6T-lineage-4.9-ak3
-          path: artifacts/
+          path: |
+            artifacts/
+            !artifacts/ebpf-tests/**
           if-no-files-found: error
           retention-days: 14
 
