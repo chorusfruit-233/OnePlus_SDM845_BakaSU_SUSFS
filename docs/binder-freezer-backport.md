@@ -33,6 +33,9 @@ ARM64 和 32 位兼容进程使用相同编号和布局。
 
 ## 验证
 
+实现提交：`dcafe4ac8666f70d2d668e864ffbcda7e766c48d`。
+完整构建：[CI #126，2026-10-23，成功](https://github.com/chorusfruit-233/OnePlus_SDM845_BakaSU_SUSFS/actions/runs/39987204988)。
+
 | 检查 | 结果 |
 | --- | --- |
 | 手机 `Image.gz-dtb` 完整构建 | 本地通过 |
@@ -42,7 +45,7 @@ ARM64 和 32 位兼容进程使用相同编号和布局。
 | Mihomo | 最终 guest 内核的解释器、JIT、加固 JIT 三模式全通过 |
 | BakaSU ABI / SELinux 清理、SUSFS / Droidspaces 配置检查 | 全通过 |
 | 从基线应用 Binder 补丁 | 两个文件与实际构建源码逐字节一致 |
-| GitHub CI | 待本轮完整构建 |
+| GitHub CI #126 | 手机完整编译、ARM64 / ARM32 各 14 项 Binder 测试、18 项 V2 测试、Mihomo 三模式及 AK3 打包全部通过 |
 | OnePlus 6T / LOS 22.2 / NoActive Binder | 待真机反馈 |
 
 测试使用真实 `/dev/binder`、`/dev/vndbinder`、`mmap`、`BINDER_WRITE_READ`
@@ -69,6 +72,16 @@ python3 tests/host/run-binder-freezer-qemu.py \
 
 本轮 ZIP 带 `TC-eBPF-FreezerV2-Binder-experimental-AK3.zip` 标记，
 `build-info.txt` 应记录两个已回移的 Binder ioctl 和本补丁校验值。
+[下载 CI #126 的 AK3 artifact](https://github.com/chorusfruit-233/OnePlus_SDM845_BakaSU_SUSFS/actions/runs/39987204988/artifacts/12516063827)，
+先解压 artifact，核对其中的 `SHA256SUMS`，实际刷入内层 ZIP：
+
+```text
+OnePlus6-6T-BakaSU-dac2d186-SUSFS-fcd842d8-DS7-b47b17db-TC-eBPF-FreezerV2-Binder-experimental-AK3.zip
+SHA256: aed8b21626f20a91a3af2f0fd60fd986351aebbfba062bdd295cad7d706fad81
+```
+
+该 ZIP 已通过 CI 中的完整性检查。原生及兼容事务执行结果另上传为
+`binder-freezer-runtime-tests`。
 [此前 CI #125](https://github.com/chorusfruit-233/OnePlus_SDM845_BakaSU_SUSFS/actions/runs/39970035191)
 的 `FreezerV2-experimental` 包只有 V2，没有本轮 Binder 接口。
 

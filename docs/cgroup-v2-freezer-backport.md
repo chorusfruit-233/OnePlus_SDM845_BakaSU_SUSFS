@@ -114,8 +114,9 @@ QEMU 执行 10 个上游用例：大量任务、分组树、fork、冻结期间�
 运行器要求所有用例实际通过；跳过、超时、内核 warning、BUG 或 panic 均失败。
 补充测试要求专用 QEMU 启动标记，不可直接在手机上执行。
 CI 复用 Mihomo 的 ARM64 guest 内核，在原有三种 BPF 执行模式回归之后执行
-freezer 测试，上传 `freezer-runtime-tests`。通过所有检查后才生成
-`TC-eBPF-FreezerV2-experimental-AK3.zip`。
+freezer 测试，上传 `freezer-runtime-tests`。V2 初版 CI #125 生成
+`TC-eBPF-FreezerV2-experimental-AK3.zip`；后续含 Binder 的包另带
+`FreezerV2-Binder-experimental` 标记，通过全部检查后才打包。
 
 本地复现：
 
