@@ -174,11 +174,16 @@ git -C "$kernel_root" apply --whitespace=nowarn "$patch_root/mihomo-tc-4.9.patch
 git -C "$kernel_root" apply --check "$patch_root/cgroup-v2-freezer-4.9.patch"
 git -C "$kernel_root" apply --whitespace=nowarn "$patch_root/cgroup-v2-freezer-4.9.patch"
 
+# Binder transaction freezing uses the existing ReKernel and V2 adaptations.
+git -C "$kernel_root" apply --check "$patch_root/binder-freezer-4.9.patch"
+git -C "$kernel_root" apply --whitespace=nowarn "$patch_root/binder-freezer-4.9.patch"
+
 echo "BakaSU commit: $(git -C "$kernel_root/KernelSU" rev-parse HEAD)"
 echo "Mihomo eBPF backport: $(sha256sum "$patch_root/mihomo-ebpf-4.9.patch" | cut -c1-12)"
 echo "Mihomo cgroup backport: $(sha256sum "$patch_root/mihomo-cgroup-4.9.patch" | cut -c1-12)"
 echo "Mihomo TC backport: $(sha256sum "$patch_root/mihomo-tc-4.9.patch" | cut -c1-12)"
 echo "Cgroup v2 freezer: $(sha256sum "$patch_root/cgroup-v2-freezer-4.9.patch" | cut -c1-12)"
+echo "Binder freezer: $(sha256sum "$patch_root/binder-freezer-4.9.patch" | cut -c1-12)"
 echo "BakaSU SELinux adaptation: $(sha256sum "$patch_root/bakasu-selinux-4.9.patch" | cut -c1-12)"
 echo "SUSFS patch: $patch_root/susfs-4.9.patch ($(sha256sum "$patch_root/susfs-4.9.patch" | cut -c1-12))"
 echo "Hybrid Mount VFS patch: $patch_root/hybridmount-4.9.patch ($(sha256sum "$patch_root/hybridmount-4.9.patch" | cut -c1-12))"

@@ -185,8 +185,8 @@ jobs:
             -o Acquire::https::Timeout=30 update
           sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 \
             -o Acquire::https::Timeout=30 install -y --no-install-recommends \
-            bc bison build-essential cpio flex gcc-aarch64-linux-gnu \
-            libc6-dev-arm64-cross ccache git libelf-dev libssl-dev python3 \
+            bc bison build-essential cpio flex gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf \
+            libc6-dev-arm64-cross libc6-dev-armhf-cross ccache git libelf-dev libssl-dev python3 \
             qemu-user qemu-system-arm rsync unzip zip
 
       - name: Restore compiler cache
@@ -324,6 +324,9 @@ jobs:
           bash tests/host/build-freezer-tests.sh \
             "$RUNNER_TEMP/freezer-upstream.git" artifacts/freezer-tests
 
+      - name: Build Binder freezer transaction tests
+        run: bash tests/host/build-binder-freezer-tests.sh kernel artifacts/binder-freezer-tests
+
       - name: Build Image.gz-dtb
         working-directory: kernel
         run: |
@@ -374,6 +377,24 @@ jobs:
             --backport-test artifacts/freezer-tests/freezer-backport.test \
             --log artifacts/freezer-tests/qemu.log
 
+      - name: Test Binder freezing with real cross-process transactions
+        run: |
+          python3 tests/host/run-binder-freezer-qemu.py \
+            --kernel kernel/out-bpf-qemu/arch/arm64/boot/Image \
+            --busybox anykernel3/tools/busybox \
+            --test artifacts/binder-freezer-tests/binder-freezer.test \
+            --compat-test artifacts/binder-freezer-tests/binder-freezer-arm32.test \
+            --log artifacts/binder-freezer-tests/qemu.log
+
+      - name: Upload Binder freezer execution results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: binder-freezer-runtime-tests
+          path: artifacts/binder-freezer-tests/
+          if-no-files-found: ignore
+          retention-days: 14
+
       - name: Upload cgroup freezer execution results
         if: always()
         uses: actions/upload-artifact@v7
@@ -417,7 +438,7 @@ jobs:
           susfs_sha=$(sha256sum patches/lineage-4.9/susfs-4.9.patch | cut -c1-8)
           droidspaces_sha=$(sha256sum patches/lineage-4.9/droidspaces-4.9.patch | cut -c1-8)
           package="OnePlus6-6T-BakaSU-${bakasu_sha}-SUSFS-${susfs_sha}-DS7-${droidspaces_sha}-AK3.zip"
-          package="${package%-AK3.zip}-TC-eBPF-FreezerV2-experimental-AK3.zip"
+          package="${package%-AK3.zip}-TC-eBPF-FreezerV2-Binder-experimental-AK3.zip"
           scripts/package-ak3.sh anykernel3 \
             kernel/out/arch/arm64/boot/Image.gz-dtb \
             ak3/anykernel.sh "artifacts/$package"
@@ -436,7 +457,10 @@ jobs:
             echo "freezer_scope=experimental-cgroup-v2"
             echo "freezer_patch=$(sha256sum patches/lineage-4.9/cgroup-v2-freezer-4.9.patch | cut -c1-12)"
             echo "freezer_source=linux-$(jq -r .version configs/freezer-test.json)@$(jq -r .commit configs/freezer-test.json)"
-            echo "binder_freezer_ioctl=not-backported"
+            echo "binder_freezer_ioctl=BINDER_FREEZE,BINDER_GET_FROZEN_INFO"
+            echo "binder_freezer_patch=$(sha256sum patches/lineage-4.9/binder-freezer-4.9.patch | cut -c1-12)"
+            echo "binder_freezer_source=$(jq -r .commit configs/binder-freezer.json)"
+            echo "binder_freeze_notifications=not-backported"
             echo "susfs=v2.3.0-vendored ($(sha256sum patches/lineage-4.9/susfs-4.9.patch | cut -c1-12))"
             echo "hybridmount=$(jq -r .hybridmount.version configs/vendored-upstreams.json)@$(jq -r .hybridmount.commit configs/vendored-upstreams.json) ($(sha256sum patches/lineage-4.9/hybridmount-4.9.patch | cut -c1-12))"
             echo "susfs_upstream=$(jq -r .susfs.commit configs/vendored-upstreams.json)"

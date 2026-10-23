@@ -1,0 +1,10 @@
+{
+  "repository": "https://github.com/aosp-mirror/kernel_common",
+  "commit": "9536d991bb596a507f46aafe6b5f64fe9e599e78",
+  "branch": "android13-5.10",
+  "files": {
+    "drivers/android/binder.c": "b4b4e2f58b4b2ae2e927f7fa14289581a2364f4116c19a1364dfe21a050d7cb8",
+    "drivers/android/binder_internal.h": "7cfab8fc320bab8e50c01a885e5e1ce984f673f4ebfe7cd49f6c0b4f3deb8151",
+    "include/uapi/linux/android/binder.h": "8727561af69913e6da45b7f5c80bf86f60baf408ec37def70054dc3e70bfe95d"
+  }
+}

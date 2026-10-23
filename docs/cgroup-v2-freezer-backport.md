@@ -2,7 +2,8 @@
 
 分支：`work/cgroup-v2-freezer-4.9`。以用户已经验证的 Mihomo 主分支为基础，
 增加 V2 冻结，保留 WALT、v1 freezer、BakaSU 跟踪 `main` 和现有网络功能。
-本分支尚无真机开机或 NoActive 使用反馈。
+用户反馈 NoActive 已支持 V2；后续 [Binder 冻结回移](binder-freezer-backport.md)
+另有补丁和试用包，本轮 Binder 功能仍待真机验证。
 
 ## 验证记录
 
@@ -130,10 +131,11 @@ python3 tests/host/run-freezer-qemu.py \
 
 ## 手机上验证 NoActive
 
-本次只回移进程冻结器，**没有实现 `BINDER_FREEZE` / `BINDER_GET_FROZEN_INFO`
-或 Binder 冻结通知**。现有 ReKernel 事务/网络上报与这些 ioctl 是不同的功能。
-因此先关闭 NoActive 的 `freezeBinder`，测试手动选择的 V2；不能据此宣称
-Android 系统 API 冻结器或所有 NoActive 选项已经兼容。
+本页记录的 CI #125 包只含进程冻结器，没有 `BINDER_FREEZE` /
+`BINDER_GET_FROZEN_INFO`。后续实验包已经增加这两个 ioctl，详见
+[Binder 冻结回移说明](binder-freezer-backport.md)，标准 Binder 冻结通知仍未回移。
+先关闭 NoActive 的 `freezeBinder` 验证 V2，再按对应包的说明测试 Binder 选项；
+不能据此宣称 Android 系统 API 冻结器或所有 NoActive 选项已经兼容。
 `MasterConfig.json` 的修改需要重启生效。
 
 刷入后先以 root 检查已有挂载及文件：

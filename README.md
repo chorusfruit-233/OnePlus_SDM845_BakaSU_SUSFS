@@ -21,9 +21,10 @@ direct lookup 与隔离网络命名空间路径，ZIP 标记为 `TC-eBPF-experim
 范围、源码版本及 QEMU/真机验证方法见
 [Mihomo eBPF 实验说明](docs/mihomo-ebpf-backport.md)。
 
-`work/cgroup-v2-freezer-4.9` 分支另外回移 cgroup v2 freezer，供 NoActive V2
-试用，ZIP 带有 `FreezerV2-experimental` 标记。机制、验证范围与真机测试方法见
-[V2 冻结回移说明](docs/cgroup-v2-freezer-backport.md)。
+`work/cgroup-v2-freezer-4.9` 分支另外回移 cgroup v2 freezer 和标准 Binder
+冻结接口，供 NoActive 试用，ZIP 带有 `FreezerV2-Binder-experimental` 标记。
+机制、验证范围与真机测试方法见 [V2 冻结回移说明](docs/cgroup-v2-freezer-backport.md)
+和 [Binder 冻结回移说明](docs/binder-freezer-backport.md)。
 
 每次有效构建都会从固定的 LineageOS 4.9 最新基线开始，解析各上游项目的实际提交，
 应用本仓库维护的 4.9 适配补丁（SUSFS 以自包含补丁形式 vendored 在仓库内），
