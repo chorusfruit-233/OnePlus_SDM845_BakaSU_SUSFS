@@ -19,13 +19,39 @@ MIHOMO_TESTS = (
     "TestSharedRewritePolicyIntegration",
     "TestSharedNetworkSetUDPTimeoutReachesTheControlMapIntegration",
     "TestSharedRewriteUDPChecksumDeliveryIntegration",
+    "TestBackportCgroupSocketRoundTripIntegration",
+    "TestBackportCgroupOwnerSafetyIntegration",
+    "TestCgroupProgramMatrixIntegration",
+    "TestCgroupUDPFlowCacheRevalidatesRedirectIntegration",
+    "TestCgroupBypassRefreshAndRollbackIntegration",
+    "TestCgroupTakeFallbackRetainsRedirectIntegration",
+    "TestCgroupSetUDPTimeoutReachesTheControlMapIntegration",
+    "TestCgroupBackendsShareACgroupIntegration",
 )
-DEFAULT_TEST_SELECTOR = "^(" + "|".join(MIHOMO_TESTS) + ")$"
+# 4.19 reports the blinded translated bytecode when hardening is enabled.
+# Mihomo conservatively refuses to replace owners it cannot identify; test its
+# pass-through owner inspection in the two modes that expose plain bytecode.
+OWNER_TESTS = (
+    "TestCgroupDetachRestoresADisplacedOwnerIntegration",
+    "TestCgroupBackendTakesOverPinnedNetdPlaceholderIntegration",
+    "TestCgroupBackendTakesOverUnpinnedPassThroughOwnerIntegration",
+    "TestCgroupBackendReclaimRestoresPinnedNetdPlaceholderIntegration",
+    "TestCgroupBackendReclaimKeepsNetdHookSingleProgramIntegration",
+    "TestCgroupBackendReclaimDetachesStaleProgramWithoutNetdIntegration",
+    "TestCgroupBackendKeepsNetdProgramWithLogicIntegration",
+    "TestOptionalCgroupAttachKeepsNetdPlaceholderIntegration",
+    "TestInspectPassThroughIntegration",
+)
+DEFAULT_TEST_SELECTOR = "^(" + "|".join(MIHOMO_TESTS + OWNER_TESTS) + ")$"
 PROBE_TESTS = (
     "TestSubprogramExecution", "TestAtomicMapUpdates", "TestLegacyEBPFPacketLoads",
     "TestLRUEviction", "TestLPMUpdateDelete", "TestVerifierRejectsInvalidAccess",
     "TestUnsupportedTypesRejected", "TestPinnedMapRoundTrip", "TestRunUserBufferBounds",
     "TestSeccompCompatibility", "TestClassicSocketFilters",
+    "TestCgroupContextValidation", "TestCgroupQueryAndInheritance",
+    "TestCgroupExclusiveParent",
+    "TestMapLookupAndDelete",
+    "TestLRUSmallMapCPUHandoff",
 )
 
 
@@ -56,15 +82,20 @@ def main():
     if not qemu:
         parser.error("install qemu-system-arm or set --qemu")
     tests = shlex.quote(args.mihomo_run)
+    hardened_tests = shlex.quote("^(" + "|".join(MIHOMO_TESTS) + ")$"
+                                if args.mihomo_run == DEFAULT_TEST_SELECTOR else args.mihomo_run)
     init = f"""#!/bin/sh
 export PATH=/bin
 mount -t proc proc /proc || exit 1
 mount -t sysfs sysfs /sys || exit 1
 mount -t devtmpfs devtmpfs /dev || exit 1
 mount -t bpf bpf /sys/fs/bpf || exit 1
+/bin/busybox mkdir -p /sys/fs/cgroup || exit 1
+mount -t cgroup2 none /sys/fs/cgroup || exit 1
 export SING_BOX_EBPF_INTEGRATION=1
 export GOMAXPROCS=2
 failed=0
+/probe.test -test.v -test.run='^TestQEMUNetworkSetup$' || failed=1
 for mode in {' '.join(args.modes)}; do
     echo "BPF_EXECUTION_MODE=$mode"
     case "$mode" in
@@ -73,7 +104,10 @@ for mode in {' '.join(args.modes)}; do
         hardened) echo 1 > /proc/sys/net/core/bpf_jit_enable; echo 2 > /proc/sys/net/core/bpf_jit_harden;;
     esac
     /probe.test -test.v -test.timeout=90s || failed=1
-    /mihomo.test -test.v -test.timeout=90s -test.run={tests} || failed=1
+    case "$mode" in
+        hardened) /mihomo.test -test.v -test.timeout=90s -test.run={hardened_tests} || failed=1;;
+        *) /mihomo.test -test.v -test.timeout=90s -test.run={tests} || failed=1;;
+    esac
 done
 if [ "$failed" = 0 ]; then echo EBPF_QEMU_PASS; else echo EBPF_QEMU_FAIL; fi
 BACKPORT_QEMU_SHUTDOWN=1 /probe.test -test.run='^TestQEMUShutdown$'
@@ -113,8 +147,10 @@ while :; do /bin/busybox sleep 1; done
     if result.returncode or "EBPF_QEMU_PASS" not in output or re.search(
             r"--- (SKIP|FAIL):|Kernel panic|BUG:|WARNING:|no tests to run", output):
         raise SystemExit(f"BPF regression failed; see {args.log}")
-    expected = PROBE_TESTS + (MIHOMO_TESTS if args.mihomo_run == DEFAULT_TEST_SELECTOR else ())
     for mode in args.modes:
+        expected = PROBE_TESTS
+        if args.mihomo_run == DEFAULT_TEST_SELECTOR:
+            expected += MIHOMO_TESTS + (() if mode == "hardened" else OWNER_TESTS)
         marker = f"BPF_EXECUTION_MODE={mode}\n"
         normalized = output.replace("\r\n", "\n")
         if marker not in normalized:

@@ -1,8 +1,11 @@
-# Experimental branch: Mihomo shared-network packet_rewrite prerequisites.
+# Experimental branch: Mihomo shared-network packet_rewrite and local cgroup.
 CONFIG_BPF=y
 CONFIG_BPF_SYSCALL=y
 CONFIG_BPF_JIT=y
 CONFIG_BPF_UNPRIV_DEFAULT_OFF=y
+CONFIG_CGROUPS=y
+CONFIG_CGROUP_BPF=y
+CONFIG_IPV6=y
 CONFIG_NET_CLS_BPF=y
 CONFIG_NET_SCH_INGRESS=y
 CONFIG_NET_CLS_ACT=y

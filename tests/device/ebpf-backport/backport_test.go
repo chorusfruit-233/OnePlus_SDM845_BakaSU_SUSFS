@@ -257,7 +257,7 @@ func TestVerifierRejectsInvalidAccess(t *testing.T) {
 
 func TestUnsupportedTypesRejected(t *testing.T) {
 	requireRoot(t)
-	for _, typ := range []ebpf.ProgramType{ebpf.CGroupSockAddr, ebpf.SockOps, ebpf.SkMsg, ebpf.SkReuseport} {
+	for _, typ := range []ebpf.ProgramType{ebpf.CGroupSock, ebpf.SockOps, ebpf.SkMsg, ebpf.SkReuseport} {
 		p, err := ebpf.NewProgram(&ebpf.ProgramSpec{Type: typ, License: "GPL",
 			Instructions: asm.Instructions{asm.Mov.Imm(asm.R0, 0), asm.Return()}})
 		if p != nil {
