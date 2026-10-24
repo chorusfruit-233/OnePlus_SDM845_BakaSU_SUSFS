@@ -23,6 +23,9 @@ shell root 和启动参数强制 feature 值。4.9 配套改动包括：
   `module_blacklist` 符号，消除按名称查找的歧义。
 - preinit runner 必须以目标 4.9 UAPI 头文件实际构建并嵌入内核，头文件安装
   失败时中止构建，避免悄悄禁用功能后仍生成刷机包。
+- UAPI 安装显式使用手机输出目录；递归调用清空继承的 `KBUILD_SRC`，防止
+  在源码目录生成文件。镜像检查同时验证源码目录未被污染，避免旧 Kbuild 的
+  VPATH 使后续独立 QEMU 输出目录漏生成 `asm/types.h` 等文件。
 
 对应补丁为 `bakasu-selinux-4.9.patch`、`bakasu-compat-4.9.patch`、
 `bakasu-preinit-module-4.9.patch`。源代码检查保留原始上游文件指纹和补丁完整性
@@ -40,7 +43,8 @@ shell root 和启动参数强制 feature 值。4.9 配套改动包括：
 | 最终镜像精确符号与 ELF | 唯一内核黑名单符号；所需 hook 已链接；嵌入字节与静态 AArch64 runner 完全一致 |
 | 生产 runner 在 Linux 4.9 QEMU 8.2.2 中执行 | 六种情况全通过 |
 | 从原始内核和上游重新应用补丁 | 两个内核文件、七个 BakaSU 文件均与实际构建源码逐字节一致 |
-| GitHub CI | 待本轮完整构建 |
+| 全新独立 QEMU 输出目录的 prepare / scripts | 通过，`asm/types.h` 和 modpost 均正常生成，源码目录保持干净 |
+| GitHub CI | #129 手机镜像和 ELF 检查通过；后续 guest 构建暴露 UAPI 输出目录污染，已修正，待完整重跑 |
 | OnePlus 6T / LOS 22.2 | 本轮待真机反馈 |
 
 六个 QEMU 场景是：无配置、执行模块动作、不安全配置、启动计数限制、程序不存在、
@@ -59,6 +63,7 @@ shell root 和启动参数强制 feature 值。4.9 配套改动包括：
 ```sh
 python3 tests/host/test-bakasu-integration.py --source kernel
 python3 tests/host/check-bakasu-image.py \
+  --source kernel \
   --vmlinux kernel/out/vmlinux \
   --runner kernel/out/drivers/kernelsu/preinit/runner.elf
 python3 tests/host/run-bakasu-preinit-qemu.py \

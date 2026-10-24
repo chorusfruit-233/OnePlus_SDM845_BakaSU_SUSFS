@@ -20,8 +20,12 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--vmlinux", type=Path, required=True)
     parser.add_argument("--runner", type=Path, required=True)
+    parser.add_argument("--source", type=Path)
     parser.add_argument("--nm", default="aarch64-linux-gnu-nm")
     args = parser.parse_args()
+    if args.source:
+        for name in ("arch/arm64/include/generated", "include/generated"):
+            assert not (args.source / name).exists(), f"generated files leaked into source tree: {name}"
     symbols = {}
     output = subprocess.check_output([args.nm, "--defined-only", str(args.vmlinux)], text=True)
     for line in output.splitlines():

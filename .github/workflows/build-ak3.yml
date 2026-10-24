@@ -330,6 +330,12 @@ jobs:
       - name: Build Binder freezer transaction tests
         run: bash tests/host/build-binder-freezer-tests.sh kernel artifacts/binder-freezer-tests
 
+      - name: Install target UAPI headers for BakaSU preinit
+        working-directory: kernel
+        run: |
+          make O=out ARCH='${{ steps.config.outputs.arch }}' \
+            headers_install INSTALL_HDR_PATH="$GITHUB_WORKSPACE/kernel/out/usr"
+
       - name: Build Image.gz-dtb
         working-directory: kernel
         run: |
@@ -342,6 +348,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 tests/host/check-bakasu-image.py \
+            --source kernel \
             --vmlinux kernel/out/vmlinux \
             --runner kernel/out/drivers/kernelsu/preinit/runner.elf \
             | tee artifacts/bakasu-tests/image.log

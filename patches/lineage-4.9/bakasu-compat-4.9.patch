@@ -169,10 +169,21 @@ index 9e49bcd8..62001f83 100644
  static inline int ksu_preinit_handle_post_execveat(int *fd, struct filename **filename_ptr, void *argv_user,
                                                     void *envp_user, int *flags, int *retval, int *preinit_fd)
 diff --git a/kernel/tools/code_generation/preinit_runner/preinit_runner.mk b/kernel/tools/code_generation/preinit_runner/preinit_runner.mk
-index 87afec1e..a1a034b0 100644
+index 87afec1e..c26407aa 100644
 --- a/kernel/tools/code_generation/preinit_runner/preinit_runner.mk
 +++ b/kernel/tools/code_generation/preinit_runner/preinit_runner.mk
-@@ -47,7 +47,6 @@ targets += preinit/runner.elf
+@@ -4,8 +4,9 @@
+ KSU_UAPI_INC := $(objtree)/usr/include
+ 
+ ifeq ($(wildcard $(KSU_UAPI_INC)/linux/unistd.h),)
++# Do not inherit the outer O= build's KBUILD_SRC when re-entering srctree.
+ KSU_HEADERS_INSTALL_OUTPUT := $(shell $(MAKE) -s -C "$(abspath $(srctree))" \
+-	O="$(abspath $(objtree))" ARCH="$(ARCH)" \
++	KBUILD_SRC= O="$(abspath $(objtree))" ARCH="$(ARCH)" \
+ 	headers_install INSTALL_HDR_PATH="$(abspath $(objtree))/usr")
+ endif
+ 
+@@ -47,7 +48,6 @@ targets += preinit/runner.elf
  $(obj)/preinit/blob.o: $(KSU_RUNNER_TARGET)
  asflags-y += -DKSU_PREINIT_RUNNER_BIN=\"$(KSU_RUNNER_BIN)\"
  else
