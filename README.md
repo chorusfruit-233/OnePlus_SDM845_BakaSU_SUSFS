@@ -55,11 +55,16 @@ ramdisk、内核模块或 vendor 接口差异而不兼容。不要在未备份�
 ### BakaSU 与 SUSFS
 
 - BakaSU 默认跟踪 `main`，每次构建先解析并记录实际提交。
-  Linux 4.9 配套补丁基于 `d7260ca1`，保留 SELinux hide 时间侧信道修复与
+  Linux 4.9 配套补丁基于 `c0c96a40`，保留 SELinux hide 时间侧信道修复与
   旧内核 SID 修正；该提交仅记录补丁来源，不限制后续构建的提交 SHA；
 - 已审查 `main @ 896e8981` 的 32 位用户空间兼容更新：保留 SUSFS inline hooks，
-  使用上游系统调用号生成器，原有 4.9 SELinux 配套补丁继续适用。CI 同时检查
+  使用上游系统调用号生成器。CI 同时检查
   原生/32 位寄存器、指针及系统调用号处理；设备端兼容行为仍需真机验证；
+- 已适配 `main @ c0c96a40` 的 UAPI v6、模块预初始化及模块黑名单接口。
+  补齐 SUSFS exec 前后调用、可恢复错误时重试原 init、fd 0 清理、4.9 模块
+  路径检测及私有符号重名处理；CI 实际运行手机内核中嵌入的 preinit ELF，
+  验证模块动作、失败/超时处理及返回 init。范围与真机测试见
+  [最新 BakaSU 适配记录](docs/bakasu-main-20261024.md)；
 - 使用 BakaSU 管理器；当前上游在 `CONFIG_KSU_MULTI_MANAGER_SUPPORT=y` 时还支持
   官方 KernelSU 与 KOWSU 管理器，已移除 MKSU、RKSU 和 SukiSU-Ultra 的签名支持；
 - BakaSU 用户空间向模块脚本提供 `BAKASU=true`，取代旧的 `KSU_SUKISU=true`；

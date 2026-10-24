@@ -308,8 +308,11 @@ jobs:
 
       - name: Test BakaSU ABI compatibility and SELinux hook failure handling
         run: |
-          python3 tests/host/test-bakasu-compat.py
-          python3 tests/host/test-selinux-cleanup.py
+          set -euo pipefail
+          mkdir -p artifacts/bakasu-tests
+          python3 tests/host/test-bakasu-compat.py | tee artifacts/bakasu-tests/abi.log
+          python3 tests/host/test-selinux-cleanup.py | tee artifacts/bakasu-tests/selinux-cleanup.log
+          python3 tests/host/test-bakasu-integration.py | tee artifacts/bakasu-tests/integration.log
 
       - name: Test kernel-only boot image installation
         run: python3 tests/host/test-ak3-ramdisk.py --anykernel anykernel3
@@ -334,6 +337,15 @@ jobs:
             CROSS_COMPILE="ccache ${{ steps.config.outputs.cross_compile }}" \
             KCFLAGS=-Wno-error -j"$(nproc)" Image.gz-dtb
           ccache --show-stats
+
+      - name: Verify BakaSU hooks and embedded preinit ELF
+        run: |
+          set -euo pipefail
+          python3 tests/host/check-bakasu-image.py \
+            --vmlinux kernel/out/vmlinux \
+            --runner kernel/out/drivers/kernelsu/preinit/runner.elf \
+            | tee artifacts/bakasu-tests/image.log
+          cp kernel/out/drivers/kernelsu/preinit/runner.elf artifacts/bakasu-tests/
 
       - name: Set up Go for real Mihomo BPF regression tests
         uses: actions/setup-go@v6
@@ -367,6 +379,24 @@ jobs:
             --inbound-test artifacts/ebpf-tests/mihomo-ebpf-inbound.test \
             --probe artifacts/ebpf-tests/ebpf-backport.test \
             --log artifacts/ebpf-tests/qemu.log
+
+      - name: Execute the production BakaSU preinit ELF on Linux 4.9
+        run: |
+          python3 tests/host/run-bakasu-preinit-qemu.py \
+            --kernel kernel/out-bpf-qemu/arch/arm64/boot/Image \
+            --runner artifacts/bakasu-tests/runner.elf \
+            --busybox anykernel3/tools/busybox \
+            --control artifacts/freezer-tests/freezer-backport.test \
+            --log artifacts/bakasu-tests/preinit-qemu.log
+
+      - name: Upload BakaSU execution results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: bakasu-runtime-tests
+          path: artifacts/bakasu-tests/
+          if-no-files-found: ignore
+          retention-days: 14
 
       - name: Test cgroup v2 freezing, signals, migration and v1 coexistence
         run: |
@@ -448,6 +478,10 @@ jobs:
             echo "kernel=$(git -C kernel rev-parse HEAD)"
             echo "bakasu_repo=${{ steps.config.outputs.bakasu_repo }}"
             echo "bakasu=$(git -C kernel/KernelSU rev-parse HEAD)"
+            echo "bakasu_reviewed_commit=$(jq -r .susfs.bakasu_reviewed_commit configs/vendored-upstreams.json)"
+            echo "bakasu_compat_patch=$(sha256sum patches/lineage-4.9/bakasu-compat-4.9.patch | cut -c1-12)"
+            echo "bakasu_preinit_hooks=$(sha256sum patches/lineage-4.9/bakasu-preinit-module-4.9.patch | cut -c1-12)"
+            echo "bakasu_preinit=embedded-static-elf-and-susfs-inline-hooks"
             echo "ak3_installer=$(sha256sum ak3/anykernel.sh | cut -c1-12)"
             echo "boot_installation=kernel-only-preserve-ramdisk"
             echo "ebpf_scope=experimental-packet-rewrite-cgroup-and-isolated-tc-direct-lookup"

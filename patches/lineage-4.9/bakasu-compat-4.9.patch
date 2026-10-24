@@ -1,0 +1,206 @@
+# BakaSU Linux 4.9 adaptation.
+# Base: c0c96a4087285ff82d71003d4186629de1c46b3c.
+# Legacy module hooks, preinit ownership/failure handling and an unambiguous blacklist symbol.
+
+diff --git a/kernel/feature/module_blacklist.c b/kernel/feature/module_blacklist.c
+index 18df7a00..b77ff1c0 100644
+--- a/kernel/feature/module_blacklist.c
++++ b/kernel/feature/module_blacklist.c
+@@ -12,7 +12,7 @@
+ #if defined(KSU_COMPAT_HAS_INSMOD_HOOK) || defined(CONFIG_KSU_TRACEPOINT_HOOK)
+ static char *blacklist = NULL;
+ static char *orig_blacklist = NULL;
+-static char **module_blacklist = NULL;
++static char **ksu_module_blacklist_slot = NULL;
+ 
+ // workaround https://cs.android.com/android/platform/superproject/+/android-latest-release:system/core/libmodprobe/utils.cpp;l=73
+ // userspace will throw error when ret != 0
+@@ -71,13 +71,13 @@ void __init ksu_module_blacklist_init(const char *modules)
+     if (!modules[0] && !extra[0])
+         return;
+ 
+-    module_blacklist = (char **)find_kernel_symbol_exact("module_blacklist");
+-    if (!module_blacklist) {
++    ksu_module_blacklist_slot = (char **)find_kernel_symbol_exact("module_blacklist");
++    if (!ksu_module_blacklist_slot) {
+         pr_warn("module_blacklist: kernel symbol not found, skipping blocked modules\n");
+         return;
+     }
+ 
+-    existing = *module_blacklist;
++    existing = *ksu_module_blacklist_slot;
+     existing_len = existing ? strlen(existing) : 0;
+     blacklist =
+         kasprintf(GFP_KERNEL, "%s%s%s%s", existing_len ? existing : "", existing_len ? "," : "", modules, extra);
+@@ -86,7 +86,7 @@ void __init ksu_module_blacklist_init(const char *modules)
+         return;
+     }
+ 
+-    *module_blacklist = blacklist;
++    *ksu_module_blacklist_slot = blacklist;
+     orig_blacklist = (char *)existing;
+     pr_info("module_blacklist: blocked modules: %s\n", blacklist);
+ 
+@@ -101,7 +101,7 @@ void __exit ksu_module_blacklist_exit()
+ {
+     const char *existing;
+ 
+-    if (module_blacklist == NULL) {
++    if (ksu_module_blacklist_slot == NULL) {
+         // that's mean no modules got block
+         return;
+     }
+@@ -118,14 +118,14 @@ void __exit ksu_module_blacklist_exit()
+         return;
+     }
+ 
+-    existing = *module_blacklist;
++    existing = *ksu_module_blacklist_slot;
+ 
+     if (existing != blacklist) {
+         pr_warn("module_blacklist: looks module_blacklist changed by other, skip kfree and revert changes!\n");
+         return;
+     }
+ 
+-    *module_blacklist = orig_blacklist;
++    *ksu_module_blacklist_slot = orig_blacklist;
+     kfree(blacklist); // kasprintf alloc
+ 
+     pr_info("module_blacklist: blacklist reverted and memory freed!\n");
+diff --git a/kernel/preinit/preinit.c b/kernel/preinit/preinit.c
+index dd3ba606..eca78791 100644
+--- a/kernel/preinit/preinit.c
++++ b/kernel/preinit/preinit.c
+@@ -220,12 +220,15 @@ int ksu_setup_preinit_file(struct filename **filename_ptr, struct user_arg_ptr *
+ {
+     char fd_path[32] = { 0 };
+     struct file *file;
++    struct filename *runner_name;
+     struct path path;
+-    int fd, len;
++    int fd;
+ 
+     if (likely(!READ_ONCE(ksu_preinit_file)))
+         return -EINVAL;
+ 
++    if (!filename_ptr || IS_ERR_OR_NULL(*filename_ptr) || !argv_user)
++        return -EINVAL;
+     if (strcmp((*filename_ptr)->name, INIT_PATH) || !is_selinux_setup(argv_user))
+         return -EINVAL;
+ 
+@@ -237,23 +240,27 @@ int ksu_setup_preinit_file(struct filename **filename_ptr, struct user_arg_ptr *
+     if (fd < 0) {
+         pr_err("preinit: get fd failed: %d\n", fd);
+         fput(file);
+-        return -EINVAL;
++        return fd;
+     }
+-    // The fd owns the file from here on; close-on-exec frees it once the
+-    // runner has been loaded.
+     fd_install(fd, file);
+-
+-    len = snprintf(fd_path, sizeof(fd_path), "/proc/self/fd/%d", fd);
++    snprintf(fd_path, sizeof(fd_path), "/proc/self/fd/%d", fd);
+     if (kern_path(fd_path, LOOKUP_FOLLOW, &path)) {
+         pr_err("preinit: %s not reachable, booting without preinit\n", fd_path);
+         ksu_close_fd(fd);
+-        return -EINVAL;
++        return -ENOENT;
+     }
+     path_put(&path);
+ 
+-    memset((void *)(*filename_ptr)->name, 0, strlen((*filename_ptr)->name));
+-    memcpy((void *)(*filename_ptr)->name, (void *)fd_path, strlen(fd_path));
+-
++    /* Keep struct filename ownership and NUL termination valid even when
++     * a large fd number makes the new path longer than /system/bin/init.
++     */
++    runner_name = getname_kernel(fd_path);
++    if (IS_ERR(runner_name)) {
++        ksu_close_fd(fd);
++        return PTR_ERR(runner_name);
++    }
++    putname(*filename_ptr);
++    *filename_ptr = runner_name;
+     pr_info("preinit: exec runner via %s\n", fd_path);
+     return fd;
+ }
+@@ -261,14 +268,18 @@ int ksu_setup_preinit_file(struct filename **filename_ptr, struct user_arg_ptr *
+ int ksu_preinit_handle_post_execveat(int *fd, struct filename **filename_ptr, void *argv_user, void *envp_user,
+                                      int *flags, int *retval, int *preinit_fd)
+ {
+-    if (*retval && *preinit_fd > 0) {
++    if (*retval && *preinit_fd >= 0) {
+         ksu_close_fd(*preinit_fd);
+-        memset((void *)(*filename_ptr)->name, 0, strlen((*filename_ptr)->name));
+-        memcpy((void *)(*filename_ptr)->name, INIT_PATH, strlen(INIT_PATH));
++        *preinit_fd = -1;
++        /* getname_kernel() supplied an owned filename buffer. Restore the
++         * original init path before the exec hook retries it once.
++         */
++        memcpy((void *)(*filename_ptr)->name, INIT_PATH, sizeof(INIT_PATH));
+         return -EINVAL;
+     }
+     return 0;
+ }
++
+ #else
+ #error Unsupported hook type
+ #endif
+diff --git a/kernel/preinit/preinit.h b/kernel/preinit/preinit.h
+index 9e49bcd8..62001f83 100644
+--- a/kernel/preinit/preinit.h
++++ b/kernel/preinit/preinit.h
+@@ -2,6 +2,7 @@
+ #define __KSU_H_PREINIT
+ 
+ #include <linux/types.h>
++#include <linux/errno.h>
+ #include <asm/ptrace.h>
+ 
+ #ifndef KSU_NO_PREINIT
+@@ -52,7 +53,7 @@ static inline void ksu_preinit_handle_execve_manual(const char **filename, struc
+ #elif defined(CONFIG_KSU_SUSFS)
+ static inline int ksu_setup_preinit_file(struct filename **filename_ptr, struct user_arg_ptr *argv_user)
+ {
+-    return 0;
++    return -EOPNOTSUPP;
+ }
+ static inline int ksu_preinit_handle_post_execveat(int *fd, struct filename **filename_ptr, void *argv_user,
+                                                    void *envp_user, int *flags, int *retval, int *preinit_fd)
+diff --git a/kernel/tools/code_generation/preinit_runner/preinit_runner.mk b/kernel/tools/code_generation/preinit_runner/preinit_runner.mk
+index 87afec1e..a1a034b0 100644
+--- a/kernel/tools/code_generation/preinit_runner/preinit_runner.mk
++++ b/kernel/tools/code_generation/preinit_runner/preinit_runner.mk
+@@ -47,7 +47,6 @@ targets += preinit/runner.elf
+ $(obj)/preinit/blob.o: $(KSU_RUNNER_TARGET)
+ asflags-y += -DKSU_PREINIT_RUNNER_BIN=\"$(KSU_RUNNER_BIN)\"
+ else
+-$(warning -- $(REPO_NAME): $(KSU_UAPI_INC) not found, preinit disabled)
+-ccflags-y += -DKSU_NO_PREINIT
++$(error -- $(REPO_NAME): install target UAPI headers to build the required preinit runner)
+ endif
+ 
+diff --git a/kernel/tools/kernel_compat.mk b/kernel/tools/kernel_compat.mk
+index 39e5ab9b..db858f38 100644
+--- a/kernel/tools/kernel_compat.mk
++++ b/kernel/tools/kernel_compat.mk
+@@ -359,12 +359,14 @@ $(info -- $(REPO_NAME)/compat: found KERNEL_PARAM_FL_NOARG)
+ ccflags-y += -DKSU_COMPAT_HAS_KERNEL_PARAM_FL_NOARG
+ endif
+ 
+-ifeq ($(shell grep -q "ksu_handle_init_module" $(srctree)/kernel/module/main.c 2>/dev/null; echo $$?),0)
++# Legacy kernels keep the two module syscalls in kernel/module.c.
++KSU_MODULE_SOURCE := $(firstword $(wildcard $(srctree)/kernel/module/main.c $(srctree)/kernel/module.c))
++ifeq ($(shell grep -q "ksu_handle_init_module" $(KSU_MODULE_SOURCE) 2>/dev/null; echo $$?),0)
+   $(info -- $(REPO_NAME)/compat: found ksu_handle_init_module)
+-  ifeq ($(shell grep -q "ksu_handle_finit_module" $(srctree)/kernel/module/main.c 2>/dev/null; echo $$?),0)
++  ifeq ($(shell grep -q "ksu_handle_finit_module" $(KSU_MODULE_SOURCE) 2>/dev/null; echo $$?),0)
+     $(info -- $(REPO_NAME)/compat: found ksu_handle_finit_module)
+     ccflags-y += -DKSU_COMPAT_HAS_INSMOD_HOOK
+   else
+     $(error You must hook both init_module and finit_module if you want module blacklist)
+   endif
+-endif
+\ No newline at end of file
++endif

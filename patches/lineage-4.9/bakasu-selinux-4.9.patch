@@ -1,13 +1,9 @@
-# BakaSU SELinux auto-hook adaptation for the pinned Lineage ARM64 4.9 port.
-# Base: d7260ca1e5c128061122924d0d48754e361e135c (includes fa12ffde time-side-channel fix).
-# Preserve dual policy/SID conversion; avoid legacy global-policy helpers for
-# backup queries, preserve 4.9 setprocattr permissions, and require reviewed ABI.
-# MLS formatting helpers are adapted from this GPL-2.0 Lineage kernel's
-# security/selinux/ss/mls.c with an explicit policydb parameter.
-# The build marker means source review only, not device validation.
+# BakaSU Linux 4.9 adaptation.
+# Base: c0c96a4087285ff82d71003d4186629de1c46b3c.
+# Applies to the reviewed Lineage ARM64 SUSFS inline/automatic SELinux port.
 
 diff --git a/kernel/feature/selinux_hide.c b/kernel/feature/selinux_hide.c
-index 9864c9cf..b5490a05 100644
+index 91b54ef..884f246 100644
 --- a/kernel/feature/selinux_hide.c
 +++ b/kernel/feature/selinux_hide.c
 @@ -56,6 +56,8 @@ static DEFINE_MUTEX(selinux_hide_mutex);
@@ -83,7 +79,7 @@ index 9864c9cf..b5490a05 100644
  #endif
  // clang-format on
  
-@@ -451,6 +415,11 @@ int __nocfi ksu_handle_selinux_setprocattr(const char *name, void *value, size_t
+@@ -462,6 +426,11 @@ int __nocfi ksu_handle_selinux_setprocattr(const char *name, void *value, size_t
  int __nocfi ksu_handle_selinux_setprocattr(struct task_struct *p, char *name, void *value, size_t size)
  #endif
  {
@@ -92,10 +88,10 @@ index 9864c9cf..b5490a05 100644
 +    if (current != p)
 +        return -EACCES;
 +#endif
+ #ifndef KSU_COMPAT_HAS_SUSFS_FEATURE_SELINUX_HIDE
      if (likely(ksu_get_uid_t(current_uid()) < 10000)) {
          goto call_orig;
-     }
-@@ -577,10 +546,10 @@ static int my_sel_open_handle_status(struct inode *inode, struct file *filp)
+@@ -590,10 +559,10 @@ static int my_sel_open_handle_status(struct inode *inode, struct file *filp)
      return ret;
  }
  
@@ -108,7 +104,7 @@ index 9864c9cf..b5490a05 100644
      if (!sel_open_handle_status_slot) {
  #ifdef CONFIG_KALLSYMS_ALL
          struct file_operations *ops = (struct file_operations *)find_kernel_symbol_exact("sel_handle_status_ops");
-@@ -590,7 +559,7 @@ static void hook_selinux_status_open()
+@@ -603,7 +572,7 @@ static void hook_selinux_status_open()
  #endif
          if (!ops) {
              pr_err("selinux_hide: sel_handle_status_ops not found, fake status will not work\n");
@@ -117,7 +113,7 @@ index 9864c9cf..b5490a05 100644
          }
          sel_open_handle_status_slot = &ops->open;
      }
-@@ -602,26 +571,32 @@ static void hook_selinux_status_open()
+@@ -615,26 +584,32 @@ static void hook_selinux_status_open()
          sel_open_handle_status_slot = NULL;
          orig_sel_open_handle_status = NULL;
      }
@@ -154,7 +150,7 @@ index 9864c9cf..b5490a05 100644
          }
      }
  #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
-@@ -630,21 +605,28 @@ static void ksu_selinux_hide_unhook()
+@@ -643,21 +618,28 @@ static void ksu_selinux_hide_unhook()
      if (ksu_orig_setprocattr) {
          ret = ksu_patch_text((void *)selinux_setprocattr_hook_ptr, &ksu_orig_setprocattr, sizeof(ksu_orig_setprocattr),
                               KSU_PATCH_TEXT_FLUSH_DCACHE);
@@ -187,7 +183,7 @@ index 9864c9cf..b5490a05 100644
  #endif // #ifndef KSU_COMPAT_HAS_SUSFS_FEATURE_SELINUX_HIDE
  
  static int ksu_selinux_hide_enable()
-@@ -669,7 +651,13 @@ static int ksu_selinux_hide_enable()
+@@ -682,7 +664,13 @@ static int ksu_selinux_hide_enable()
  #endif
  
  #ifndef KSU_COMPAT_HAS_SUSFS_FEATURE_SELINUX_HIDE
@@ -202,7 +198,7 @@ index 9864c9cf..b5490a05 100644
  #endif
  
      // clang-format off
-@@ -683,22 +671,13 @@ static int ksu_selinux_hide_enable()
+@@ -696,22 +684,13 @@ static int ksu_selinux_hide_enable()
          if (!context_struct_compute_av_fn) {
              pr_warn("context_struct_compute_av not found!\n");
          }
@@ -226,7 +222,7 @@ index 9864c9cf..b5490a05 100644
          }
      #endif
  #else
-@@ -718,27 +697,6 @@ static int ksu_selinux_hide_enable()
+@@ -731,27 +710,6 @@ static int ksu_selinux_hide_enable()
          if (!context_struct_compute_av_fn) {
              pr_warn("context_struct_compute_av not found!\n");
          }
@@ -254,7 +250,7 @@ index 9864c9cf..b5490a05 100644
      #endif
  
      #if LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0) && !defined(KSU_COMPAT_USE_SELINUX_STATE)
-@@ -759,7 +717,7 @@ static int ksu_selinux_hide_enable()
+@@ -772,7 +730,7 @@ static int ksu_selinux_hide_enable()
  #endif
      if (!selinux_write_op) {
          pr_err("selinux_hide: no write_op found!\n");
@@ -263,7 +259,7 @@ index 9864c9cf..b5490a05 100644
      }
  
      context_write = &selinux_write_op[SEL_CONTEXT];
-@@ -790,6 +748,13 @@ static int ksu_selinux_hide_enable()
+@@ -803,6 +761,13 @@ static int ksu_selinux_hide_enable()
      }
  #elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 2, 0) || defined(KSU_COMPAT_HAS_LIST_OF_LSM_HOOKS)
      struct security_hook_list *hp;
@@ -277,7 +273,7 @@ index 9864c9cf..b5490a05 100644
  
      // https://github.com/torvalds/linux/commit/df0ce17331e2501dbffc060041dfc6c5f85227b5
  #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 17, 0) || defined(KSU_COMPAT_HLIST_FOR_SECURITY_HOOK_LIST)
-@@ -805,6 +770,9 @@ static int ksu_selinux_hide_enable()
+@@ -818,6 +783,9 @@ static int ksu_selinux_hide_enable()
          // when we are in 4.11+, we can ensure we are control "selinux" LSM by that
          if (strcmp("selinux", hp->lsm))
              continue;
@@ -287,7 +283,7 @@ index 9864c9cf..b5490a05 100644
  #endif // #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0)
          selinux_setprocattr_hook_ptr = (unsigned long)&hp->hook.setprocattr;
          ksu_orig_setprocattr = hp->hook.setprocattr;
-@@ -818,6 +786,9 @@ static int ksu_selinux_hide_enable()
+@@ -831,6 +799,9 @@ static int ksu_selinux_hide_enable()
          goto out;
      }
  
@@ -297,7 +293,7 @@ index 9864c9cf..b5490a05 100644
  #undef ksu_for_each_lsm_entry
  out:
  #else
-@@ -833,19 +804,25 @@ out:
+@@ -846,19 +817,25 @@ out:
  #ifndef KSU_COMPAT_HAS_SUSFS_FEATURE_SELINUX_HIDE
  unhook:
  #endif
@@ -326,7 +322,7 @@ index 9864c9cf..b5490a05 100644
      *value = ksu_selinux_hide_enabled ? 1 : 0;
      return 0;
  }
-@@ -856,7 +833,13 @@ static int selinux_hide_feature_set(u64 value)
+@@ -869,7 +846,13 @@ static int selinux_hide_feature_set(u64 value)
      int ret = 0;
      pr_info("selinux_hide: set to %d\n", enable);
      mutex_lock(&selinux_hide_mutex);
@@ -341,7 +337,7 @@ index 9864c9cf..b5490a05 100644
      if (enable) {
          if (!ksu_selinux_hide_running) {
              ret = ksu_selinux_hide_enable();
-@@ -864,12 +847,18 @@ static int selinux_hide_feature_set(u64 value)
+@@ -877,12 +860,18 @@ static int selinux_hide_feature_set(u64 value)
                  ksu_selinux_hide_running = true;
              }
          }
@@ -361,7 +357,7 @@ index 9864c9cf..b5490a05 100644
      mutex_unlock(&selinux_hide_mutex);
      return ret;
  }
-@@ -929,13 +918,23 @@ void __init ksu_selinux_hide_init()
+@@ -942,13 +931,23 @@ void __init ksu_selinux_hide_init()
  
  void __exit ksu_selinux_hide_exit()
  {
@@ -388,7 +384,7 @@ index 9864c9cf..b5490a05 100644
      mutex_lock(ksu_selinux_status_lock);
      if (fake_status)
          __free_page(fake_status);
-@@ -947,7 +946,7 @@ void ksu_selinux_hide_drop_backup_if_unused()
+@@ -960,7 +959,7 @@ void ksu_selinux_hide_drop_backup_if_unused()
  {
      mutex_lock(&selinux_hide_mutex);
  #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0) || defined(KSU_COMPAT_HAS_SELINUX_POLICY_STRUCT)
@@ -397,7 +393,7 @@ index 9864c9cf..b5490a05 100644
          pr_info("selinux_hide is not enabled - drop backup_sepolicy\n");
          sidtab_destroy(backup_sepolicy->sidtab);
          kfree(backup_sepolicy->sidtab);
-@@ -955,7 +954,7 @@ void ksu_selinux_hide_drop_backup_if_unused()
+@@ -968,7 +967,7 @@ void ksu_selinux_hide_drop_backup_if_unused()
          backup_sepolicy = NULL;
      }
  #elif defined(KSU_COMPAT_USE_SELINUX_STATE)
@@ -406,7 +402,7 @@ index 9864c9cf..b5490a05 100644
          pr_info("selinux_hide is not enabled - drop backup_policydb\n");
          sidtab_destroy(backup_sidtab);
          kfree(backup_sidtab);
-@@ -965,7 +964,7 @@ void ksu_selinux_hide_drop_backup_if_unused()
+@@ -978,7 +977,7 @@ void ksu_selinux_hide_drop_backup_if_unused()
          backup_sidtab = NULL;
      }
  #else
@@ -415,7 +411,7 @@ index 9864c9cf..b5490a05 100644
          sidtab_destroy(backup_sidtab);
          kfree(backup_sidtab);
          ksu_destroy_policydb(backup_policydb);
-@@ -996,6 +995,21 @@ __maybe_static void initialize_fake_status()
+@@ -1009,6 +1008,21 @@ __maybe_static void initialize_fake_status()
      ksu_selinux_status_lock = &selinux_status_lock;
  #endif
  
@@ -437,7 +433,7 @@ index 9864c9cf..b5490a05 100644
      mutex_lock(ksu_selinux_status_lock);
      if (fake_status)
          goto out;
-@@ -1009,7 +1023,12 @@ __maybe_static void initialize_fake_status()
+@@ -1022,7 +1036,12 @@ __maybe_static void initialize_fake_status()
      // because some compiler add suffix for that
      // e.g:
      // 0000000000000000 b selinux_status_page.llvm.9985633631847037644
@@ -451,7 +447,7 @@ index 9864c9cf..b5490a05 100644
  #else
      extern struct page *selinux_status_page;
  #endif
-@@ -1300,6 +1319,135 @@ static int ksu_security_context_to_sid(struct policydb *orig_policydb, struct si
+@@ -1313,6 +1332,135 @@ static int ksu_security_context_to_sid(struct policydb *orig_policydb, struct si
      return rc;
  }
  
@@ -587,7 +583,7 @@ index 9864c9cf..b5490a05 100644
  /*
   * Write the security context string representation of
   * the context structure `context' into a dynamically
-@@ -1332,7 +1480,7 @@ static int context_struct_to_string(struct policydb *p, struct context *context,
+@@ -1345,7 +1493,7 @@ static int context_struct_to_string(struct policydb *p, struct context *context,
  #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 17, 0) || defined(KSU_COMPAT_USE_SELINUX_STATE)
      *scontext_len += mls_compute_context_len(p, context);
  #else
@@ -596,7 +592,7 @@ index 9864c9cf..b5490a05 100644
  #endif
  
      if (!scontext)
-@@ -1353,7 +1501,7 @@ static int context_struct_to_string(struct policydb *p, struct context *context,
+@@ -1366,7 +1514,7 @@ static int context_struct_to_string(struct policydb *p, struct context *context,
  #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 17, 0) || defined(KSU_COMPAT_USE_SELINUX_STATE)
      mls_sid_to_context(p, context, &scontextp);
  #else
@@ -605,7 +601,7 @@ index 9864c9cf..b5490a05 100644
  #endif
  
      *scontextp = 0;
-@@ -1471,7 +1619,7 @@ static void __nocfi type_attribute_bounds_av(struct policydb *policydb, struct c
+@@ -1484,7 +1632,7 @@ static void __nocfi type_attribute_bounds_av(struct policydb *policydb, struct c
      }
  
      if (context_struct_compute_av_fn) {
@@ -615,13 +611,14 @@ index 9864c9cf..b5490a05 100644
          ksu_context_struct_compute_av_fallback(policydb, &lo_scontext, tcontextp, tclass, &lo_avd, NULL);
      }
 diff --git a/kernel/tools/susfs_compat.mk b/kernel/tools/susfs_compat.mk
-index 9a70255d..123c25ce 100644
+index 904bad1..4ff0593 100644
 --- a/kernel/tools/susfs_compat.mk
 +++ b/kernel/tools/susfs_compat.mk
-@@ -15,6 +15,24 @@ $(info -- $(REPO_NAME)/compat: ksu_install_su_fd direct call found)
+@@ -14,3 +14,23 @@ ifeq ($(shell grep -q "ksu_install_su_fd" $(srctree)/fs/exec.c; echo $$?),0)
+ $(info -- $(REPO_NAME)/compat: ksu_install_su_fd direct call found)
  ccflags-y += -DKSU_COMPAT_HAS_SUSFS_INSTALL_SU_FD_DIRECT_CALL
  endif
- 
++
 +# Only the pinned Lineage 4.9 ARM64 port has been reviewed for the NonGKI
 +# automatic SELinux hooks. prepare-sources.sh writes this marker after checking
 +# the kernel ABI and the adaptation patch; it does not certify device testing.
@@ -639,9 +636,5 @@ index 9a70255d..123c25ce 100644
 +$(info -- $(REPO_NAME): using reviewed Lineage 4.9 SUSFS automatic SELinux hooks)
 +ccflags-y += -DKSU_COMPAT_SUSFS_4_9_AUTO
 +else
- $(info -- $(REPO_NAME): susfs has NOT update with latest KernelSU source)
- $(info -- $(REPO_NAME): Please wait simonpunk update)
--$(error Please wait susfs update.)
-\ No newline at end of file
-+$(error Please wait susfs update.)
++$(error BakaSU 4.9 automatic SELinux adaptation requires reviewed source preparation.)
 +endif

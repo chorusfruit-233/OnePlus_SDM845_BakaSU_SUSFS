@@ -34,6 +34,9 @@ actual_bakasu=$(git -C "$ksu_root" rev-parse HEAD)
 git -C "$ksu_root" apply --reverse --check \
     "$builder_root/patches/lineage-4.9/bakasu-selinux-4.9.patch" ||
     fail 'BakaSU SELinux adaptation is absent or incomplete.'
+git -C "$ksu_root" apply --reverse --check \
+    "$builder_root/patches/lineage-4.9/bakasu-compat-4.9.patch" ||
+    fail 'BakaSU preinit/legacy compatibility adaptation is absent or incomplete.'
 
 require '^#define SUSFS_VERSION "v2\.3\.0"$' "$kernel_root/include/linux/susfs.h"
 require 'ksu_handle_selinux_setprocattr\(struct task_struct \*p' \
@@ -52,6 +55,10 @@ fi
 
 require 'ksu_handle_execveat_sucompat' "$kernel_root/fs/exec.c"
 require 'ksu_handle_post_execveat_sucompat' "$kernel_root/fs/exec.c"
+require 'preinit_fd = ksu_setup_preinit_file' "$kernel_root/fs/exec.c"
+require 'goto ksu_exec_retry' "$kernel_root/fs/exec.c"
+require 'ksu_handle_init_module\(&err\)' "$kernel_root/kernel/module.c"
+require 'ksu_handle_finit_module\(&err\)' "$kernel_root/kernel/module.c"
 require 'ksu_handle_faccessat' "$kernel_root/fs/open.c"
 require 'ksu_handle_stat' "$kernel_root/fs/stat.c"
 require 'ksu_handle_sys_read' "$kernel_root/fs/read_write.c"

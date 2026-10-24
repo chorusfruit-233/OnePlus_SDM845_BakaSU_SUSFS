@@ -26,7 +26,7 @@ FUNCTIONS = (
 
 def extract_function(source, name):
     """Find a C definition and balance braces, ignoring strings/comments."""
-    pattern = (r"(?m)^(?:static\s+)?(?:inline\s+)?(?:void|int)\s+"
+    pattern = (r"(?m)^(?:static\s+)?(?:inline\s+)?(?:void|int|bool)\s+"
                + re.escape(name) + r"\s*\([^;]*?\)\s*\{")
     match = re.search(pattern, source)
     if match is None:

@@ -41,6 +41,8 @@ clone_ref "$bakasu_repo" "$bakasu_ref" "$kernel_root/KernelSU"
 python3 "$script_dir/check-bakasu-4.9.py" "$kernel_root/KernelSU"
 git -C "$kernel_root/KernelSU" apply --check "$patch_root/bakasu-selinux-4.9.patch"
 git -C "$kernel_root/KernelSU" apply --whitespace=nowarn "$patch_root/bakasu-selinux-4.9.patch"
+git -C "$kernel_root/KernelSU" apply --check "$patch_root/bakasu-compat-4.9.patch"
+git -C "$kernel_root/KernelSU" apply --whitespace=nowarn "$patch_root/bakasu-compat-4.9.patch"
 ln -sfn ../KernelSU/kernel "$kernel_root/drivers/kernelsu"
 
 # Supplement the base container configuration for the recorded Droidspaces release.
@@ -73,6 +75,8 @@ git -C "$kernel_root" apply --whitespace=nowarn \
 
 # Replace KernelSU's kprobe hooks with SUSFS inline hooks (no-kprobe mode).
 bash "$script_dir/susfs-inline-hook.sh" "$kernel_root"
+git -C "$kernel_root" apply --check "$patch_root/bakasu-preinit-module-4.9.patch"
+git -C "$kernel_root" apply --whitespace=nowarn "$patch_root/bakasu-preinit-module-4.9.patch"
 
 clone_ref "$cake_repo" "$cake_ref" "$cake_checkout"
 install -D -m 0644 "$cake_checkout/sch_cake.c" \
@@ -185,6 +189,8 @@ echo "Mihomo TC backport: $(sha256sum "$patch_root/mihomo-tc-4.9.patch" | cut -c
 echo "Cgroup v2 freezer: $(sha256sum "$patch_root/cgroup-v2-freezer-4.9.patch" | cut -c1-12)"
 echo "Binder freezer: $(sha256sum "$patch_root/binder-freezer-4.9.patch" | cut -c1-12)"
 echo "BakaSU SELinux adaptation: $(sha256sum "$patch_root/bakasu-selinux-4.9.patch" | cut -c1-12)"
+echo "BakaSU compatibility: $(sha256sum "$patch_root/bakasu-compat-4.9.patch" | cut -c1-12)"
+echo "BakaSU preinit/module hooks: $(sha256sum "$patch_root/bakasu-preinit-module-4.9.patch" | cut -c1-12)"
 echo "SUSFS patch: $patch_root/susfs-4.9.patch ($(sha256sum "$patch_root/susfs-4.9.patch" | cut -c1-12))"
 echo "Hybrid Mount VFS patch: $patch_root/hybridmount-4.9.patch ($(sha256sum "$patch_root/hybridmount-4.9.patch" | cut -c1-12))"
 echo "rtl8812au commit: $(git -C "$rtl8812au_checkout" rev-parse HEAD)"
