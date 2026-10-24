@@ -21,7 +21,7 @@
       "kernel/tools/kernel_compat.mk": "a04eab2d4145a69bbffb834ab4e92a1562e289ed6ec2d92c0e29a5a8b09aef76",
       "kernel/compat/kernel_compat.h": "2ac7d86964e5ae1471b515d5ed70211b6b6dc5c7102f8ba507a4c157da5e61de",
       "kernel/tools/susfs_compat.mk": "fed05d93c03f11e252ff3fc411e0f2591059579ec0be8c32ab6b83bbd6a1d91e",
-      "kernel/Kbuild": "025f5b3352d57adef2c1b588da8fcf56bc5d50f919085ec3a3d32d7d11cf787a",
+      "kernel/Kbuild": "0e6c7668100c2b9976f9e8624771383acbb6d4246b10dea630dd80a5ddd087d9",
       "kernel/include/arch.h": "84cd3804faab495620913616236e20c2ffc8f7ad4ca591fd0383d835cf7194b9",
       "kernel/feature/sucompat.h": "e18cda16748775dc9a3d53710fe2601a20c3a81c207114f127ad84eb61539473",
       "kernel/hook/setuid_hook.c": "7395311570e6a9bf882c81eacc91fe7ae69527c163981eba98107a24e1aeadfb",
@@ -46,7 +46,7 @@
       "kernel/feature/module_blacklist.h": "746dabd2ee63c5cf924defc0d5d86196f5e9d727480e6abecdc046dc207fed0e",
       "kernel/manager/throne_tracker.c": "ccb8e63b10e145d894d83bfcae937bde5b605717991d58c61ac59329776a0dbb"
     },
-    "bakasu_reviewed_commit": "c0c96a4087285ff82d71003d4186629de1c46b3c"
+    "bakasu_reviewed_commit": "d5e9e025b8b49155f8014684d64c91742b465f65"
   },
   "hybridmount": {
     "version": "hm1",

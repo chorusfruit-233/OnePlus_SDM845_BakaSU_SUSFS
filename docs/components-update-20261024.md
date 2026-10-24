@@ -7,7 +7,7 @@ Mihomo eBPF、cgroup V2 freezer 和 Binder 冻结适配。BakaSU 的独立输出
 
 | 组件 | 本轮核对的上游 | 处理 |
 | --- | --- | --- |
-| BakaSU | `main @ c0c96a408728` | UAPI v6 / preinit / 热安装适配；增加 SUSFS 新命令及包变化后的 UID 刷新 |
+| BakaSU | `main @ d5e9e025b8b4` | UAPI v6 / preinit / 热安装、SUSFS 新命令与 UID 刷新；同步最新生成器构建修复 |
 | SUSFS | `gki-android14-6.1 @ 27e0a0e42745`，仍为 v2.3.0 | 同步新核心功能及 4.9 mount 修复 |
 | Non-GKI SUSFS port | `mainline @ dcd789634247` | 同步 `clone_mnt()` 的 unshared ID 标记；保留本地正确的 ctime bitmask |
 | Hybrid Mount | `dev @ e5120adea50d`，`hm1` | 更新内建驱动，保留 4.9 ABI 适配 |
@@ -74,6 +74,9 @@ CAKE 使用当前独立上游，包含 TCP options 解析越界修复。同步
   4.9 ext4 使用通用文件句柄编码；自定义 export encoder 防护另由上游生产
   函数测试验证。
 - 最终 GitHub CI：待本轮完整构建。
+
+集成提交 `29cd530` 推送时，上游 BakaSU 新增 `d5e9e025`，只给代码生成器
+增加 `CONFIG_KSU` 条件。已审核并更新对应指纹；#131 被后续完整构建取代。
 
 QEMU 新增实际 hm1/ext4/inotify、规则缓存和 UID 隔离、CAKE 配置与 UDP 包统计、
 默认 memcg swap 记账测试；原有 Mihomo、V2/Binder 和 preinit 测试继续执行。

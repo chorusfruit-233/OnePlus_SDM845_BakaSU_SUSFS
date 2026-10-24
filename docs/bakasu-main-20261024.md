@@ -1,6 +1,8 @@
 # BakaSU main 的 Linux 4.9 适配记录
 
-本轮审查并构建 `Baka-SU/BakaSU main @ c0c96a4087285ff82d71003d4186629de1c46b3c`。
+本轮审查 `Baka-SU/BakaSU main @ d5e9e025b8b49155f8014684d64c91742b465f65`。
+兼容补丁基于 `c0c96a40`；其后的 `d5e9e025` 只为代码生成器增加
+`CONFIG_KSU` 条件，不改变运行时代码。已同步审查指纹，继续验证主线构建。
 `configs/enchilada.json` 继续跟踪 `main`；该 SHA 用于记录补丁来源和本轮验证，
 不固定后续构建的 BakaSU 版本。原有 WALT、SUSFS、Hybridmount、Droidspaces、
 Mihomo、V2 / Binder 冻结配置保留。
@@ -74,4 +76,4 @@ python3 tests/host/run-bakasu-preinit-qemu.py \
   --log artifacts/bakasu-tests/preinit-qemu.log
 ```
 
-来源：[BakaSU main](https://github.com/Baka-SU/BakaSU/tree/c0c96a4087285ff82d71003d4186629de1c46b3c)。
+来源：[BakaSU main](https://github.com/Baka-SU/BakaSU/tree/d5e9e025b8b49155f8014684d64c91742b465f65)。
