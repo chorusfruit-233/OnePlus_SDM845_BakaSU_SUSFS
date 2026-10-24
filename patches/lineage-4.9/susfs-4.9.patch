@@ -11,6 +11,7 @@ OPEN_REDIRECT support and the private statx KSTAT discriminator.
 Updates priority/ioprio UID filtering and clone_mnt unshared-ID accounting.
 4.9 allocation uses a private zeroed kmalloc/vmalloc fallback. UID refreshes
 check the configuration generation before publishing a replacement bitmap.
+Guard nullable old bitmaps before 4.9 kfree_rcu(), including first configuration.
 ---
 diff --git a/block/ioprio.c b/block/ioprio.c
 index 284bdfa..f20a2b2 100644
@@ -2029,10 +2030,10 @@ index 206b576..f85c013 100644
  		return -ENOMEM;
 diff --git a/fs/susfs.c b/fs/susfs.c
 new file mode 100644
-index 0000000..c8c9006
+index 0000000..1c0b00a
 --- /dev/null
 +++ b/fs/susfs.c
-@@ -0,0 +1,2032 @@
+@@ -0,0 +1,2034 @@
 +#include <linux/version.h>
 +#include <linux/cred.h>
 +#include <linux/fs.h>
@@ -3557,7 +3558,8 @@ index 0000000..c8c9006
 +		is_uid_filter_set_before = true;
 +	mutex_unlock(&susfs_mutex_lock_priority_uid_filter);
 +
-+	kfree_rcu(old_bitmap, rcu);
++	if (old_bitmap)
++		kfree_rcu(old_bitmap, rcu);
 +
 +	SUSFS_LOGI("the priority uid filter is set\n");
 +	err = 0;
@@ -3637,7 +3639,8 @@ index 0000000..c8c9006
 +	new_bitmap = NULL;
 +	mutex_unlock(&susfs_mutex_lock_priority_uid_filter);
 +
-+	kfree_rcu(old_bitmap, rcu);
++	if (old_bitmap)
++		kfree_rcu(old_bitmap, rcu);
 +
 +	SUSFS_LOGI("the uids of the priority uid filter are resolved again\n");
 +

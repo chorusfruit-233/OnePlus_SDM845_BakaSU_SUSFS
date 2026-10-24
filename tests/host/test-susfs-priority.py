@@ -63,7 +63,8 @@ static void release(void *p) { if(p) {live_allocations--; free(p);} }
 #define vzalloc(size) allocate(size)
 #define kfree(p) release(p)
 #define kvfree(p) release(p)
-#define kfree_rcu(p,member) release(p)
+/* 4.9 kfree_rcu() dereferences its argument; unlike 6.1 it rejects NULL. */
+#define kfree_rcu(p,member) do { assert(p); release(p); } while(0)
 struct cred { int domain; };
 static int current_domain, deny_domain;
 static struct cred *prepare_creds(void) {

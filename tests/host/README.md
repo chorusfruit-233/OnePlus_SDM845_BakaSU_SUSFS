@@ -69,6 +69,8 @@ python3 tests/host/run-components-qemu.py \
 The SUSFS test compiles the actual filter and BakaSU command dispatcher with
 mocked credentials/VFS/RCU. It checks invalid input, allocation failures,
 credential restoration, multi-user UID matching and stale refresh publication.
+The RCU stub rejects NULL as 4.9 does, including the first configuration with no
+previous bitmap; it must not silently model the newer NULL-safe helper.
 The [vendored Hybrid Mount fixtures](hybridmount/README.md) exercise production
 functions with controlled failure injection.
 

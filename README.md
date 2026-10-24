@@ -76,8 +76,9 @@ ramdisk、内核模块或 vendor 接口差异而不兼容。不要在未备份�
   `gki-android14-6.1 @ 27e0a0e42745`），构建不再依赖 GitLab 上游。
   同步新的应用 UID 优先级过滤、四个 priority/ioprio 系统调用钩子，以及
   `clone_mnt()` 的 unshared mount ID 标记修复；版本号仍为官方 v2.3.0。
-  BakaSU 已补齐控制命令与安装/卸载应用后的 UID 刷新，4.9 使用私有分配兼容层，
-  并阻止过期后台刷新覆盖新配置。使用新功能需更新官方 SUSFS 用户态工具。
+  BakaSU 已补齐控制命令与安装/卸载应用后的 UID 刷新，4.9 使用私有分配兼容层、
+  释放旧位图前的空指针检查，并阻止过期后台刷新覆盖新配置。
+  使用新功能需更新官方 SUSFS 用户态工具。
   官方 GKI 手动 SELinux hooks 在本树由以下 NonGKI 自动接入替代；
 - 使用 SUSFS 官方 inline hook 方式（`scripts/susfs-inline-hook.sh`）替换 KernelSU
   的 kprobe 钩子，覆盖 exec、faccessat、stat/fstat、read、input、reboot、

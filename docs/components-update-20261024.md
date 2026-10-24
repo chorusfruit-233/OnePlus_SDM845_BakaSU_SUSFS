@@ -30,7 +30,10 @@ UID 更新从公共 package tracker 触发，覆盖旧版 rename LSM 钩子，�
 
 移植保留 inode `i_state` 存储、statx 私有标记和已有 OPEN_REDIRECT 等功能。
 新增分配使用私有 kmalloc/vmalloc 兼容函数；配置代次检查防止旧后台刷新
-覆盖较新配置。SELinux 继续使用已适配的 NonGKI 自动 hooks。
+覆盖较新配置。4.9 的 `kfree_rcu()` 不接受空指针，首次配置还没有旧位图，
+因此两处旧位图释放都增加非空检查；宿主模型按实际 4.9 的 RCU 约束测试，
+修复前可复现首次配置断言失败，修复后首次配置和后续更新均通过。
+SELinux 继续使用已适配的 NonGKI 自动 hooks。
 
 新功能需要包含 `set_priority_uid_filter` 命令的最新版官方 SUSFS 工具。
 本仓库更新内核及接口，不打包替换管理器、SUSFS 工具或 Hybrid Mount 元模块。
@@ -76,7 +79,8 @@ CAKE 使用当前独立上游，包含 TCP options 解析越界修复。同步
 - 最终 GitHub CI：待本轮完整构建。
 
 集成提交 `29cd530` 推送时，上游 BakaSU 新增 `d5e9e025`，只给代码生成器
-增加 `CONFIG_KSU` 条件。已审核并更新对应指纹；#131 被后续完整构建取代。
+增加 `CONFIG_KSU` 条件。已审核并更新对应指纹；#131 被后续构建取代。
+#132 随后由包含上述 RCU 空指针修复的最终完整构建取代。
 
 QEMU 新增实际 hm1/ext4/inotify、规则缓存和 UID 隔离、CAKE 配置与 UDP 包统计、
 默认 memcg swap 记账测试；原有 Mihomo、V2/Binder 和 preinit 测试继续执行。
