@@ -76,7 +76,12 @@ CAKE 使用当前独立上游，包含 TCP options 解析越界修复。同步
 - QEMU 的八项实际 hm1/ext4/inotify、规则生命周期、CAKE 和 memcg 测试通过。
   4.9 ext4 使用通用文件句柄编码；自定义 export encoder 防护另由上游生产
   函数测试验证。
-- 最终 GitHub CI：待本轮完整构建。
+- 最终 [GitHub CI #133](https://github.com/chorusfruit-233/OnePlus_SDM845_BakaSU_SUSFS/actions/runs/40112046834)
+  全通过，构建提交 `77cb9e8099ec674a8849ed29a1c2b6c9d20d9e8f`，
+  BakaSU 实际提交 `d5e9e025b8b49155f8014684d64c91742b465f65`。
+- CI 同时通过手机镜像及 ELF 校验、kernel-only 安装测试、SUSFS 与 135 项
+  Hybrid Mount 宿主检查、八项组件实测、Mihomo interpreter/JIT/hardened、
+  18 项 V2 freezer、ARM64/ARM32 Binder 冻结和六项生产 preinit 测试。
 
 集成提交 `29cd530` 推送时，上游 BakaSU 新增 `d5e9e025`，只给代码生成器
 增加 `CONFIG_KSU` 条件。已审核并更新对应指纹；#131 被后续构建取代。
@@ -86,3 +91,19 @@ QEMU 新增实际 hm1/ext4/inotify、规则缓存和 UID 隔离、CAKE 配置与
 默认 memcg swap 记账测试；原有 Mihomo、V2/Binder 和 preinit 测试继续执行。
 宿主故障注入使用模拟内核服务；QEMU 不启动 Android SELinux policy 或系统框架。
 本轮更新仍需 OnePlus 6T / LOS 22.2 真机刷入后的启动、root 与模块行为反馈。
+
+## 刷机包
+
+下载 [CI #133 的 OnePlus6-6T-lineage-4.9-ak3 artifact](https://github.com/chorusfruit-233/OnePlus_SDM845_BakaSU_SUSFS/actions/runs/40112046834/artifacts/12567093965)，
+解压 artifact 后，刷入其中的 AK3 ZIP：
+
+`OnePlus6-6T-BakaSU-d5e9e025-SUSFS-2678ee10-DS7-1c4b0962-TC-eBPF-FreezerV2-Binder-experimental-AK3.zip`
+
+CI 已执行 ZIP 完整性检查，AK3 ZIP 的 SHA-256 为：
+
+```text
+ecd5a9b40d2cde0a7f3718442c385ecbd296e609db323ac6e5d1c1a3c447f105
+```
+
+artifact 同时提供 `build-info.txt`、`SHA256SUMS`、内核镜像、Droidspaces 配置
+检查结果和真机测试工具。各组 CI 运行日志位于同一 run 的测试 artifacts 中。

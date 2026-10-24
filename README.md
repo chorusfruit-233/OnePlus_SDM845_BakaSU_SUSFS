@@ -92,6 +92,9 @@ ramdisk、内核模块或 vendor 接口差异而不兼容。不要在未备份�
   `O_PATH` 与 `O_TRUNC`，open redirect 覆盖普通 open、`O_PATH`、`O_TMPFILE`、
   readlink、`/proc/self/fd`、maps/smaps 与 statfs。
 
+本轮所有集成组件的来源、4.9 修复和已通过的 CI #133 结果，见
+[组件更新记录](docs/components-update-20261024.md)。
+
 ### Linux 4.9 SELinux 接入
 
 `patches/lineage-4.9/bakasu-selinux-4.9.patch` 保留新版 BakaSU 的 NonGKI
