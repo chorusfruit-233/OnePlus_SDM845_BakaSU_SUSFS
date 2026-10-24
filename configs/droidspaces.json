@@ -1,7 +1,8 @@
 {
   "repo": "https://github.com/ravindu644/Droidspaces-OSS",
   "version": "v7.0.0",
-  "commit": "37e8b45de5ddc57d35cb8adfd8327add75e25159",
+  "commit": "847ecdd2c9431f3fa69647eed4060738275aeece",
+  "release_commit": "37e8b45de5ddc57d35cb8adfd8327add75e25159",
   "requirements": "Documentation/Kernel-Configuration.md",
   "required_builtin": [
     "CONFIG_SYSCTL",
@@ -23,6 +24,8 @@
     "CONFIG_CGROUP_NET_PRIO",
     "CONFIG_CPUSETS",
     "CONFIG_MEMCG",
+    "CONFIG_MEMCG_SWAP",
+    "CONFIG_MEMCG_SWAP_ENABLED",
     "CONFIG_CGROUP_PIDS",
     "CONFIG_CGROUP_CPUACCT",
     "CONFIG_DEVTMPFS",

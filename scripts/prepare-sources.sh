@@ -43,6 +43,8 @@ git -C "$kernel_root/KernelSU" apply --check "$patch_root/bakasu-selinux-4.9.pat
 git -C "$kernel_root/KernelSU" apply --whitespace=nowarn "$patch_root/bakasu-selinux-4.9.patch"
 git -C "$kernel_root/KernelSU" apply --check "$patch_root/bakasu-compat-4.9.patch"
 git -C "$kernel_root/KernelSU" apply --whitespace=nowarn "$patch_root/bakasu-compat-4.9.patch"
+git -C "$kernel_root/KernelSU" apply --check "$patch_root/bakasu-susfs-sync-4.9.patch"
+git -C "$kernel_root/KernelSU" apply --whitespace=nowarn "$patch_root/bakasu-susfs-sync-4.9.patch"
 ln -sfn ../KernelSU/kernel "$kernel_root/drivers/kernelsu"
 
 # Supplement the base container configuration for the recorded Droidspaces release.
@@ -69,7 +71,7 @@ git -C "$kernel_root" apply --whitespace=nowarn \
 git -C "$kernel_root" apply --whitespace=nowarn \
     "$patch_root/ath9k-htc-symbols.patch"
 
-# ReKernel-X v9.2 (drivers/rekernel + binder/signal hooks).
+# ReKernel Non-GKI sources (drivers/rekernel + adapted binder/signal hooks).
 git -C "$kernel_root" apply --whitespace=nowarn \
     "$patch_root/rekernel-4.9.patch"
 
@@ -81,7 +83,7 @@ git -C "$kernel_root" apply --whitespace=nowarn "$patch_root/bakasu-preinit-modu
 clone_ref "$cake_repo" "$cake_ref" "$cake_checkout"
 install -D -m 0644 "$cake_checkout/sch_cake.c" \
     "$kernel_root/net/sched/sch_cake.c"
-install -D -m 0644 "$cake_checkout/cobalt.h" \
+install -D -m 0644 "$cake_checkout/cobalt_compat.h" \
     "$kernel_root/include/net/cobalt.h"
 git -C "$kernel_root" apply --whitespace=nowarn \
     "$patch_root/cake-4.9-adaptation.patch"

@@ -187,7 +187,7 @@ jobs:
             -o Acquire::https::Timeout=30 install -y --no-install-recommends \
             bc bison build-essential cpio flex gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf \
             libc6-dev-arm64-cross libc6-dev-armhf-cross ccache git libelf-dev libssl-dev python3 \
-            qemu-user qemu-system-arm rsync unzip zip
+            qemu-user qemu-system-arm e2fsprogs rsync unzip zip
 
       - name: Restore compiler cache
         id: ccache
@@ -317,6 +317,15 @@ jobs:
       - name: Test kernel-only boot image installation
         run: python3 tests/host/test-ak3-ramdisk.py --anykernel anykernel3
 
+      - name: Test SUSFS priority filter and Hybrid Mount source regressions
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/component-tests
+          python3 tests/host/test-susfs-priority.py --source kernel \
+            | tee artifacts/component-tests/susfs-priority.log
+          python3 tests/host/run-hybridmount-tests.py --source kernel \
+            | tee artifacts/component-tests/hybridmount.log
+
       - name: Build pinned upstream cgroup freezer self-tests
         run: |
           set -euo pipefail
@@ -329,6 +338,9 @@ jobs:
 
       - name: Build Binder freezer transaction tests
         run: bash tests/host/build-binder-freezer-tests.sh kernel artifacts/binder-freezer-tests
+
+      - name: Build Hybrid Mount and CAKE runtime tests
+        run: bash tests/host/build-component-tests.sh kernel artifacts/component-tests
 
       - name: Install target UAPI headers for BakaSU preinit
         working-directory: kernel
@@ -396,12 +408,30 @@ jobs:
             --control artifacts/freezer-tests/freezer-backport.test \
             --log artifacts/bakasu-tests/preinit-qemu.log
 
+      - name: Test Hybrid Mount ext4 inode handling, CAKE and memcg swap
+        run: |
+          python3 tests/host/run-components-qemu.py \
+            --kernel kernel/out-bpf-qemu/arch/arm64/boot/Image \
+            --busybox anykernel3/tools/busybox \
+            --test artifacts/component-tests/components-runtime.test \
+            --control artifacts/freezer-tests/freezer-backport.test \
+            --log artifacts/component-tests/qemu.log
+
       - name: Upload BakaSU execution results
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: bakasu-runtime-tests
           path: artifacts/bakasu-tests/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload component regression results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: component-tests
+          path: artifacts/component-tests/
           if-no-files-found: ignore
           retention-days: 14
 
@@ -507,17 +537,21 @@ jobs:
             echo "susfs_upstream=$(jq -r .susfs.commit configs/vendored-upstreams.json)"
             echo "susfs_port=$(jq -r .susfs.port_commit configs/vendored-upstreams.json)"
             echo "susfs_core=$(jq -r .susfs.core_commit configs/vendored-upstreams.json)"
+            echo "bakasu_susfs_sync_patch=$(sha256sum patches/lineage-4.9/bakasu-susfs-sync-4.9.patch | cut -c1-12)"
+            echo "rekernel_integration=$(jq -r .rekernel.commit configs/vendored-upstreams.json)"
             echo "bakasu_selinux_patch=$(sha256sum patches/lineage-4.9/bakasu-selinux-4.9.patch | cut -c1-12)"
             echo "selinux_integration=$(jq -r .susfs.selinux_integration configs/vendored-upstreams.json)"
             echo "selinux_runtime=not-tested-by-ci"
             echo "droidspaces=$(jq -r .version configs/droidspaces.json)@$(jq -r .commit configs/droidspaces.json)"
             echo "droidspaces_patch=$(sha256sum patches/lineage-4.9/droidspaces-4.9.patch | cut -c1-12)"
             echo "droidspaces_cpu_quota_policy=$(jq -r .cpu_quota_policy configs/droidspaces.json)"
+            echo "droidspaces_swap_accounting=enabled-by-default"
             echo "cake=$(git -C "$RUNNER_TEMP/sch_cake" rev-parse HEAD)"
             echo "baseband_guard=$(git -C kernel/Baseband-guard rev-parse HEAD)"
             echo "kernel_patches=$(git -C "$RUNNER_TEMP/kernel_patches" rev-parse HEAD)"
             echo "rtl8812au=$(git -C "$RUNNER_TEMP/rtl8812au" rev-parse HEAD)"
             echo "anykernel3=$(git -C anykernel3 rev-parse HEAD)"
+            echo "firmware_sha256=$(sha256sum kernel/firmware/htc_9271.fw kernel/firmware/rt2870.bin kernel/firmware/mt7601u.bin | tr '\n' ';')"
           } > artifacts/build-info.txt
 
       - name: Upload AK3 artifacts

@@ -1,11 +1,14 @@
 Re:Kernel kernel integration (drivers/rekernel + binder/signal hooks)
 
-Sourced from https://github.com/Sakion-Team/Re-Kernel (main, Integrate/;
-rekernel.c/rekernel.h/Kconfig/Makefile are identical in the ReKernel-X
-upstream/v9.2 fork), adapted for the LineageOS 4.9.337 base:
+Sourced from https://github.com/Sakion-Team/Re-Kernel
+main @ ac08296174d7fb2801c0eee1084f067a34f8a0fe, Integrate/rekernel/.
+The current Non-GKI source is unchanged from the previously imported baseline;
+later v11.7 external-module releases do not change this integration.
+Adapted for the LineageOS 4.9.337 base:
 
-- drivers/rekernel/{Kconfig,Makefile,rekernel.c,rekernel.h} verbatim
-  (GPL-2.0), with CONFIG_REKERNEL=y / CONFIG_REKERNEL_NETWORK=y;
+- drivers/rekernel/{Kconfig,Makefile,rekernel.c} verbatim, rekernel.h
+  with the legacy freezer fallback (GPL-2.0);
+  CONFIG_REKERNEL=y / CONFIG_REKERNEL_NETWORK=y;
 - drivers/android/binder.c: frozen-process async transaction handling
   (binder_can_update_transaction()/
   binder_find_outdated_transaction_ilocked()) plus the

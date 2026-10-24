@@ -1,6 +1,7 @@
 Droidspaces v7.0.0 support for the pinned LineageOS 4.9 kernel.
-Reference: ravindu644/Droidspaces-OSS @ 37e8b45de5ddc57d35cb8adfd8327add75e25159.
-Enable macvlan networking and the optional recent match for UFW/Fail2Ban.
+Release: ravindu644/Droidspaces-OSS @ 37e8b45de5ddc57d35cb8adfd8327add75e25159.
+Requirements reviewed at main @ 847ecdd2c9431f3fa69647eed4060738275aeece.
+Enable macvlan, recent match and swap accounting enabled by default.
 The core namespace/NAT/resource configuration and cgroup prefix repair are
 already supplied by kernel-4.9-adaptation.patch. Preserve WALT scheduling;
 its Kconfig excludes CFS_BANDWIDTH, so CPU quotas remain unavailable.
@@ -8,6 +9,15 @@ its Kconfig excludes CFS_BANDWIDTH, so CPU quotas remain unavailable.
 diff --git a/arch/arm64/configs/enchilada_defconfig b/arch/arm64/configs/enchilada_defconfig
 --- a/arch/arm64/configs/enchilada_defconfig
 +++ b/arch/arm64/configs/enchilada_defconfig
+@@ -19,6 +19,8 @@
+ CONFIG_CGROUP_DEVICE=y
+ CONFIG_CGROUP_PIDS=y
+ CONFIG_MEMCG=y
++CONFIG_MEMCG_SWAP=y
++CONFIG_MEMCG_SWAP_ENABLED=y
+ CONFIG_CPUSETS=y
+ CONFIG_CGROUP_CPUACCT=y
+ CONFIG_CGROUP_SCHEDTUNE=y
 @@ -190,6 +190,7 @@
  CONFIG_NETFILTER_XT_MATCH_PKTTYPE=y
  CONFIG_NETFILTER_XT_MATCH_QUOTA=y

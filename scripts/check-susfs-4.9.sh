@@ -37,8 +37,18 @@ git -C "$ksu_root" apply --reverse --check \
 git -C "$ksu_root" apply --reverse --check \
     "$builder_root/patches/lineage-4.9/bakasu-compat-4.9.patch" ||
     fail 'BakaSU preinit/legacy compatibility adaptation is absent or incomplete.'
+git -C "$ksu_root" apply --reverse --check \
+    "$builder_root/patches/lineage-4.9/bakasu-susfs-sync-4.9.patch" ||
+    fail 'BakaSU priority UID filter dispatch/package refresh adaptation is incomplete.'
 
 require '^#define SUSFS_VERSION "v2\.3\.0"$' "$kernel_root/include/linux/susfs.h"
+require '^#define CMD_SUSFS_SET_PRIORITY_UID_FILTER 0x60030$' "$kernel_root/include/linux/susfs_def.h"
+require 'case CMD_SUSFS_SET_PRIORITY_UID_FILTER:' "$ksu_root/kernel/supercall/dispatch.c"
+require 'susfs_parse_priority_app_strings\(\);' "$ksu_root/kernel/manager/throne_tracker.c"
+for file in kernel/sys.c block/ioprio.c; do
+    [[ $(grep -c 'susfs_is_priority_uid_filtered(uid.val)' "$kernel_root/$file") == 2 ]] ||
+        fail "Priority UID filtering is incomplete in $file"
+done
 require 'ksu_handle_selinux_setprocattr\(struct task_struct \*p' \
     "$ksu_root/kernel/feature/selinux_hide.c"
 require 'static int selinux_setprocattr\(struct task_struct \*p,' \

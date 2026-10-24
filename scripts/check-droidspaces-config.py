@@ -43,6 +43,8 @@ def main():
     # A compiled-in command line can disable controllers despite their config.
     # Bootloader arguments and Android mount/policy restrictions need device checks.
     command_line = config.get("CONFIG_CMDLINE", "").strip('"')
+    if "swapaccount=0" in command_line.split():
+        errors.append("Swap accounting disabled by CONFIG_CMDLINE: swapaccount=0")
     for token in command_line.split():
         if token.startswith("cgroup_disable="):
             disabled = set(token.partition("=")[2].split(","))
@@ -58,6 +60,8 @@ def main():
             "ipv6_nat": all(config.get(key) == "y" for key in
                             ("CONFIG_IP6_NF_NAT", "CONFIG_IP6_NF_TARGET_MASQUERADE")),
             "memory_limit": config.get("CONFIG_MEMCG") == "y",
+            "swap_limit": config.get("CONFIG_MEMCG_SWAP") == "y" and
+                          config.get("CONFIG_MEMCG_SWAP_ENABLED") == "y",
             "pids_limit": config.get("CONFIG_CGROUP_PIDS") == "y",
             "cpu_accounting": config.get("CONFIG_CGROUP_CPUACCT") == "y",
             "cpu_quota": cpu_quota,

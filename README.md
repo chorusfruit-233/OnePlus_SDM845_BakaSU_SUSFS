@@ -72,8 +72,11 @@ ramdisk、内核模块或 vendor 接口差异而不兼容。不要在未备份�
 - SUSFS **v2.3.0** 以自包含补丁形式 vendored（`patches/lineage-4.9/susfs-4.9.patch`，
   基于 [JackA1ltman/NonGKI_Kernel_Build_2nd](https://github.com/JackA1ltman/NonGKI_Kernel_Build_2nd)
   的 `susfs_patch_to_4.9.patch` 移植，并同步官方
-  `gki-android14-6.1 @ 5192aa2d33b3` 的接入更新），构建不再依赖 GitLab 上游。
-  这两次官方更新没有修改 SUSFS 核心文件；核心仍基于 `24743360ea08`。
+  `gki-android14-6.1 @ 27e0a0e42745`），构建不再依赖 GitLab 上游。
+  同步新的应用 UID 优先级过滤、四个 priority/ioprio 系统调用钩子，以及
+  `clone_mnt()` 的 unshared mount ID 标记修复；版本号仍为官方 v2.3.0。
+  BakaSU 已补齐控制命令与安装/卸载应用后的 UID 刷新，4.9 使用私有分配兼容层，
+  并阻止过期后台刷新覆盖新配置。使用新功能需更新官方 SUSFS 用户态工具。
   官方 GKI 手动 SELinux hooks 在本树由以下 NonGKI 自动接入替代；
 - 使用 SUSFS 官方 inline hook 方式（`scripts/susfs-inline-hook.sh`）替换 KernelSU
   的 kprobe 钩子，覆盖 exec、faccessat、stat/fstat、read、input、reboot、
@@ -111,10 +114,11 @@ CI 在编译前执行 `tests/host/test-selinux-cleanup.py`，从已准备的 Bak
 ### Hybrid Mount VFS（内建）
 
 - [Hybrid-Mount/meta-hybrid_mount](https://github.com/Hybrid-Mount/meta-hybrid_mount)
-  的 VFS 驱动固定到 `dev @ b2afc9130929`，以自包含补丁
+  的 VFS 驱动更新到 `dev @ e5120adea50d`，以自包含补丁
   `patches/lineage-4.9/hybridmount-4.9.patch` vendored；
-- 本次快照更新中，VFS 源码树与此前版本一致，协议仍为 `hm1`，保留现有 4.9
-  适配。上游新增的 SUSFS LKM 冲突检查属于用户态元模块，需单独更新元模块；
+- 同步 inode/RCU 引用、规则替换缓存、按 UID 区分的同名子项、父目录转换、
+  seqcount 写侧与分配失败回滚修复；内建 ext4 export encoder 防护覆盖
+  fabricated inode 的 inotify fdinfo 路径。协议仍为 `hm1`；
 - 启用 `CONFIG_HYBRIDMOUNT=y` 和 `CONFIG_KEYS=y`，驱动内建到内核镜像，
   使用 `hybridmount` keyring 接口与 **hm1** 协议；支持路径注入、重定向、
   whiteout、opaque 目录与 UID 隔离；
@@ -163,9 +167,11 @@ CI 在编译前执行 `tests/host/test-selinux-cleanup.py`，从已准备的 Bak
 
 ### Re:Kernel
 
-- [Sakion-Team/Re-Kernel](https://github.com/Sakion-Team/Re-Kernel)（Integrate，
-  rekernel 源码与 ReKernel-X upstream/v9.2 相同）以自包含补丁 vendored
+- [Sakion-Team/Re-Kernel](https://github.com/Sakion-Team/Re-Kernel) 的 Non-GKI
+  集成已核对至 `main @ ac08296174d7`，以自包含补丁 vendored
   （`patches/lineage-4.9/rekernel-4.9.patch`）；
+- 当前 Non-GKI 源码与此前快照一致；外置模块的 v11.7 版本号不适用于本集成。
+  保留本仓库的 V2 freezer 判断与 Binder 事务计数适配；
 - 新增 `drivers/rekernel/`（netlink 上报模块，`CONFIG_REKERNEL=y`，
   `CONFIG_REKERNEL_NETWORK=y`）；
 - `drivers/android/binder.c`：移植冻结进程的 async 事务合并处理
@@ -188,13 +194,17 @@ CI 在编译前执行 `tests/host/test-selinux-cleanup.py`，从已准备的 Bak
   poll 触发器；Android LMKD 是否使用 PSI 还取决于 ROM 的配置与运行状态；
 
 - BBRv1 与 BBRv3，可在运行时保留 BBRv1 作为回退；
-- CAKE、FQ、FQ_CODEL 与 PIE qdisc；
+- CAKE 更新到 `dtaht/sch_cake @ 53ff94d4b580`，同步现代 netlink 参数/统计
+  接口及旧内核兼容层，包含 TCP options 解析越界修复；保留 FQ、FQ_CODEL 与 PIE；
 - TTL/HL target、IPSet、IPv6 NAT；
-- 对照 Droidspaces **v7.0.0**（`37e8b45de5dd`）的正式内核要求启用
+- 对照 Droidspaces **v7.0.0** 和主线要求（`847ecdd2c943`）启用
   namespaces、cgroups、seccomp、veth、bridge、IPv4/IPv6 NAT、macvlan、
   overlayfs、TMPFS XATTR/POSIX ACL、CPU 使用统计、内存和进程数限额；
 - 补齐 macvlan 与 UFW/Fail2Ban 使用的 `xt_recent`；4.9 的 netfilter 旧配置名
   记录在 `configs/droidspaces.json`，不加入本树不存在的通用选项；
+- 启用 `CONFIG_MEMCG_SWAP=y` / `CONFIG_MEMCG_SWAP_ENABLED=y`，默认开启
+  swap 记账，支持 Droidspaces 的容器 swap 限制；无需增加 `swapaccount=1`，
+  真机启动参数仍不能包含 `swapaccount=0`；
 - 保留 Qualcomm WALT。该树的 `CONFIG_CFS_BANDWIDTH` 依赖 `!SCHED_WALT`，
   所以 Droidspaces 的 `--cpus` 配额不可用，CPU 使用统计与 cpuset 仍可用；
 - 官方 NonGKI cgroup 前缀修复已在基础补丁内适配；本基线没有 `xt_qtaguid.c`，
@@ -290,9 +300,9 @@ SUSFS 补丁的哈希）和所有上游 commit 共同组成 build key：
 | Kernel | [LineageOS/android_kernel_oneplus_sdm845](https://github.com/LineageOS/android_kernel_oneplus_sdm845) | 固定基线 commit |
 | BakaSU | [Baka-SU/BakaSU](https://github.com/Baka-SU/BakaSU) | 默认跟踪 `main`，校验配套实现 |
 | SUSFS v2.3.0 | 自包含补丁（源自 [JackA1ltman/NonGKI_Kernel_Build_2nd](https://github.com/JackA1ltman/NonGKI_Kernel_Build_2nd)） | vendored，随仓库版本变化 |
-| Hybrid Mount VFS | [Hybrid-Mount/meta-hybrid_mount](https://github.com/Hybrid-Mount/meta-hybrid_mount)（dev 分支） | vendored，固定 `b2afc9130929`，内建 hm1 provider |
+| Hybrid Mount VFS | [Hybrid-Mount/meta-hybrid_mount](https://github.com/Hybrid-Mount/meta-hybrid_mount)（dev 分支） | vendored，固定 `e5120adea50d`，内建 hm1 provider |
 | RTL8812AU/8821AU/8814AU | [aircrack-ng/rtl8812au](https://github.com/aircrack-ng/rtl8812au) | 默认跟踪 `v5.6.4.2`（构建时克隆 + 适配补丁） |
-| CAKE | [dtaht/sch_cake](https://github.com/dtaht/sch_cake) | 固定最后一版兼容旧 qdisc API 的基线 |
+| CAKE | [dtaht/sch_cake](https://github.com/dtaht/sch_cake) | 固定最新 `53ff94d4b580`，同步 4.9 兼容层和 UAPI |
 | BBRv3 patches | [WildKernels/kernel_patches](https://github.com/WildKernels/kernel_patches) | 稀疏拉取 `common/bbrv3` |
 | Baseband Guard | [vc-teahouse/Baseband-guard](https://github.com/vc-teahouse/Baseband-guard) | 默认跟踪 `main` |
 | AnyKernel3 | [osm0sis/AnyKernel3](https://github.com/osm0sis/AnyKernel3) | 默认跟踪 `master` |

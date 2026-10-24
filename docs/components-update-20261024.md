@@ -1,0 +1,81 @@
+# 2026-10-24 集成组件更新
+
+本轮继续使用 LineageOS Linux 4.9.337 基线，BakaSU 跟踪 `main`，保留 WALT、
+Mihomo eBPF、cgroup V2 freezer 和 Binder 冻结适配。BakaSU 的独立输出目录修复
+已在 [CI #130](https://github.com/chorusfruit-233/OnePlus_SDM845_BakaSU_SUSFS/actions/runs/40109240760)
+全流程通过；下面的组件更新另做完整构建与回归。
+
+| 组件 | 本轮核对的上游 | 处理 |
+| --- | --- | --- |
+| BakaSU | `main @ c0c96a408728` | UAPI v6 / preinit / 热安装适配；增加 SUSFS 新命令及包变化后的 UID 刷新 |
+| SUSFS | `gki-android14-6.1 @ 27e0a0e42745`，仍为 v2.3.0 | 同步新核心功能及 4.9 mount 修复 |
+| Non-GKI SUSFS port | `mainline @ dcd789634247` | 同步 `clone_mnt()` 的 unshared ID 标记；保留本地正确的 ctime bitmask |
+| Hybrid Mount | `dev @ e5120adea50d`，`hm1` | 更新内建驱动，保留 4.9 ABI 适配 |
+| CAKE | `master @ 53ff94d4b580` | 更新调度器、旧内核兼容层及 netlink UAPI |
+| Droidspaces | v7.0.0；主线要求 `847ecdd2c943` | 开启默认 swap 记账，保留 WALT / 无 CFS CPU 配额 |
+| ReKernel | `main @ ac08296174d7` | Non-GKI 集成源码未变；记录最新来源，保留 V2/Binder 适配 |
+| Baseband Guard | `main @ a54e0dc6cf0a` | 无更新，继续跟踪 main |
+| BBRv3 patch set | `main @ fa76c90e2cb2` | 无更新，保留 4.9 适配 |
+| RTL8812AU | `v5.6.4.2 @ 734485506a30` | 无更新，保留 cfg80211 兼容层 |
+| AnyKernel3 | `master @ 020dfeccf9d7` | 无更新，保留 kernel-only / 原 ramdisk 安装方式 |
+| Mihomo 测试目标 | `Alpha @ 02581ff38100` | 无更新，继续执行真实 eBPF 程序测试 |
+
+## SUSFS
+
+核心更新来自 `08066fa`。新接口 `0x60030` 使用应用包名配置 UID 位图，过滤
+普通应用对目标 UID 的 priority/ioprio 查询。4.9 的四个系统调用保留原来的
+RCU 和 tasklist 锁边界；BakaSU 的 root-only SUSFS dispatcher 已接入命令。
+UID 更新从公共 package tracker 触发，覆盖旧版 rename LSM 钩子，无需在
+4.9 上开启新版 fsnotify observer。
+
+移植保留 inode `i_state` 存储、statx 私有标记和已有 OPEN_REDIRECT 等功能。
+新增分配使用私有 kmalloc/vmalloc 兼容函数；配置代次检查防止旧后台刷新
+覆盖较新配置。SELinux 继续使用已适配的 NonGKI 自动 hooks。
+
+新功能需要包含 `set_priority_uid_filter` 命令的最新版官方 SUSFS 工具。
+本仓库更新内核及接口，不打包替换管理器、SUSFS 工具或 Hybrid Mount 元模块。
+
+## Hybrid Mount 与 CAKE
+
+Hybrid Mount 同步 UID 子项选择、规则替换缓存、父目录转换、RCU/引用计数、
+seqcount 写侧、内存分配失败回滚和 ext4 export encoder 防护。最新源码仍用
+`hm1` keyring 协议；保留本树的四参数 getattr/statx 和 C 字符串 name snapshot
+适配。内建 export encoder 防护让 fabricated inode 的 inotify fdinfo 不再
+调用依赖 ext4 私有 inode 状态的原始编码器。
+
+上游为了避免悬空回调，保留已复制的目录 fops 及相关文件系统引用到卸载时；
+本仓库内建驱动的生命周期为本次开机。清除规则后，相关资源也可能继续保留
+到重启，大量 inode 更替会增加这部分占用。
+
+CAKE 使用当前独立上游，包含 TCP options 解析越界修复。同步
+`TCA_CAKE_BASE_RATE64`、GSO/fwmark 和嵌套统计接口，避免新实现与旧 UAPI 混用。
+使用 CAKE 配置工具时需要支持现代 CAKE netlink 接口的 iproute2/tc。
+
+## 固件核对
+
+重新下载官方 linux-firmware 当前版本，三个文件与当前内核内嵌文件一致：
+
+| 文件 | 字节 | SHA-256 |
+| --- | --- | --- |
+| `htc_9271.fw` | 50980 | `b5c123f9a8f2b0388eddd630860c100b4fe889ccdb4fcf24bc88b0fe2df3e59e` |
+| `rt2870.bin` | 8192 | `251b8918391eac6415d60dca239e415aad0177e885376f2a17782e64fcbbe317` |
+| `mediatek/mt7601u.bin` | 45412 | `4511b1d840e22aea2bf5fdca419c91c0d94cbfb291b9ac4f8be6d9100d1a7046` |
+
+## 验证
+
+- 从原始基线重新执行全部内核补丁及 inline hook，144 个内核路径和
+  9 个 BakaSU 文件与实际源码逐字节一致。
+- SUSFS 实际函数与 BakaSU dispatcher 的输入/分配/权限域失败注入通过；
+  覆盖 multi-user app ID、包 UID 更新和过期刷新。
+- Hybrid Mount 的六组上游生产函数测试通过，含 UID cursor、分配回滚、
+  inode 生命周期、读取引用和 VFS 语义。
+- 完整手机 `Image.gz-dtb`、符号/嵌入 ELF 检查和增强 QEMU guest 均通过。
+- QEMU 的八项实际 hm1/ext4/inotify、规则生命周期、CAKE 和 memcg 测试通过。
+  4.9 ext4 使用通用文件句柄编码；自定义 export encoder 防护另由上游生产
+  函数测试验证。
+- 最终 GitHub CI：待本轮完整构建。
+
+QEMU 新增实际 hm1/ext4/inotify、规则缓存和 UID 隔离、CAKE 配置与 UDP 包统计、
+默认 memcg swap 记账测试；原有 Mihomo、V2/Binder 和 preinit 测试继续执行。
+宿主故障注入使用模拟内核服务；QEMU 不启动 Android SELinux policy 或系统框架。
+本轮更新仍需 OnePlus 6T / LOS 22.2 真机刷入后的启动、root 与模块行为反馈。

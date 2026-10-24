@@ -9,7 +9,7 @@
   "bakasu_repo": "https://github.com/Baka-SU/BakaSU.git",
   "bakasu_ref": "main",
   "cake_repo": "https://github.com/dtaht/sch_cake.git",
-  "cake_ref": "15f1f6c0665213d1f1fbe7d315e0cbd75cdbf861",
+  "cake_ref": "53ff94d4b58071307084d47a7937afbe71e40070",
   "bbg_repo": "https://github.com/vc-teahouse/Baseband-guard.git",
   "bbg_ref": "main",
   "kernel_patches_repo": "https://github.com/WildKernels/kernel_patches.git",

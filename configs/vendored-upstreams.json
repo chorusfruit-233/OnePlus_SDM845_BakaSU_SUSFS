@@ -3,11 +3,11 @@
     "version": "v2.3.0",
     "repo": "https://gitlab.com/simonpunk/susfs4ksu.git",
     "ref": "gki-android14-6.1",
-    "commit": "5192aa2d33b381b58c1051532f9e1dfa5de6e8d3",
+    "commit": "27e0a0e42745991ba09d6f96a97bf4b83f41a012",
     "port_repo": "https://github.com/JackA1ltman/NonGKI_Kernel_Build_2nd.git",
     "port_ref": "mainline",
-    "port_commit": "e2f895b357a2844f5dc8d4e7ad980c0c9b200345",
-    "core_commit": "24743360ea08d98f6ad72b856851abed8de5854f",
+    "port_commit": "dcd789634247c77d8549a42aef232c680a905585",
+    "core_commit": "08066faea18f809bc3260b00291a32d098b08c92",
     "selinux_integration": "BakaSU NonGKI automatic hooks; LineageOS 4.9 adaptation",
     "bakasu_patch_base": "c0c96a4087285ff82d71003d4186629de1c46b3c",
     "bakasu_reviewed_files": {
@@ -43,7 +43,8 @@
       "kernel/supercall/dispatch.c": "184d407c951fe8465816343a943f0990d15217fd54eac1c92f0306df80e2ac82",
       "kernel/preinit/preinit.c": "cbc553aeb19bf59307c1130dae66d70546974eba4f01e85fec8e4cc21a2c230b",
       "kernel/tools/manual_hook_check.mk": "1730356ba9ef0fb5d3e943198de0396bbbaad3f5bbe368277bb842b0409ed77b",
-      "kernel/feature/module_blacklist.h": "746dabd2ee63c5cf924defc0d5d86196f5e9d727480e6abecdc046dc207fed0e"
+      "kernel/feature/module_blacklist.h": "746dabd2ee63c5cf924defc0d5d86196f5e9d727480e6abecdc046dc207fed0e",
+      "kernel/manager/throne_tracker.c": "ccb8e63b10e145d894d83bfcae937bde5b605717991d58c61ac59329776a0dbb"
     },
     "bakasu_reviewed_commit": "c0c96a4087285ff82d71003d4186629de1c46b3c"
   },
@@ -51,9 +52,17 @@
     "version": "hm1",
     "repo": "https://github.com/Hybrid-Mount/meta-hybrid_mount.git",
     "ref": "dev",
-    "commit": "b2afc9130929689ed3c932addb3b6bdb9f339022",
+    "commit": "e5120adea50d917aa21fd5ab11a7823e48c937f0",
     "source_path": "module/vfs/src",
     "license": "GPL-2.0-only",
-    "source_tree": "345990de510f996f081f99dc20402be5c0cb051a"
+    "source_tree": "001e206a5f6dcb781ae724f4d07fda4eaf94d14b"
+  },
+  "rekernel": {
+    "repo": "https://github.com/Sakion-Team/Re-Kernel.git",
+    "ref": "main",
+    "commit": "ac08296174d7fb2801c0eee1084f067a34f8a0fe",
+    "source_path": "Integrate/rekernel",
+    "source_tree": "4c0ab90148ec8898241ae21e07fbe86f735f3f36",
+    "integration": "Non-GKI sources unchanged; keep local cgroup-v2 and Binder-freezer adaptations"
   }
 }

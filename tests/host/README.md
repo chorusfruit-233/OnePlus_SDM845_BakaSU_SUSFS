@@ -51,3 +51,35 @@ disable and startup-rollback recovery.
 
 This covers failure bookkeeping. ARM64 memory patching, concurrent callbacks,
 device boot, SELinux decisions, and timing behavior still require device tests.
+
+## Integrated components
+
+```sh
+python3 tests/host/test-susfs-priority.py --source kernel
+python3 tests/host/run-hybridmount-tests.py --source kernel
+bash tests/host/build-component-tests.sh kernel artifacts/component-tests
+python3 tests/host/run-components-qemu.py \
+  --kernel kernel/out-bpf-qemu/arch/arm64/boot/Image \
+  --busybox anykernel3/tools/busybox \
+  --test artifacts/component-tests/components-runtime.test \
+  --control artifacts/freezer-tests/freezer-backport.test \
+  --log artifacts/component-tests/qemu.log
+```
+
+The SUSFS test compiles the actual filter and BakaSU command dispatcher with
+mocked credentials/VFS/RCU. It checks invalid input, allocation failures,
+credential restoration, multi-user UID matching and stale refresh publication.
+The [vendored Hybrid Mount fixtures](hybridmount/README.md) exercise production
+functions with controlled failure injection.
+
+The QEMU test uses the built kernel and a temporary ext4 image made by
+`e2fsprogs`. It invokes the real hm1 keyring interface and checks redirects,
+xattrs/stat/readdir, ext4 inotify fdinfo, UID-specific whiteouts, rule replacement,
+parent conversion and retained open FDs. It also configures CAKE through the
+modern netlink API, delivers UDP packets and reads packet/byte statistics, and
+checks that memcg swap accounting is exposed without a boot override. The guest
+has no host disk or network attached. Android SELinux and the phone still need
+device validation.
+
+This 4.9 ext4 uses the generic file-handle encoder. The custom export encoder
+guard is checked separately by the production-function hook fixtures.

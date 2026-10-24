@@ -1,0 +1,47 @@
+SUSFS priority UID filter integration for BakaSU main / Linux 4.9
+
+Upstream: simonpunk/susfs4ksu @ 27e0a0e42745991ba09d6f96a97bf4b83f41a012
+BakaSU base: c0c96a4087285ff82d71003d4186629de1c46b3c
+Route the root-only SUSFS command and refresh UID mappings after package scans.
+Use the common tracker rather than enabling the fsnotify observer on 4.9.
+---
+diff --git a/kernel/manager/throne_tracker.c b/kernel/manager/throne_tracker.c
+index d487fc8..0f2bb5e 100644
+--- a/kernel/manager/throne_tracker.c
++++ b/kernel/manager/throne_tracker.c
+@@ -17,6 +17,9 @@
+ #include "klog.h" // IWYU pragma: keep
+ #include "manager/manager_identity.h"
+ #include "manager/throne_tracker.h"
++#ifdef CONFIG_KSU_SUSFS
++#include <linux/susfs.h>
++#endif
+ #include "compat/kernel_compat.h"
+ #include "feature/dynamic_manager.h"
+ 
+@@ -360,6 +363,10 @@ out:
+         kfree(np);
+     }
+     revert_creds(old_cred);
++#ifdef CONFIG_KSU_SUSFS
++    /* Both legacy rename hooks and modern fsnotify scans converge here. */
++    susfs_parse_priority_app_strings();
++#endif
+ }
+ 
+ void track_throne(unsigned int flags)
+diff --git a/kernel/supercall/dispatch.c b/kernel/supercall/dispatch.c
+index c23a7cb..dc05cf1 100644
+--- a/kernel/supercall/dispatch.c
++++ b/kernel/supercall/dispatch.c
+@@ -1168,6 +1168,10 @@ int ksu_handle_susfs_cmd(unsigned int cmd, void __user **arg)
+         return 0;
+     }
+ #endif // #ifdef CONFIG_KSU_SUSFS_SUS_MAP
++    case CMD_SUSFS_SET_PRIORITY_UID_FILTER: {
++        susfs_set_priority_uid_filter(arg);
++        return 0;
++    }
+     case CMD_SUSFS_ENABLE_AVC_LOG_SPOOFING: {
+         susfs_set_avc_log_spoofing(arg);
+         return 0;

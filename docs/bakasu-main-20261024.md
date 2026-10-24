@@ -44,7 +44,7 @@ shell root 和启动参数强制 feature 值。4.9 配套改动包括：
 | 生产 runner 在 Linux 4.9 QEMU 8.2.2 中执行 | 六种情况全通过 |
 | 从原始内核和上游重新应用补丁 | 两个内核文件、七个 BakaSU 文件均与实际构建源码逐字节一致 |
 | 全新独立 QEMU 输出目录的 prepare / scripts | 通过，`asm/types.h` 和 modpost 均正常生成，源码目录保持干净 |
-| GitHub CI | #129 手机镜像和 ELF 检查通过；后续 guest 构建暴露 UAPI 输出目录污染，已修正，待完整重跑 |
+| GitHub CI | [#130 全通过](https://github.com/chorusfruit-233/OnePlus_SDM845_BakaSU_SUSFS/actions/runs/40109240760)；已修复 #129 的 UAPI 输出目录污染 |
 | OnePlus 6T / LOS 22.2 | 本轮待真机反馈 |
 
 六个 QEMU 场景是：无配置、执行模块动作、不安全配置、启动计数限制、程序不存在、

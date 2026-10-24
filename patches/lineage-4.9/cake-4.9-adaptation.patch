@@ -1,50 +1,183 @@
+CAKE 53ff94d4b58071307084d47a7937afbe71e40070 / Linux 4.9 integration
+
+Install upstream sch_cake.c and cobalt_compat.h first. Use the kernel UAPI
+header with the matching modern CAKE netlink attributes/statistics, and keep
+the upstream legacy-kernel compatibility layer in include/net/cobalt.h.
+---
+diff --git a/include/uapi/linux/pkt_sched.h b/include/uapi/linux/pkt_sched.h
+index 3efb311..0668dea 100644
+--- a/include/uapi/linux/pkt_sched.h
++++ b/include/uapi/linux/pkt_sched.h
+@@ -870,7 +870,8 @@ struct tc_pie_xstats {
+ /* CAKE */
+ enum {
+ 	TCA_CAKE_UNSPEC,
+-	TCA_CAKE_BASE_RATE,
++	TCA_CAKE_PAD,
++	TCA_CAKE_BASE_RATE64,
+ 	TCA_CAKE_DIFFSERV_MODE,
+ 	TCA_CAKE_ATM,
+ 	TCA_CAKE_FLOW_MODE,
+@@ -880,51 +881,104 @@ enum {
+ 	TCA_CAKE_AUTORATE,
+ 	TCA_CAKE_MEMORY,
+ 	TCA_CAKE_NAT,
+-	TCA_CAKE_ETHERNET,
++	TCA_CAKE_RAW, // was _ETHERNET
+ 	TCA_CAKE_WASH,
+ 	TCA_CAKE_MPU,
+ 	TCA_CAKE_INGRESS,
+ 	TCA_CAKE_ACK_FILTER,
++	TCA_CAKE_SPLIT_GSO,
++	TCA_CAKE_FWMARK,
+ 	__TCA_CAKE_MAX
+ };
+ #define TCA_CAKE_MAX	(__TCA_CAKE_MAX - 1)
+ 
+-struct tc_cake_traffic_stats {
+-	__u32 packets;
+-	__u32 link_ms;
+-	__u64 bytes;
+-};
+-
+-struct tc_cake_tin_stats {
+-	__u32 threshold_rate;
+-	__u32 target_us;
+-	struct tc_cake_traffic_stats sent;
+-	struct tc_cake_traffic_stats dropped;
+-	struct tc_cake_traffic_stats ecn_marked;
+-	struct tc_cake_traffic_stats backlog;
+-	__u32 interval_us;
+-	__u32 way_indirect_hits;
+-	__u32 way_misses;
+-	__u32 way_collisions;
+-	__u32 peak_delay_us;
+-	__u32 avge_delay_us;
+-	__u32 base_delay_us;
+-	__u16 sparse_flows;
+-	__u16 bulk_flows;
+-	__u16 unresponse_flows;
+-	__u16 spare;
+-	__u32 max_skblen;
+-	struct tc_cake_traffic_stats ack_drops;
+-};
++enum {
++	__TCA_CAKE_STATS_INVALID,
++	TCA_CAKE_STATS_PAD,
++	TCA_CAKE_STATS_CAPACITY_ESTIMATE64,
++	TCA_CAKE_STATS_MEMORY_LIMIT,
++	TCA_CAKE_STATS_MEMORY_USED,
++	TCA_CAKE_STATS_AVG_NETOFF,
++	TCA_CAKE_STATS_MIN_NETLEN,
++	TCA_CAKE_STATS_MAX_NETLEN,
++	TCA_CAKE_STATS_MIN_ADJLEN,
++	TCA_CAKE_STATS_MAX_ADJLEN,
++	TCA_CAKE_STATS_TIN_STATS,
++	TCA_CAKE_STATS_DEFICIT,
++	TCA_CAKE_STATS_COBALT_COUNT,
++	TCA_CAKE_STATS_DROPPING,
++	TCA_CAKE_STATS_DROP_NEXT_US,
++	TCA_CAKE_STATS_P_DROP,
++	TCA_CAKE_STATS_BLUE_TIMER_US,
++	__TCA_CAKE_STATS_MAX
++};
++#define TCA_CAKE_STATS_MAX (__TCA_CAKE_STATS_MAX - 1)
++
++enum {
++	__TCA_CAKE_TIN_STATS_INVALID,
++	TCA_CAKE_TIN_STATS_PAD,
++	TCA_CAKE_TIN_STATS_SENT_PACKETS,
++	TCA_CAKE_TIN_STATS_SENT_BYTES64,
++	TCA_CAKE_TIN_STATS_DROPPED_PACKETS,
++	TCA_CAKE_TIN_STATS_DROPPED_BYTES64,
++	TCA_CAKE_TIN_STATS_ACKS_DROPPED_PACKETS,
++	TCA_CAKE_TIN_STATS_ACKS_DROPPED_BYTES64,
++	TCA_CAKE_TIN_STATS_ECN_MARKED_PACKETS,
++	TCA_CAKE_TIN_STATS_ECN_MARKED_BYTES64,
++	TCA_CAKE_TIN_STATS_BACKLOG_PACKETS,
++	TCA_CAKE_TIN_STATS_BACKLOG_BYTES,
++	TCA_CAKE_TIN_STATS_THRESHOLD_RATE64,
++	TCA_CAKE_TIN_STATS_TARGET_US,
++	TCA_CAKE_TIN_STATS_INTERVAL_US,
++	TCA_CAKE_TIN_STATS_WAY_INDIRECT_HITS,
++	TCA_CAKE_TIN_STATS_WAY_MISSES,
++	TCA_CAKE_TIN_STATS_WAY_COLLISIONS,
++	TCA_CAKE_TIN_STATS_PEAK_DELAY_US,
++	TCA_CAKE_TIN_STATS_AVG_DELAY_US,
++	TCA_CAKE_TIN_STATS_BASE_DELAY_US,
++	TCA_CAKE_TIN_STATS_SPARSE_FLOWS,
++	TCA_CAKE_TIN_STATS_BULK_FLOWS,
++	TCA_CAKE_TIN_STATS_UNRESPONSIVE_FLOWS,
++	TCA_CAKE_TIN_STATS_MAX_SKBLEN,
++	TCA_CAKE_TIN_STATS_FLOW_QUANTUM,
++	__TCA_CAKE_TIN_STATS_MAX
++};
++#define TCA_CAKE_TIN_STATS_MAX (__TCA_CAKE_TIN_STATS_MAX - 1)
+ #define TC_CAKE_MAX_TINS (8)
+ 
+-struct tc_cake_xstats {
+-	__u16 version;
+-	__u16 tin_stats_size;
+-	__u32 capacity_estimate;
+-	__u32 memory_limit;
+-	__u32 memory_used;
+-	__u8 tin_cnt;
+-	struct tc_cake_tin_stats tin_stats[0];
++enum {
++	CAKE_FLOW_NONE = 0,
++	CAKE_FLOW_SRC_IP,
++	CAKE_FLOW_DST_IP,
++	CAKE_FLOW_HOSTS,    /* = CAKE_FLOW_SRC_IP | CAKE_FLOW_DST_IP */
++	CAKE_FLOW_FLOWS,
++	CAKE_FLOW_DUAL_SRC, /* = CAKE_FLOW_SRC_IP | CAKE_FLOW_FLOWS */
++	CAKE_FLOW_DUAL_DST, /* = CAKE_FLOW_DST_IP | CAKE_FLOW_FLOWS */
++	CAKE_FLOW_TRIPLE,   /* = CAKE_FLOW_HOSTS  | CAKE_FLOW_FLOWS */
++	CAKE_FLOW_MAX,
++};
++
++enum {
++	CAKE_DIFFSERV_DIFFSERV3 = 0,
++	CAKE_DIFFSERV_DIFFSERV4,
++	CAKE_DIFFSERV_DIFFSERV8,
++	CAKE_DIFFSERV_BESTEFFORT,
++	CAKE_DIFFSERV_PRECEDENCE,
++	CAKE_DIFFSERV_MAX
+ };
++
++enum {
++	CAKE_ACK_NONE = 0,
++	CAKE_ACK_FILTER,
++	CAKE_ACK_AGGRESSIVE,
++	CAKE_ACK_MAX
++};
++
++enum {
++	CAKE_ATM_NONE = 0,
++	CAKE_ATM_ATM,
++	CAKE_ATM_PTM,
++	CAKE_ATM_MAX
++};
++
+ #endif
 diff --git a/net/sched/sch_cake.c b/net/sched/sch_cake.c
-index 62b67e7..2fae4a4 100644
+index 0861c9b..0cdcaf5 100644
 --- a/net/sched/sch_cake.c
 +++ b/net/sched/sch_cake.c
-@@ -64,6 +64,16 @@
- #include <net/netfilter/nf_conntrack.h>
+@@ -65,7 +65,7 @@
+ #include <linux/reciprocal_div.h>
+ #include <net/netlink.h>
+ #include <linux/version.h>
+-#include "pkt_sched.h"
++#include <linux/pkt_sched.h>
+ #include <net/pkt_cls.h>
+ #include <linux/if_vlan.h>
+ #include <net/tcp.h>
+@@ -74,7 +74,7 @@
+ #else
+ #include <net/flow_dissector.h>
  #endif
+-#include "cobalt_compat.h"
++#include <net/cobalt.h>
  
-+static void *cake_kvzalloc(size_t size, gfp_t flags)
-+{
-+	void *ptr = kzalloc(size, flags | __GFP_NOWARN);
-+
-+	if (!ptr && (flags & GFP_KERNEL) == GFP_KERNEL)
-+		ptr = vzalloc(size);
-+
-+	return ptr;
-+}
-+
- /* The CAKE Principles:
-  *		   (or, how to have your cake and eat it too)
-  *
-@@ -2233,7 +2243,7 @@ static int cake_change(struct Qdisc *sch, struct nlattr *opt)
- 	if (!opt)
- 		return -EINVAL;
- 
--	err = nla_parse_nested(tb, TCA_CAKE_MAX, opt, cake_policy, NULL);
-+	err = nla_parse_nested(tb, TCA_CAKE_MAX, opt, cake_policy);
- 	if (err < 0)
- 		return err;
- 
-@@ -2373,8 +2383,8 @@ static int cake_init(struct Qdisc *sch, struct nlattr *opt)
- 	for (i = 1; i <= CAKE_QUEUES; i++)
- 		quantum_div[i] = 65535 / i;
- 
--	q->tins = kvzalloc(CAKE_MAX_TINS * sizeof(struct cake_tin_data),
--			   GFP_KERNEL);
-+	q->tins = cake_kvzalloc(CAKE_MAX_TINS * sizeof(struct cake_tin_data),
-+				GFP_KERNEL);
- 	if (!q->tins)
- 		goto nomem;
- 
-@@ -2482,7 +2492,7 @@ static int cake_dump_stats(struct Qdisc *sch, struct gnet_dump *d)
- 	size_t size = sizeof(*st) + sizeof(struct tc_cake_tin_stats) * q->tin_cnt;
- 	int i;
- 
--	st = kvzalloc(size, GFP_KERNEL);
-+	st = cake_kvzalloc(size, GFP_KERNEL);
- 
- 	if (!st)
- 		return -ENOMEM;
+ #if IS_REACHABLE(CONFIG_NF_CONNTRACK)
+ #include <net/netfilter/nf_conntrack_core.h>
