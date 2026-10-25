@@ -40,9 +40,13 @@ def boot_image(version, kernel, ramdisk):
 
 def dtb(label):
     value = label.encode() + b"\0"
+    # magiskboot filters out DTBs no larger than empty_root.dts (132 bytes).
+    # Model a nonempty phone DTB with ordinary root cell properties.
     tree = (struct.pack(">I4sIII", 1, bytes(4), 3, len(value), 0) + value +
-            bytes(-len(value) % 4) + struct.pack(">II", 2, 9))
-    strings = b"compatible\0"
+            bytes(-len(value) % 4) +
+            struct.pack(">IIII", 3, 4, 11, 2) +
+            struct.pack(">IIII", 3, 4, 26, 2) + struct.pack(">II", 2, 9))
+    strings = b"compatible\0#address-cells\0#size-cells\0"
     header = struct.pack(">10I", 0xd00dfeed, 56 + len(tree) + len(strings),
                          56, 56 + len(tree), 40, 17, 16, 0, len(strings), len(tree))
     return header + bytes(16) + tree + strings
@@ -129,6 +133,7 @@ setup_ak;
                 run(magiskboot + ["unpack", "-h", str(root / "partition.img")], verify)
                 assert (verify / "ramdisk.cpio").read_bytes() == archive, "ramdisk CPIO changed"
                 assert (verify / "kernel").read_bytes() == replacement, "kernel not replaced"
+                assert (verify / "kernel_dtb").read_bytes() == replacement_dtb, "appended DTB not recognised"
                 kernel_size = struct.unpack_from("<I", flashed, 8)[0]
                 assert flashed[4096:4096 + kernel_size].endswith(replacement_dtb), "appended DTB not replaced"
                 print(f"PASS: boot v{version}, {compression}: kernel/DTB replaced; ramdisk CPIO unchanged")
