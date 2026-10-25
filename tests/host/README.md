@@ -62,6 +62,12 @@ the original callbacks and backup resources, report an incomplete state, and
 allow a later cleanup retry before enabling again. It also checks successful
 disable and startup-rollback recovery.
 
+The installer mock can return EAGAIN, as happens after boot-completed has freed
+the unused policy backup. The actual getter must retain the requested value for
+ksud's `feature save`, and a simulated next boot must restore the running state.
+Cancellation of that pending request and a fresh hard initialization failure
+are covered separately.
+
 This covers failure bookkeeping. ARM64 memory patching, concurrent callbacks,
 device boot, SELinux decisions, and timing behavior still require device tests.
 

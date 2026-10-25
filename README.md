@@ -110,6 +110,9 @@ ramdisk、内核模块或 vendor 接口差异而不兼容。不要在未备份�
 
 CI 在编译前执行 `tests/host/test-selinux-cleanup.py`，从已准备的 BakaSU 源码
 提取真实清理/切换函数，注入回调恢复失败，检查原回调、备份资源、错误状态和重试。
+同时覆盖开机完成后启用返回 `-EAGAIN` 时的保存语义：保留待重启启用的请求，
+由管理器的 `feature save` 保存为 `1`，下次启动再恢复。此前补丁误将这一情况
+保存为 `0`；修复说明见 [SELinux 隐藏开关持久化](docs/selinux-hide-persistence-20261025.md)。
 源码检查、主机回归和编译成功均不能证明真机 SELinux hide 的行为或时间特性。
 `device-tests/selinux_hide_test` 用于从真实普通应用 UID/SELinux 域采集接口语义与
 重复时延；root 或 adb shell 不能代替该验证。测试说明和两次运行的对比方法见

@@ -95,7 +95,7 @@ struct sidtab { int unused; };
 static struct policydb policy_resource,*backup_policydb;
 static struct sidtab sid_resource,*backup_sidtab;
 static void *failing_slot;
-static int enable_calls,destroy_calls;
+static int enable_calls,destroy_calls,enable_error;
 static void mutex_lock(int *m) {(void)m;}
 static void mutex_unlock(int *m) {(void)m;}
 static void sidtab_destroy(struct sidtab *s) {(void)s;destroy_calls++;}
@@ -107,7 +107,7 @@ static int ksu_patch_text(void *dst,void *value,size_t size,int flags) {
     memcpy(dst,value,size);
     return 0;
 }
-static int ksu_selinux_hide_enable(void) {enable_calls++; return 0;}
+static int ksu_selinux_hide_enable(void) {enable_calls++; return enable_error;}
 static void reset(bool running) {
     context_slot=access_slot=setprocattr_slot=installed;
     orig_context_write=orig_access_write=ksu_orig_setprocattr=original;
@@ -116,6 +116,7 @@ static void reset(bool running) {
     ksu_selinux_hide_cleanup_pending=false;
     failing_slot=NULL;
     enable_calls=destroy_calls=0;
+    enable_error=0;
     backup_policydb=&policy_resource;
     backup_sidtab=&sid_resource;
 }
@@ -182,6 +183,41 @@ int main(void) {
     assert(selinux_hide_feature_set(1)==0 && enable_calls==1);
     assert(ksu_selinux_hide_running && ksu_selinux_hide_enabled && !ksu_selinux_hide_cleanup_pending);
     puts("PASS: failed disable is cleaned up before a new enable");
+
+    /* boot-completed drops the unused policy backup. A later manager toggle
+     * gets EAGAIN, then ksud feature save persists the feature getter value.
+     */
+    reset(false);
+    assert(ksu_selinux_hide_unhook()==0);
+    ksu_selinux_hide_drop_backup_if_unused();
+    assert(!backup_policydb && !backup_sidtab);
+    enable_error=-EAGAIN;
+    assert(selinux_hide_feature_set(1)==-EAGAIN);
+    assert(!ksu_selinux_hide_running && !ksu_selinux_hide_cleanup_pending);
+    assert(selinux_hide_feature_get(&value)==0 && value==1);
+    assert(!orig_context_write && !orig_access_write && !ksu_orig_setprocattr);
+    u64 persisted=value;
+    reset(false); /* next boot: a fresh policy backup exists before config load */
+    assert(selinux_hide_feature_set(persisted)==0);
+    assert(ksu_selinux_hide_running && ksu_selinux_hide_enabled && enable_calls==1);
+    ksu_selinux_hide_drop_backup_if_unused();
+    assert(backup_policydb && backup_sidtab && !destroy_calls);
+    puts("PASS: reboot-required enable remains saved and next-boot config restores running state");
+
+    reset(false);
+    enable_error=-EAGAIN;
+    assert(selinux_hide_feature_set(1)==-EAGAIN);
+    assert(selinux_hide_feature_set(0)==0);
+    assert(selinux_hide_feature_get(&value)==0 && value==0);
+    assert(!ksu_selinux_hide_running && !ksu_selinux_hide_enabled);
+    puts("PASS: disabling a pending enable cancels its saved request");
+
+    reset(false);
+    enable_error=-ENOSYS;
+    assert(selinux_hide_feature_set(1)==-ENOSYS);
+    assert(selinux_hide_feature_get(&value)==0 && value==0);
+    assert(!ksu_selinux_hide_running && !ksu_selinux_hide_enabled);
+    puts("PASS: hard initialization failure is not presented as an enabled feature");
     return 0;
 }
 """
