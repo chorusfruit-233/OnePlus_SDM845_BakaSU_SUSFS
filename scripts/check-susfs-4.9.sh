@@ -21,7 +21,7 @@ case "$mode" in
     *) fail "Unknown mode: $mode" ;;
 esac
 
-[[ $(git -C "$kernel_root" rev-parse HEAD) == "$(jq -er .kernel_base "$config")" ]] ||
+[[ $(python3 "$script_dir/source_revisions.py" "$kernel_root" --upstream) == "$(jq -er .kernel_base "$config")" ]] ||
     fail 'Kernel base changed; review the adaptation before building.'
 python3 "$script_dir/check-bakasu-4.9.py" "$ksu_root"
 actual_bakasu=$(git -C "$ksu_root" rev-parse HEAD)

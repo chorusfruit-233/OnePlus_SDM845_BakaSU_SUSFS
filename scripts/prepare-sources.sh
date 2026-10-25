@@ -184,7 +184,12 @@ git -C "$kernel_root" apply --whitespace=nowarn "$patch_root/cgroup-v2-freezer-4
 git -C "$kernel_root" apply --check "$patch_root/binder-freezer-4.9.patch"
 git -C "$kernel_root" apply --whitespace=nowarn "$patch_root/binder-freezer-4.9.patch"
 
-echo "BakaSU commit: $(git -C "$kernel_root/KernelSU" rev-parse HEAD)"
+# Make version strings describe the actual patched sources, retaining upstream
+# commits separately for compatibility checks and build provenance.
+python3 "$script_dir/source_revisions.py" "$kernel_root"
+
+echo "BakaSU upstream: $(python3 "$script_dir/source_revisions.py" "$kernel_root/KernelSU" --upstream)"
+echo "BakaSU prepared commit: $(git -C "$kernel_root/KernelSU" rev-parse HEAD)"
 echo "Mihomo eBPF backport: $(sha256sum "$patch_root/mihomo-ebpf-4.9.patch" | cut -c1-12)"
 echo "Mihomo cgroup backport: $(sha256sum "$patch_root/mihomo-cgroup-4.9.patch" | cut -c1-12)"
 echo "Mihomo TC backport: $(sha256sum "$patch_root/mihomo-tc-4.9.patch" | cut -c1-12)"

@@ -250,7 +250,8 @@ artifact 包含：
 | `OnePlus6-6T-BakaSU-*-SUSFS-*-AK3.zip` | 可刷入的 AnyKernel3 包 |
 | `Image.gz-dtb` | 编译得到的内核镜像 |
 | `SHA256SUMS` | AK3 ZIP 的 SHA256 校验值 |
-| `build-info.txt` | 本次构建使用的全部上游 commit |
+| `build-info.txt` | 本次构建使用的上游与本地适配 commit |
+| `source-revisions.json` | 内核、BakaSU、Baseband Guard 的上游提交、适配提交及源码 tree |
 | `device-tests/` | AArch64 SUSFS syscall 与 SELinux 行为/时延真机回归工具 |
 
 > [!NOTE]
@@ -315,6 +316,15 @@ SUSFS 补丁的哈希）和所有上游 commit 共同组成 build key：
 vendored 组件的确切来源记录在 `configs/vendored-upstreams.json`。SUSFS 官方来源、
 4.9 移植来源和 Hybrid Mount VFS 均固定到提交；同一 SUSFS 版本号内也可能存在源码差异。
 每次构建的确切版本以 artifact 内的 `build-info.txt` 为准，不应只根据 branch 名推断。
+
+打完补丁后，构建流程会分别在临时的 BakaSU、Baseband Guard 和内核仓库创建
+本地适配提交，因此驱动和内核版本对应实际编译源码，不再带预期补丁产生的
+`-dirty`。相同上游及相同源码生成相同适配提交；这些提交仅用于构建，不推送
+到各组件的上游。BakaSU 继续跟踪 `main`，兼容检查仍针对原始上游提交。
+包名中的 BakaSU 短 SHA 改为本地适配提交，原始上游 SHA 同时记录在
+`build-info.txt` 的 `bakasu_upstream` 和 `source-revisions.json` 中。
+这一个本地提交也会计入 BakaSU 原有的版本码计算。
+编译后会检查源码状态及镜像版本，发现后续修改或 `-dirty` 时中止打包。
 
 ## 真机回归测试
 

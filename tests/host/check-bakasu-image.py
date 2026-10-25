@@ -24,6 +24,8 @@ def main():
     parser.add_argument("--nm", default="aarch64-linux-gnu-nm")
     args = parser.parse_args()
     if args.source:
+        subprocess.run(["python3", str(Path(__file__).resolve().parents[2] / "scripts/source_revisions.py"),
+                        str(args.source), "--check"], check=True)
         for name in ("arch/arm64/include/generated", "include/generated"):
             assert not (args.source / name).exists(), f"generated files leaked into source tree: {name}"
     symbols = {}
@@ -45,6 +47,22 @@ def main():
     start, end = (symbols[name][0] for name in ("ksu_preinit_runner_start", "ksu_preinit_runner_end"))
     assert end - start == len(runner), "embedded preinit length differs"
     image = args.vmlinux.read_bytes()
+    if args.source:
+        prepared = subprocess.check_output(
+            ["git", "-C", str(args.source / "KernelSU"), "rev-parse", "--short=8", "HEAD"],
+            text=True,
+        ).strip()
+        assert prepared.encode() in image, "BakaSU prepared revision missing from image"
+        assert (prepared + "-dirty").encode() not in image, "BakaSU driver was built with dirty sources"
+        release = args.vmlinux.parent / "include/config/kernel.release"
+        version = release.read_text().strip()
+        assert "-dirty" not in version, "kernel was built with dirty sources"
+        assert version.encode() + b"\0" in image, "kernel release differs from embedded version"
+        kernel_revision = subprocess.check_output(
+            ["git", "-C", str(args.source), "rev-parse", "--short=12", "HEAD"], text=True,
+        ).strip()
+        assert kernel_revision in version, "kernel prepared revision missing from release"
+        print(f"PASS: BakaSU prepared revision {prepared}; kernel release {version}")
     for kind, flags, offset, address, physical, size, memory_size, align in segments(image):
         if kind == 1 and address <= start and end <= address + size:
             begin = offset + start - address
@@ -52,7 +70,7 @@ def main():
             break
     else:
         raise AssertionError("embedded preinit is outside file-backed load segments")
-    print("PASS: unique kernel blacklist symbol, linked hooks and exact static AArch64 preinit ELF embedding")
+    print("PASS: clean source versions, unique blacklist symbol, linked hooks and exact preinit ELF embedding")
 
 
 if __name__ == "__main__":

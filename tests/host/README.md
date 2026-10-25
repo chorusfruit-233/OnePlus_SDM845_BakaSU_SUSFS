@@ -1,5 +1,18 @@
 # Host BakaSU regressions
 
+## Prepared source revisions
+
+```sh
+python3 tests/host/test-source-revisions.py
+python3 scripts/source_revisions.py kernel --check
+```
+
+The Git integration test checks deterministic commits in two independent nested
+checkouts, retained upstream revisions/tags, required ignored firmware inputs,
+exclusion of O= outputs, repeat invocation, and rejection of later source edits.
+The image check additionally requires the prepared BakaSU revision in vmlinux
+and clean driver/kernel version strings.
+
 ## Kernel-only installation
 
 ```sh

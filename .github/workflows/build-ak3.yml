@@ -310,6 +310,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p artifacts/bakasu-tests
+          python3 tests/host/test-source-revisions.py | tee artifacts/bakasu-tests/source-revisions.log
           python3 tests/host/test-bakasu-compat.py | tee artifacts/bakasu-tests/abi.log
           python3 tests/host/test-selinux-cleanup.py | tee artifacts/bakasu-tests/selinux-cleanup.log
           python3 tests/host/test-bakasu-integration.py | tee artifacts/bakasu-tests/integration.log
@@ -501,6 +502,8 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p artifacts
+          python3 scripts/source_revisions.py kernel --check
+          cp "$(git -C kernel rev-parse --absolute-git-dir)/source-revisions.json" artifacts/
           bakasu_sha=$(git -C kernel/KernelSU rev-parse --short=8 HEAD)
           susfs_sha=$(sha256sum patches/lineage-4.9/susfs-4.9.patch | cut -c1-8)
           droidspaces_sha=$(sha256sum patches/lineage-4.9/droidspaces-4.9.patch | cut -c1-8)
@@ -512,9 +515,14 @@ jobs:
           (cd artifacts && sha256sum "$package" > SHA256SUMS)
           cp kernel/out/arch/arm64/boot/Image.gz-dtb artifacts/
           {
+            echo "builder=$(git rev-parse HEAD)"
             echo "kernel=$(git -C kernel rev-parse HEAD)"
+            echo "kernel_upstream=$(python3 scripts/source_revisions.py kernel --upstream)"
             echo "bakasu_repo=${{ steps.config.outputs.bakasu_repo }}"
             echo "bakasu=$(git -C kernel/KernelSU rev-parse HEAD)"
+            echo "bakasu_upstream=$(python3 scripts/source_revisions.py kernel/KernelSU --upstream)"
+            echo "source_revisions=source-revisions.json"
+            echo "source_status=committed-adaptations-clean"
             echo "bakasu_reviewed_commit=$(jq -r .susfs.bakasu_reviewed_commit configs/vendored-upstreams.json)"
             echo "bakasu_compat_patch=$(sha256sum patches/lineage-4.9/bakasu-compat-4.9.patch | cut -c1-12)"
             echo "bakasu_preinit_hooks=$(sha256sum patches/lineage-4.9/bakasu-preinit-module-4.9.patch | cut -c1-12)"
@@ -548,6 +556,7 @@ jobs:
             echo "droidspaces_swap_accounting=enabled-by-default"
             echo "cake=$(git -C "$RUNNER_TEMP/sch_cake" rev-parse HEAD)"
             echo "baseband_guard=$(git -C kernel/Baseband-guard rev-parse HEAD)"
+            echo "baseband_guard_upstream=$(python3 scripts/source_revisions.py kernel/Baseband-guard --upstream)"
             echo "kernel_patches=$(git -C "$RUNNER_TEMP/kernel_patches" rev-parse HEAD)"
             echo "rtl8812au=$(git -C "$RUNNER_TEMP/rtl8812au" rev-parse HEAD)"
             echo "anykernel3=$(git -C anykernel3 rev-parse HEAD)"
@@ -588,7 +597,7 @@ jobs:
 
           gh release create "$tag" \
             artifacts/*-AK3.zip artifacts/SHA256SUMS \
-            artifacts/build-info.txt artifacts/Image.gz-dtb \
+            artifacts/build-info.txt artifacts/source-revisions.json artifacts/Image.gz-dtb \
             --title "OnePlus 6/6T BakaSU + SUSFS $(date +%Y-%m-%d)" \
             --notes "$notes"
           echo "Created release: $tag"

@@ -7,6 +7,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from source_revisions import upstream_commit
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -15,11 +17,12 @@ def main():
     metadata = Path(__file__).resolve().parent.parent / "configs/vendored-upstreams.json"
     profile = json.loads(metadata.read_text())["susfs"]
     changed = []
+    revision = upstream_commit(args.checkout)
     # Read committed upstream content, not the local adaptation's patched files.
     # The caller separately checks that the full local patch is present.
     for name, expected in profile["bakasu_reviewed_files"].items():
         result = subprocess.run(
-            ["git", "-C", str(args.checkout), "show", f"HEAD:{name}"],
+            ["git", "-C", str(args.checkout), "show", f"{revision}:{name}"],
             capture_output=True,
         )
         if result.returncode or hashlib.sha256(result.stdout).hexdigest() != expected:
@@ -30,9 +33,6 @@ def main():
         for name in changed:
             print(f"  {name}", file=sys.stderr)
         return 1
-    revision = subprocess.check_output(
-        ["git", "-C", str(args.checkout), "rev-parse", "HEAD"], text=True
-    ).strip()
     print(f"BakaSU {revision}: reviewed 4.9 integration unchanged "
           f"(patch base {profile['bakasu_patch_base']}).")
     return 0
