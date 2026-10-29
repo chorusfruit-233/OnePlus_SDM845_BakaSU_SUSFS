@@ -1,5 +1,29 @@
 # Host BakaSU regressions
 
+## Droidspaces systemd interfaces
+
+```sh
+bash tests/host/build-droidspaces-tests.sh kernel artifacts/droidspaces-tests
+python3 tests/host/run-droidspaces-qemu.py \
+  --kernel kernel/out-bpf-qemu/arch/arm64/boot/Image \
+  --busybox anykernel3/tools/busybox \
+  --test artifacts/droidspaces-tests/droidspaces-arm64.test \
+  --compat-test artifacts/droidspaces-tests/droidspaces-arm32.test \
+  --control artifacts/freezer-tests/freezer-backport.test \
+  --log artifacts/droidspaces-tests/qemu.log
+```
+
+Runs eleven syscall groups per ABI on the actual 4.9 guest: pidfd wait/poll/kill,
+statx ABI and bind-mount metadata, utimensat, faccessat2 real/effective credentials,
+close_range, socket options, namespace ioctls, PTY flags/error paths and nexthop
+enumeration. The test uses the kernel's statx/nsfs UAPI with each target libc.
+It checks real errors and descriptor ownership, not version numbers. Existing
+freezer tests separately verify real frozen=0/1 transitions.
+
+Run these binaries only in the disposable QEMU guest. The PTY error-path case
+temporarily renames its virtual /dev/ptmx; they are excluded from the phone AK3
+artifact. This does not boot Android, Droidspaces or systemd.
+
 ## Prepared source revisions
 
 ```sh

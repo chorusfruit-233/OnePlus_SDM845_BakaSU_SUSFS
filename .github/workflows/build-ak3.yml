@@ -108,7 +108,7 @@ jobs:
           rtl8812au_sha=$(resolve_ref "$(jq -r .rtl8812au_repo "$CONFIG")" "$RTL8812AU_REF")
           anykernel_sha=$(resolve_ref "$(jq -r .anykernel_repo "$CONFIG")" "$ANYKERNEL_REF")
           builder_sha=$(git rev-parse HEAD)
-          patch_sha=$(sha256sum patches/lineage-4.9/*.patch | sha256sum | cut -d' ' -f1)
+          patch_sha=$(git ls-files -z -- 'patches/lineage-4.9/*.patch' 'patches/lineage-4.9/droidspaces-backports/*.patch' | sort -z | xargs -0 sha256sum | sha256sum | cut -d' ' -f1)
           build_key="${kernel_base}-${bakasu_sha}-${cake_sha}-${bbg_sha}-${kernel_patches_sha}-${rtl8812au_sha}-${anykernel_sha}-${builder_sha}-${patch_sha}"
 
           {
@@ -340,6 +340,9 @@ jobs:
       - name: Build Binder freezer transaction tests
         run: bash tests/host/build-binder-freezer-tests.sh kernel artifacts/binder-freezer-tests
 
+      - name: Build Droidspaces systemd syscall tests
+        run: bash tests/host/build-droidspaces-tests.sh kernel artifacts/droidspaces-tests
+
       - name: Build Hybrid Mount and CAKE runtime tests
         run: bash tests/host/build-component-tests.sh kernel artifacts/component-tests
 
@@ -408,6 +411,25 @@ jobs:
             --busybox anykernel3/tools/busybox \
             --control artifacts/freezer-tests/freezer-backport.test \
             --log artifacts/bakasu-tests/preinit-qemu.log
+
+      - name: Test Droidspaces backports on ARM64 and ARM32
+        run: |
+          python3 tests/host/run-droidspaces-qemu.py \
+            --kernel kernel/out-bpf-qemu/arch/arm64/boot/Image \
+            --busybox anykernel3/tools/busybox \
+            --test artifacts/droidspaces-tests/droidspaces-arm64.test \
+            --compat-test artifacts/droidspaces-tests/droidspaces-arm32.test \
+            --control artifacts/freezer-tests/freezer-backport.test \
+            --log artifacts/droidspaces-tests/qemu.log
+
+      - name: Upload Droidspaces syscall results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: droidspaces-backport-tests
+          path: artifacts/droidspaces-tests/
+          if-no-files-found: ignore
+          retention-days: 14
 
       - name: Test Hybrid Mount ext4 inode handling, CAKE and memcg swap
         run: |
@@ -507,13 +529,16 @@ jobs:
           bakasu_sha=$(git -C kernel/KernelSU rev-parse --short=8 HEAD)
           susfs_sha=$(sha256sum patches/lineage-4.9/susfs-4.9.patch | cut -c1-8)
           droidspaces_sha=$(sha256sum patches/lineage-4.9/droidspaces-4.9.patch | cut -c1-8)
+          systemd_sha=$(sha256sum patches/lineage-4.9/droidspaces-backports/*.patch | sha256sum | cut -c1-8)
           package="OnePlus6-6T-BakaSU-${bakasu_sha}-SUSFS-${susfs_sha}-DS7-${droidspaces_sha}-AK3.zip"
           package="${package%-AK3.zip}-TC-eBPF-FreezerV2-Binder-experimental-AK3.zip"
+          package="${package%-AK3.zip}-systemd262-${systemd_sha}-AK3.zip"
           scripts/package-ak3.sh anykernel3 \
             kernel/out/arch/arm64/boot/Image.gz-dtb \
             ak3/anykernel.sh "artifacts/$package"
           (cd artifacts && sha256sum "$package" > SHA256SUMS)
           cp kernel/out/arch/arm64/boot/Image.gz-dtb artifacts/
+          cp configs/droidspaces-backports.json artifacts/
           {
             echo "builder=$(git rev-parse HEAD)"
             echo "kernel=$(git -C kernel rev-parse HEAD)"
@@ -554,6 +579,10 @@ jobs:
             echo "droidspaces_patch=$(sha256sum patches/lineage-4.9/droidspaces-4.9.patch | cut -c1-12)"
             echo "droidspaces_cpu_quota_policy=$(jq -r .cpu_quota_policy configs/droidspaces.json)"
             echo "droidspaces_swap_accounting=enabled-by-default"
+            echo "droidspaces_backports=$(jq -r .commit configs/droidspaces-backports.json)"
+            echo "droidspaces_backports_patchset=$systemd_sha"
+            echo "droidspaces_runtime_required=$(jq -r .runtime.required_commit configs/droidspaces-backports.json)"
+            echo "systemd_backports_scope=258-262-interfaces; container-boot-not-tested-by-ci"
             echo "cake=$(git -C "$RUNNER_TEMP/sch_cake" rev-parse HEAD)"
             echo "baseband_guard=$(git -C kernel/Baseband-guard rev-parse HEAD)"
             echo "baseband_guard_upstream=$(python3 scripts/source_revisions.py kernel/Baseband-guard --upstream)"
@@ -570,6 +599,7 @@ jobs:
           path: |
             artifacts/
             !artifacts/ebpf-tests/**
+            !artifacts/droidspaces-tests/**
           if-no-files-found: error
           retention-days: 14
 

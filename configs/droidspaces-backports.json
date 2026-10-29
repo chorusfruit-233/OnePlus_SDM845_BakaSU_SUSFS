@@ -1,0 +1,106 @@
+{
+  "repository": "https://github.com/Droidspaces/droidspaces-backports",
+  "ref": "main",
+  "commit": "be24159e5cc264b4491f5416d8efd9504031c42b",
+  "runtime": {
+    "repository": "https://github.com/ravindu644/Droidspaces-OSS",
+    "required_commit": "3132cc9311c5e2582a9c47c40476925b3a9a2c57",
+    "requirement": "Newer than v7.1.0; includes new-mount-API fallback"
+  },
+  "preserved": {
+    "pidfd_base": "already present",
+    "statx": "existing full implementation; add mount metadata and attributes mask",
+    "freezer": "real cgroup-v2 freezer, including frozen 0/1 events",
+    "scheduler": "WALT; no CFS CPU bandwidth"
+  },
+  "skipped": {
+    "kernel-4.9-series/0004": "replaced with adapted 4.14 mount-ID and mount-root changes",
+    "kernel-4.9-series/0010": "standalone ARM/x86 only; ARM64 compat rows are included",
+    "kernel-4.9-series/0015": "frozen 0 stub must not replace the real freezer"
+  },
+  "series": [
+    {
+      "file": "0001-pidfd-add-P_PIDFD-to-waitid.patch",
+      "source": "kernel-4.9-series/0001-pidfd-add-P_PIDFD-to-waitid.patch",
+      "sha256": "8d6fe03a556d35b0e2a1cbc59dae998fd39db46d9417470060f59958b1a5e713"
+    },
+    {
+      "file": "0002-fork-don-t-check-parent_tidptr-with-CLONE_PIDFD.patch",
+      "source": "kernel-4.9-series/0002-fork-don-t-check-parent_tidptr-with-CLONE_PIDFD.patch",
+      "sha256": "dfebcab6228ea63a762e34cea288f3d135b520212b4f4b42f914e083876c6d78"
+    },
+    {
+      "file": "0003-net-introduce-SO_BINDTOIFINDEX-sockopt.patch",
+      "source": "kernel-4.9-series/0003-net-introduce-SO_BINDTOIFINDEX-sockopt.patch",
+      "sha256": "359c1b0ec165394789d43ffa84544e0c190f2a091833ecbf4e0057a416c8d630"
+    },
+    {
+      "file": "0004-statx-add-mount-ID.patch",
+      "source": "kernel-4.14-series/0004-statx-add-mount-ID.patch",
+      "sha256": "8690fc7abd0857bfb163b28e61113b4260e25ac4123b168a84d93a1e9b4de465"
+    },
+    {
+      "file": "0004b-statx-add-mount_root.patch",
+      "source": "kernel-4.14-series/0005-statx-add-mount_root.patch",
+      "sha256": "dd43db3dbffdc962829ae468b83ae08b48d9fbc127a4e210c291af2f06ed360a"
+    },
+    {
+      "file": "0005-utimensat-AT_EMPTY_PATH-support.patch",
+      "source": "kernel-4.9-series/0005-utimensat-AT_EMPTY_PATH-support.patch",
+      "sha256": "401bc7959a072972e7a6f53cb72f43ef31f848fa1b6c72cc6cb8895d041df3a2"
+    },
+    {
+      "file": "0006-vfs-add-faccessat2-syscall.patch",
+      "source": "kernel-4.9-series/0006-vfs-add-faccessat2-syscall.patch",
+      "sha256": "8d81328f1d8fe7f32402f2b1bfb2d907e83cc1298bba9ce356ee0830a31507ca"
+    },
+    {
+      "file": "0007-open-add-close_range.patch",
+      "source": "kernel-4.9-series/0007-open-add-close_range.patch",
+      "sha256": "693aacafd2adc054837d0f38187724ce21ce3ca861dbad1bfcdc7f0794612643"
+    },
+    {
+      "file": "0008-arch-wire-up-close_range.patch",
+      "source": "kernel-4.9-series/0008-arch-wire-up-close_range.patch",
+      "sha256": "33882e4b3a672ad366123f5df73cd08a29c60c5d189fb1eccf268c17ee46bbb3"
+    },
+    {
+      "file": "0009-rtnetlink-accept-nexthop-message-types-and-multicast.patch",
+      "source": "kernel-4.9-series/0009-rtnetlink-accept-nexthop-message-types-and-multicast.patch",
+      "sha256": "1e7aea986d1ff65e8be8050684ab42ec5a784178258bbc11be7a52eda67ffc62"
+    },
+    {
+      "file": "0011-net-introduce-SO_PEERGROUPS-getsockopt.patch",
+      "source": "kernel-4.9-series/0011-net-introduce-SO_PEERGROUPS-getsockopt.patch",
+      "sha256": "fba109250c3e047d0ab3def2dbf0e9f9ad8d235efadb5c6795b312be6405f4ae"
+    },
+    {
+      "file": "0012-nsfs-Add-an-ioctl-to-return-the-namespace-type.patch",
+      "source": "kernel-4.9-series/0012-nsfs-Add-an-ioctl-to-return-the-namespace-type.patch",
+      "sha256": "38bd795d58781dcfa3f962a7d44aaa411cc449fff4ebb4e51d4e69c6a9ff714a"
+    },
+    {
+      "file": "0013-nsfs-Add-an-ioctl-to-return-owner-UID-of-a-userns.patch",
+      "source": "kernel-4.9-series/0013-nsfs-Add-an-ioctl-to-return-owner-UID-of-a-userns.patch",
+      "sha256": "f3766a5c935184c5ee37e6172c85f2edc4f1be5ecc1dd970ece3dd6ca747899b"
+    },
+    {
+      "file": "0013b-nsfs-forward-compatible-ioctls.patch",
+      "source": "local: LineageOS 4.9 compat ioctl dispatch",
+      "sha256": "961971ecb0cff4bc972965b4c1e5201381d72a5303dace7d7a7ee2b6a9f33ef2"
+    },
+    {
+      "file": "0014-tty-add-TIOCGPTPEER-ioctl.patch",
+      "source": "kernel-4.9-series/0014-tty-add-TIOCGPTPEER-ioctl.patch",
+      "sha256": "8b6c6293c20c4b3b31ca4b237b0865016ebb0e92e9f0e08fb901e43d743e3d59"
+    }
+  ],
+  "systemd_target_range": [
+    258,
+    262
+  ],
+  "upstream_boot_tested_versions": [
+    259,
+    262
+  ]
+}

@@ -1,0 +1,26 @@
+From 41ff8b07a701f5d0ae9ed27909d28507d3eb0cf3 Mon Sep 17 00:00:00 2001
+From: 16384 Misaka <chorus.fruit.472@gmail.com>
+Date: Thu, 29 Oct 2026 13:38:05 +0000
+Subject: [PATCH] nsfs: forward compatible namespace ioctls
+
+The LineageOS 4.9 namespace fd only exposes unlocked_ioctl. AArch32 callers on an ARM64 kernel therefore get ENOTTY for the backported NS_GET_NSTYPE and NS_GET_OWNER_UID commands. These ioctls have identical command and uid_t layouts for both ABIs; forward them to the common handler.
+
+Signed-off-by: 16384 Misaka <chorus.fruit.472@gmail.com>
+---
+ fs/nsfs.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/fs/nsfs.c b/fs/nsfs.c
+index 45b4fb1..14c6431 100644
+--- a/fs/nsfs.c
++++ b/fs/nsfs.c
+@@ -16,6 +16,9 @@ static long ns_ioctl(struct file *filp, unsigned int ioctl,
+ static const struct file_operations ns_file_operations = {
+ 	.llseek		= no_llseek,
+ 	.unlocked_ioctl = ns_ioctl,
++#ifdef CONFIG_COMPAT
++	.compat_ioctl = ns_ioctl,
++#endif
+ };
+ 
+ static char *ns_dname(struct dentry *dentry, char *buffer, int buflen)

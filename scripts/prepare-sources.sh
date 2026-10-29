@@ -184,6 +184,17 @@ git -C "$kernel_root" apply --whitespace=nowarn "$patch_root/cgroup-v2-freezer-4
 git -C "$kernel_root" apply --check "$patch_root/binder-freezer-4.9.patch"
 git -C "$kernel_root" apply --whitespace=nowarn "$patch_root/binder-freezer-4.9.patch"
 
+# Modern systemd interfaces, after the existing statx and real V2 freezer ports.
+while IFS=$'\t' read -r backport expected_sha; do
+    actual_sha=$(sha256sum "$patch_root/droidspaces-backports/$backport" | cut -d' ' -f1)
+    [[ "$actual_sha" == "$expected_sha" ]] || {
+        echo "Droidspaces patch checksum mismatch: $backport" >&2
+        exit 1
+    }
+    git -C "$kernel_root" apply --check "$patch_root/droidspaces-backports/$backport"
+    git -C "$kernel_root" apply --whitespace=nowarn "$patch_root/droidspaces-backports/$backport"
+done < <(jq -r '.series[] | [.file, .sha256] | @tsv' "$script_dir/../configs/droidspaces-backports.json")
+
 # Make version strings describe the actual patched sources, retaining upstream
 # commits separately for compatibility checks and build provenance.
 python3 "$script_dir/source_revisions.py" "$kernel_root"
@@ -195,6 +206,7 @@ echo "Mihomo cgroup backport: $(sha256sum "$patch_root/mihomo-cgroup-4.9.patch" 
 echo "Mihomo TC backport: $(sha256sum "$patch_root/mihomo-tc-4.9.patch" | cut -c1-12)"
 echo "Cgroup v2 freezer: $(sha256sum "$patch_root/cgroup-v2-freezer-4.9.patch" | cut -c1-12)"
 echo "Binder freezer: $(sha256sum "$patch_root/binder-freezer-4.9.patch" | cut -c1-12)"
+echo "Droidspaces systemd backports: $(jq -r .commit "$script_dir/../configs/droidspaces-backports.json")"
 echo "BakaSU SELinux adaptation: $(sha256sum "$patch_root/bakasu-selinux-4.9.patch" | cut -c1-12)"
 echo "BakaSU compatibility: $(sha256sum "$patch_root/bakasu-compat-4.9.patch" | cut -c1-12)"
 echo "BakaSU preinit/module hooks: $(sha256sum "$patch_root/bakasu-preinit-module-4.9.patch" | cut -c1-12)"

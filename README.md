@@ -220,9 +220,17 @@ CI 在编译前执行 `tests/host/test-selinux-cleanup.py`，从已准备的 Bak
 - CI 运行 `scripts/check-droidspaces-config.py`，核对 v7 配置和资源控制器，
   保存 `droidspaces-config-check.json` 并将要求来源记录到 `build-info.txt`。
 
-Droidspaces 本身支持这个 4.9 内核。发行版仍须使用 systemd **低于 258** 或
-OpenRC/runit 等其他 init；升级 Droidspaces 不会补齐新发行版需要的 5.x 系统调用。
-若 systemd 误判旧内核的 cgroup v2，可在容器设置中使用 Force cgroup v1。
+已集成 [Droidspaces 系统调用回移](https://github.com/Droidspaces/droidspaces-backports)
+`be24159e5cc2`，补齐 systemd 258–262 所需的 pidfd waitid、statx 挂载 ID/挂载根、
+faccessat2、close_range、网络选项、namespace ioctl 和 PTY 接口。保留原有完整
+statx、真实 V2 freezer 及 WALT；补丁来源和取舍见 `configs/droidspaces-backports.json`。
+另修正 PTY 的错误指针访问、返回 fd 的 CLOEXEC 和 32 位 ioctl 转发。
+
+现代 systemd 还需要 Droidspaces 包含运行时修复
+[`3132cc93`](https://github.com/ravindu644/Droidspaces-OSS/commit/3132cc9311c5e2582a9c47c40476925b3a9a2c57)，
+v7.1.0 及更早版本不够；new mount API 的兼容由该运行时处理。nexthop 仅提供空枚举，
+不支持创建对象；close_range 当前仅支持 flags=0。CI 在 4.9 QEMU 中执行 ARM64/ARM32
+各 11 组实际调用测试，包含权限差异和错误路径；不把接口回归通过当作真机容器启动验证。
 刷入后的实际能力用 v7 后端的 `droidspaces --format check` 检查，操作见
 [`tests/device/README.md`](tests/device/README.md)。配置检查不代表真机已经启动容器。
 
@@ -255,6 +263,7 @@ artifact 包含：
 | `SHA256SUMS` | AK3 ZIP 的 SHA256 校验值 |
 | `build-info.txt` | 本次构建使用的上游与本地适配 commit |
 | `source-revisions.json` | 内核、BakaSU、Baseband Guard 的上游提交、适配提交及源码 tree |
+| `droidspaces-backports.json` | systemd 接口补丁来源、校验值和运行时要求 |
 | `device-tests/` | AArch64 SUSFS syscall 与 SELinux 行为/时延真机回归工具 |
 
 > [!NOTE]

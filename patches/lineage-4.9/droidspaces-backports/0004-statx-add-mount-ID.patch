@@ -1,0 +1,112 @@
+From d37e3f2ddf3c7fde9434df41cac3f7ce6666d0f4 Mon Sep 17 00:00:00 2001
+From: Miklos Szeredi <mszeredi@redhat.com>
+Date: Tue, 27 Oct 2026 19:46:47 +0000
+Subject: [PATCH] statx: add mount ID
+
+Systemd is hacking around to get it and it's trivial to add to statx, so...
+
+Cc: linux-api@vger.kernel.org
+Cc: linux-man@vger.kernel.org
+Signed-off-by: Miklos Szeredi <mszeredi@redhat.com>
+Reviewed-by: Christoph Hellwig <hch@lst.de>
+(cherry picked from commit fa2fcf4f1df1559a0a4ee0f46915b496cc2ebf60)
+
+Backport to LineageOS SDM845 4.9: keep the existing full statx and its SUSFS path handling. Populate mount IDs for path and file-descriptor queries, and preserve the 256-byte userspace layout.
+
+Signed-off-by: 16384 Misaka <chorus.fruit.472@gmail.com>
+---
+ fs/stat.c                 | 15 ++++++++++++++-
+ include/linux/stat.h      |  1 +
+ include/uapi/linux/stat.h |  6 +++++-
+ 3 files changed, 20 insertions(+), 2 deletions(-)
+
+diff --git a/fs/stat.c b/fs/stat.c
+index 35052ba..36b4a2f 100644
+--- a/fs/stat.c
++++ b/fs/stat.c
+@@ -18,6 +18,7 @@
+ #include <asm/uaccess.h>
+ #include <asm/unistd.h>
+ #include "internal.h"
++#include "mount.h"
+ #ifdef CONFIG_KSU_SUSFS
+ #include <linux/susfs_def.h>
+ #endif
+@@ -135,6 +136,12 @@ int vfs_getattr(const struct path *path, struct kstat *stat,
+ }
+ EXPORT_SYMBOL(vfs_getattr);
+ 
++static void statx_set_mount_info(struct kstat *stat, const struct path *path)
++{
++	stat->mnt_id = real_mount(path->mnt)->mnt_id;
++	stat->result_mask |= STATX_MNT_ID;
++}
++
+ /**
+  * vfs_statx_fd - Get the enhanced basic attributes by file descriptor
+  * @fd: The file descriptor referring to the file of interest
+@@ -166,6 +173,8 @@ int vfs_statx_fd(unsigned int fd, struct kstat *stat,
+ 			ksu_handle_vfs_fstat(fd, &stat->size);
+ #endif // #ifdef CONFIG_KSU_SUSFS
+ 
++		if (!error)
++			statx_set_mount_info(stat, &f.file->f_path);
+ 		fdput(f);
+ 	}
+ 	return error;
+@@ -242,6 +251,8 @@ orig_flow:
+ 		goto out;
+ 
+ 	error = vfs_getattr(&path, stat, request_mask, flags);
++	if (!error)
++		statx_set_mount_info(stat, &path);
+ 	path_put(&path);
+ 	if (retry_estale(error, lookup_flags)) {
+ 		lookup_flags |= LOOKUP_REVAL;
+@@ -601,7 +612,9 @@ static long statx_set_result(struct kstat *stat, struct statx __user *buffer)
+ 	    __put_user(stat->size,		&buffer->stx_size	) ||
+ 	    __put_user(stat->blocks,		&buffer->stx_blocks	) ||
+ 	    __clear_user(&buffer->__spare1, sizeof(buffer->__spare1))	  ||
+-	    __clear_user(&buffer->__spare2, sizeof(buffer->__spare2)))
++	    __put_user(stat->mnt_id,	&buffer->stx_mnt_id	) ||
++	    __put_user(0,		&buffer->__spare2	) ||
++	    __clear_user(&buffer->__spare3, sizeof(buffer->__spare3)))
+ 		return -EFAULT;
+ 
+ 	return 0;
+diff --git a/include/linux/stat.h b/include/linux/stat.h
+index c76e524..62ff4a0 100644
+--- a/include/linux/stat.h
++++ b/include/linux/stat.h
+@@ -36,6 +36,7 @@ struct kstat {
+ 	u64		ino;
+ 	dev_t		dev;
+ 	dev_t		rdev;
++	u64		mnt_id;
+ 	kuid_t		uid;
+ 	kgid_t		gid;
+ 	loff_t		size;
+diff --git a/include/uapi/linux/stat.h b/include/uapi/linux/stat.h
+index 51a6b86..171434a 100644
+--- a/include/uapi/linux/stat.h
++++ b/include/uapi/linux/stat.h
+@@ -126,7 +126,10 @@ struct statx {
+ 	__u32	stx_dev_major;	/* ID of device containing file [uncond] */
+ 	__u32	stx_dev_minor;
+ 	/* 0x90 */
+-	__u64	__spare2[14];	/* Spare space for future expansion */
++	__u64	stx_mnt_id;
++	__u64	__spare2;
++	/* 0xa0 */
++	__u64	__spare3[12];	/* Spare space for future expansion */
+ 	/* 0x100 */
+ };
+ 
+@@ -151,6 +154,7 @@ struct statx {
+ #define STATX_BLOCKS		0x00000400U	/* Want/got stx_blocks */
+ #define STATX_BASIC_STATS	0x000007ffU	/* The stuff in the normal stat struct */
+ #define STATX_BTIME		0x00000800U	/* Want/got stx_btime */
++#define STATX_MNT_ID		0x00001000U	/* Got stx_mnt_id */
+ #define STATX_ALL		0x00000fffU	/* All currently supported flags */
+ 
+ /*
