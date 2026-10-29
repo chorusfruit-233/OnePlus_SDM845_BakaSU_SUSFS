@@ -133,15 +133,18 @@ invented timing pass threshold. These checks require a device booted with the
 candidate kernel; compilation and host help checks do not validate SELinux.
 
 
-## Droidspaces v7.0.0 running-kernel check
+## Droidspaces running-kernel and container checks
 
 The build records the reviewed upstream requirements in `configs/droidspaces.json`
 and packages a static config report as `droidspaces-config-check.json`. That report
 cannot see Android boot arguments, cgroup mounts or SELinux restrictions.
 
-After installing the official v7.0.0 backend and booting this kernel, run its own
-capability probes. The packaged helper sets `DS_NO_PROXY=1`, so a daemon left running
-with an older backend does not answer for the selected binary:
+For systemd 258–262, install a Droidspaces backend newer than v7.1.0 containing
+[3132cc93](https://github.com/ravindu644/Droidspaces-OSS/commit/3132cc9311c5e2582a9c47c40476925b3a9a2c57).
+The kernel backports alone do not supply the runtime's new-mount-API fallback.
+After booting this kernel, run the selected backend's capability probes. The
+packaged helper sets `DS_NO_PROXY=1`, so a daemon left running with an older
+backend does not answer for the selected binary:
 
 ```sh
 adb push device-tests/run-droidspaces-check.sh /data/local/tmp/
@@ -165,10 +168,22 @@ unavailable: the selected Qualcomm WALT scheduler excludes CFS bandwidth in this
 actual `/proc/cmdline` for `cgroup_disable=` and Android policy/mount restrictions.
 Never treat a missing runtime controller as enabled just because the config is `y`.
 
-A systemd 258+ rootfs still requires newer kernel APIs. Use a compatible rootfs,
-such as Ubuntu 24.04, Debian 12/13, Alpine or Void. The optional Force cgroup v1
-setting can help old systemd rootfs images on this kernel; change it explicitly
-per container rather than changing saved settings as part of a capability check.
+The applied backports target systemd 258–262 interfaces; CI tests these on ARM64
+and ARM32, but does not boot a Droidspaces container. Check the backend's
+`New mount API` capability row, then boot a disposable container and inspect:
+
+```sh
+systemd --version
+systemctl --failed --no-pager
+systemctl status --no-pager
+journalctl -b -p err --no-pager
+```
+
+Also verify networking, DNS and a normal stop/restart. Keep cgroup v2 for systemd
+258 or newer; Force cgroup v1 cannot satisfy those versions. `Tainted: old-kernel`
+is expected below systemd's upstream kernel baseline. Older systemd, OpenRC and
+runit rootfs images remain options. Host Android cgroup ownership can still limit
+which resource controllers the container receives.
 
 ## Mihomo eBPF 实验回移测试
 
