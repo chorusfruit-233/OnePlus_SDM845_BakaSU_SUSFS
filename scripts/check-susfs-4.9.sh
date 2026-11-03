@@ -80,7 +80,8 @@ if [[ "$mode" == --config ]]; then
     cfg=$3
     [[ "$cfg" == /* ]] || cfg="$kernel_root/$cfg"
     for option in CONFIG_ARM64 CONFIG_KSU CONFIG_KSU_SUSFS CONFIG_KALLSYMS \
-                  CONFIG_KALLSYMS_ALL CONFIG_SECURITY_SELINUX; do
+                  CONFIG_KALLSYMS_ALL CONFIG_SECURITY_SELINUX \
+                  CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER; do
         grep -qx "${option}=y" "$cfg" || fail "Missing ${option}=y"
     done
     if grep -qE '^CONFIG_(KSU_MANUAL_HOOK|KSU_TRACEPOINT_HOOK|KPROBES)=[ym]$' "$cfg"; then

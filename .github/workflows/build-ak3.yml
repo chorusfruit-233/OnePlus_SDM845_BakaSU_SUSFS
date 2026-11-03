@@ -1,6 +1,15 @@
 name: Build OnePlus 6/6T Lineage 4.9 AK3
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/build-ak3.yml'
+      - 'configs/**'
+      - 'patches/**'
+      - 'scripts/**'
+      - 'tests/**'
+      - 'ak3/**'
   workflow_dispatch:
     inputs:
       bakasu_ref:
@@ -369,6 +378,25 @@ jobs:
             --runner kernel/out/drivers/kernelsu/preinit/runner.elf \
             | tee artifacts/bakasu-tests/image.log
           cp kernel/out/drivers/kernelsu/preinit/runner.elf artifacts/bakasu-tests/
+
+      - name: Compile SUSFS priority filter disabled
+        run: |
+          set -euo pipefail
+          mkdir -p kernel/out-priority-off
+          cp kernel/out/.config kernel/out-priority-off/.config
+          kernel/scripts/config --file kernel/out-priority-off/.config \
+            --disable KSU_SUSFS_PRIORITY_UID_FILTER
+          make -C kernel O=out-priority-off ARCH=arm64 olddefconfig
+          grep -qx '# CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER is not set' \
+            kernel/out-priority-off/.config
+          make -C kernel O=out-priority-off ARCH=arm64 \
+            headers_install INSTALL_HDR_PATH="$GITHUB_WORKSPACE/kernel/out-priority-off/usr"
+          make -C kernel O=out-priority-off ARCH=arm64 \
+            CROSS_COMPILE="ccache aarch64-linux-gnu-" KCFLAGS=-Wno-error \
+            -j"$(nproc)" fs/susfs.o \
+            drivers/kernelsu/manager/throne_tracker.o \
+            drivers/kernelsu/supercall/dispatch.o \
+            | tee artifacts/bakasu-tests/priority-disabled-build.log
 
       - name: Set up Go for real Mihomo BPF regression tests
         uses: actions/setup-go@v6

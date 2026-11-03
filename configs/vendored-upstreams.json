@@ -3,11 +3,11 @@
     "version": "v2.3.0",
     "repo": "https://gitlab.com/simonpunk/susfs4ksu.git",
     "ref": "gki-android14-6.1",
-    "commit": "27e0a0e42745991ba09d6f96a97bf4b83f41a012",
+    "commit": "a0ac906915c8a8d50d474dfb3cae478ef32edc1a",
     "port_repo": "https://github.com/JackA1ltman/NonGKI_Kernel_Build_2nd.git",
     "port_ref": "mainline",
-    "port_commit": "dcd789634247c77d8549a42aef232c680a905585",
-    "core_commit": "08066faea18f809bc3260b00291a32d098b08c92",
+    "port_commit": "732feefc0d4132bc313d39d7a511b9b7bbe51ddb",
+    "core_commit": "a0ac906915c8a8d50d474dfb3cae478ef32edc1a",
     "selinux_integration": "BakaSU NonGKI automatic hooks; LineageOS 4.9 adaptation",
     "bakasu_patch_base": "c0c96a4087285ff82d71003d4186629de1c46b3c",
     "bakasu_reviewed_files": {
@@ -17,11 +17,11 @@
       "kernel/selinux/rules.c": "d599f97877dcff4a59201ca32dd9f765f734823d043b9569504f6eb66397b2e5",
       "kernel/selinux/selinux.c": "7bc8b69fa235f1a199c0940bbf18761c30b7ff388d23ae6a1c4db0ed32957678",
       "kernel/runtime/ksud_integration.c": "db4cb4beff6b0dc3b10d5d08760e45eecee32e88ff459d85df531c4cf0591ef6",
-      "kernel/core/init.c": "d079c08c4765faec78546f2b12852125be5835567d6d19f6e3a0c56b65c28c7e",
+      "kernel/core/init.c": "19b0202f82efcb66542e2e45897931521364382494380a4f78cee4b0c0529f88",
       "kernel/tools/kernel_compat.mk": "a04eab2d4145a69bbffb834ab4e92a1562e289ed6ec2d92c0e29a5a8b09aef76",
       "kernel/compat/kernel_compat.h": "2ac7d86964e5ae1471b515d5ed70211b6b6dc5c7102f8ba507a4c157da5e61de",
       "kernel/tools/susfs_compat.mk": "fed05d93c03f11e252ff3fc411e0f2591059579ec0be8c32ab6b83bbd6a1d91e",
-      "kernel/Kbuild": "0e6c7668100c2b9976f9e8624771383acbb6d4246b10dea630dd80a5ddd087d9",
+      "kernel/Kbuild": "b3a3f70fa96935fef441dfef12abf9808195b7806b88f911980226f65a095e60",
       "kernel/include/arch.h": "84cd3804faab495620913616236e20c2ffc8f7ad4ca591fd0383d835cf7194b9",
       "kernel/feature/sucompat.h": "e18cda16748775dc9a3d53710fe2601a20c3a81c207114f127ad84eb61539473",
       "kernel/hook/setuid_hook.c": "7395311570e6a9bf882c81eacc91fe7ae69527c163981eba98107a24e1aeadfb",
@@ -44,15 +44,27 @@
       "kernel/preinit/preinit.c": "cbc553aeb19bf59307c1130dae66d70546974eba4f01e85fec8e4cc21a2c230b",
       "kernel/tools/manual_hook_check.mk": "1730356ba9ef0fb5d3e943198de0396bbbaad3f5bbe368277bb842b0409ed77b",
       "kernel/feature/module_blacklist.h": "746dabd2ee63c5cf924defc0d5d86196f5e9d727480e6abecdc046dc207fed0e",
-      "kernel/manager/throne_tracker.c": "ccb8e63b10e145d894d83bfcae937bde5b605717991d58c61ac59329776a0dbb"
+      "kernel/manager/throne_tracker.c": "ccb8e63b10e145d894d83bfcae937bde5b605717991d58c61ac59329776a0dbb",
+      "kernel/infra/btf_parser.c": "cc81049786568bd9adad4b8428d4f13165433e277a555863e4c837efaff5cac2",
+      "kernel/infra/btf_parser.h": "56efa2dce3f33d650745ec172927f6b2275a5b0085283a80227d9e66be10d3b5",
+      "kernel/infra/file_wrapper.c": "81dfdf4ff567d3ba6127846ab2519f7d65cbaa0f1ea2fac8ddd70d99e9759426",
+      "kernel/selinux/inode.c": "aef8e935b89222f7d2ebb71b830c56d658a08f423c06a1e0a11b37b6163e890f",
+      "kernel/selinux/selinux.h": "1aff9acf8e3cda760a086ea2f054e963825652403abf97c0711997385d3bbca2",
+      "kernel/Kconfig": "2f10a71bc72dbb082fb9beaaaa59a292c5875b0c18f0f914d5489030a77f342d"
     },
-    "bakasu_reviewed_commit": "d5e9e025b8b49155f8014684d64c91742b465f65"
+    "bakasu_reviewed_commit": "516d3e87fbc986ccefdde2c2765f1700612441a9",
+    "local_adaptations": [
+      "Linux 4.9 offset-based kernel_read and bounded short-read handling for packages.list",
+      "Keep configuration-generation checks, transactional errors and NULL-safe RCU retirement",
+      "Preserve legacy VFS/readlink/statfs helpers and fsnotify filename ABI",
+      "Expose the upstream priority-filter option and guard callers when disabled"
+    ]
   },
   "hybridmount": {
     "version": "hm1",
     "repo": "https://github.com/Hybrid-Mount/meta-hybrid_mount.git",
     "ref": "dev",
-    "commit": "e5120adea50d917aa21fd5ab11a7823e48c937f0",
+    "commit": "2af55f105b27ea5715c6d885961ceccd5a7dde21",
     "source_path": "module/vfs/src",
     "license": "GPL-2.0-only",
     "source_tree": "001e206a5f6dcb781ae724f4d07fda4eaf94d14b"

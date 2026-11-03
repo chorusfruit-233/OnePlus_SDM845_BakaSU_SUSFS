@@ -66,6 +66,9 @@ ramdisk、内核模块或 vendor 接口差异而不兼容。不要在未备份�
   路径检测及私有符号重名处理；CI 实际运行手机内核中嵌入的 preinit ELF，
   验证模块动作、失败/超时处理及返回 init。范围与真机测试见
   [最新 BakaSU 适配记录](docs/bakasu-main-20261024.md)；
+- 已审查 `main @ 516d3e87` 新增的 SELinux inode/BTF 层：4.9 内建模式沿用
+  旧 inode 安全上下文接口，不启用依赖新内核 BTF 的模块路径；审阅检查覆盖新增文件，
+  镜像检查确认 `ksu_selinux_inode` 已链接。继续跟踪 `main`；
 - 使用 BakaSU 管理器；当前上游在 `CONFIG_KSU_MULTI_MANAGER_SUPPORT=y` 时还支持
   官方 KernelSU 与 KOWSU 管理器，已移除 MKSU、RKSU 和 SukiSU-Ultra 的签名支持；
 - BakaSU 用户空间向模块脚本提供 `BAKASU=true`，取代旧的 `KSU_SUKISU=true`；
@@ -73,12 +76,15 @@ ramdisk、内核模块或 vendor 接口差异而不兼容。不要在未备份�
 - SUSFS **v2.3.0** 以自包含补丁形式 vendored（`patches/lineage-4.9/susfs-4.9.patch`，
   基于 [JackA1ltman/NonGKI_Kernel_Build_2nd](https://github.com/JackA1ltman/NonGKI_Kernel_Build_2nd)
   的 `susfs_patch_to_4.9.patch` 移植，并同步官方
-  `gki-android14-6.1 @ 27e0a0e42745`），构建不再依赖 GitLab 上游。
+  `gki-android14-6.1 @ a0ac906915c8`），构建不再依赖 GitLab 上游。
   同步新的应用 UID 优先级过滤、四个 priority/ioprio 系统调用钩子，以及
   `clone_mnt()` 的 unshared mount ID 标记修复；版本号仍为官方 v2.3.0。
   BakaSU 已补齐控制命令与安装/卸载应用后的 UID 刷新，4.9 使用私有分配兼容层、
   释放旧位图前的空指针检查，并阻止过期后台刷新覆盖新配置。
   使用新功能需更新官方 SUSFS 用户态工具。
+  同步 `732feefc` 的 4.9 移植：UID 查询改读 `packages.list` 并使用 `O_NOATIME`，
+  适配旧 `kernel_read`、短读与大小上限；保留错误回滚、刷新代次和空指针保护。
+  `CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER=y` 默认启用，关闭时调用端也同步禁用。
   官方 GKI 手动 SELinux hooks 在本树由以下 NonGKI 自动接入替代；
 - 使用 SUSFS 官方 inline hook 方式（`scripts/susfs-inline-hook.sh`）替换 KernelSU
   的 kprobe 钩子，覆盖 exec、faccessat、stat/fstat、read、input、reboot、
@@ -122,8 +128,8 @@ CI 在编译前执行 `tests/host/test-selinux-cleanup.py`，从已准备的 Bak
 ### Hybrid Mount VFS（内建）
 
 - [Hybrid-Mount/meta-hybrid_mount](https://github.com/Hybrid-Mount/meta-hybrid_mount)
-  的 VFS 驱动更新到 `dev @ e5120adea50d`，以自包含补丁
-  `patches/lineage-4.9/hybridmount-4.9.patch` vendored；
+  的 VFS 驱动更新到 `dev @ 2af55f105b27`，以自包含补丁
+  `patches/lineage-4.9/hybridmount-4.9.patch` vendored；本次上游只改工作流，VFS 源码树未变；
 - 同步 inode/RCU 引用、规则替换缓存、按 UID 区分的同名子项、父目录转换、
   seqcount 写侧与分配失败回滚修复；内建 ext4 export encoder 防护覆盖
   fabricated inode 的 inotify fdinfo 路径。协议仍为 `hm1`；
@@ -303,6 +309,7 @@ DTB，保留原 ROM 的 ramdisk CPIO。安装过程无需 `mkbootfs`，避免不
 | `anykernel_ref` | `master` | AnyKernel3 branch、tag 或完整 commit |
 | `force_rebuild` | `false` | 忽略无变化标记并强制完整构建 |
 
+推送 `main` 的构建配置、补丁、脚本或测试改动后自动运行 CI。
 定时任务每天在 `18:17 UTC`（北京时间次日 `02:17`）检查一次上游。workflow 会先将
 branch/tag 解析成不可变 commit，再把 kernel 基线、builder、补丁（含 vendored
 SUSFS 补丁的哈希）和所有上游 commit 共同组成 build key：
@@ -318,7 +325,7 @@ SUSFS 补丁的哈希）和所有上游 commit 共同组成 build key：
 | Kernel | [LineageOS/android_kernel_oneplus_sdm845](https://github.com/LineageOS/android_kernel_oneplus_sdm845) | 固定基线 commit |
 | BakaSU | [Baka-SU/BakaSU](https://github.com/Baka-SU/BakaSU) | 默认跟踪 `main`，校验配套实现 |
 | SUSFS v2.3.0 | 自包含补丁（源自 [JackA1ltman/NonGKI_Kernel_Build_2nd](https://github.com/JackA1ltman/NonGKI_Kernel_Build_2nd)） | vendored，随仓库版本变化 |
-| Hybrid Mount VFS | [Hybrid-Mount/meta-hybrid_mount](https://github.com/Hybrid-Mount/meta-hybrid_mount)（dev 分支） | vendored，固定 `e5120adea50d`，内建 hm1 provider |
+| Hybrid Mount VFS | [Hybrid-Mount/meta-hybrid_mount](https://github.com/Hybrid-Mount/meta-hybrid_mount)（dev 分支） | vendored，固定 `2af55f105b27`，内建 hm1 provider |
 | RTL8812AU/8821AU/8814AU | [aircrack-ng/rtl8812au](https://github.com/aircrack-ng/rtl8812au) | 默认跟踪 `v5.6.4.2`（构建时克隆 + 适配补丁） |
 | CAKE | [dtaht/sch_cake](https://github.com/dtaht/sch_cake) | 固定最新 `53ff94d4b580`，同步 4.9 兼容层和 UAPI |
 | BBRv3 patches | [WildKernels/kernel_patches](https://github.com/WildKernels/kernel_patches) | 稀疏拉取 `common/bbrv3` |

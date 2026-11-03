@@ -39,7 +39,7 @@ def main():
     for name in ("ksu_handle_init_module", "ksu_handle_finit_module", "ksu_setup_preinit_file",
                  "ksu_preinit_handle_post_execveat", "ksu_preinit_runner_start", "ksu_preinit_runner_end",
                  "susfs_set_priority_uid_filter", "susfs_is_priority_uid_filtered", "hm_encode_fh",
-                 "cake_qdisc_ops"):
+                 "cake_qdisc_ops", "ksu_selinux_inode"):
         assert len(symbols.get(name, [])) == 1, f"missing or ambiguous {name}"
     runner = args.runner.read_bytes()
     assert struct.unpack_from("<H", runner, 16)[0] == 2, "preinit runner must be executable"
