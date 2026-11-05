@@ -92,7 +92,7 @@
     {
       "file": "0014-tty-add-TIOCGPTPEER-ioctl.patch",
       "source": "kernel-4.9-series/0014-tty-add-TIOCGPTPEER-ioctl.patch",
-      "sha256": "8b6c6293c20c4b3b31ca4b237b0865016ebb0e92e9f0e08fb901e43d743e3d59"
+      "sha256": "3177d7d150451e76d0d5568df245465c8cee73725f966498f8b856edf0ab8adc"
     }
   ],
   "systemd_target_range": [

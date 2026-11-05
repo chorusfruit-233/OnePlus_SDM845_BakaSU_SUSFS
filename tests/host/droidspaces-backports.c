@@ -54,6 +54,8 @@
 _Static_assert(sizeof(struct statx) == 256, "statx ABI size");
 _Static_assert(offsetof(struct statx, stx_attributes_mask) == 0x38, "statx attribute mask ABI");
 _Static_assert(offsetof(struct statx, stx_mnt_id) == 0x90, "statx mount ID ABI");
+_Static_assert(TIOCPMGET == 0x5441 && TIOCGPTPEER == TIOCPMGET,
+               "Qualcomm UART clock-on and PTY peer ioctl collision");
 
 static char temporary[] = "/tmp/droidspaces-XXXXXX";
 static char file_path[PATH_MAX], mount_path[PATH_MAX], link_path[PATH_MAX];
@@ -237,6 +239,19 @@ static void test_nsfs(void)
     close(mnt); close(user);
 }
 
+static void test_uart_ioctl(void)
+{
+    int fd = open("/dev/ttyAMA0", O_RDWR | O_NOCTTY | O_CLOEXEC);
+    CHECK(fd >= 0);
+    /*
+     * QEMU's PL011 has no Qualcomm PM ioctl. It must reach the normal
+     * serial fallback (ENOTTY), not ptm_open_peer's non-PTY error (EIO).
+     * Run through both native and compat ioctl paths with the real UAPI.
+     */
+    EXPECT_ERROR(ioctl(fd, TIOCPMGET, 0), ENOTTY);
+    CHECK(close(fd) == 0);
+}
+
 static void test_ptypeer(void)
 {
     int fd = open("/dev/pts/ptmx", O_RDWR | O_NOCTTY | O_CLOEXEC);
@@ -246,6 +261,7 @@ static void test_ptypeer(void)
     CHECK(peer >= 0);
     CHECK(fcntl(peer, F_GETFD) & FD_CLOEXEC);
     CHECK(fcntl(peer, F_GETFL) & O_NONBLOCK);
+    EXPECT_ERROR(ioctl(peer, TIOCGPTPEER, O_RDWR | O_NOCTTY), EIO);
     CHECK(write(peer, "x", 1) == 1);
     char byte;
     CHECK(read(fd, &byte, 1) == 1 && byte == 'x');
@@ -314,6 +330,7 @@ int main(void)
     CHECK(fd >= 0 && close(fd) == 0 && mkdir(mount_path, 0700) == 0);
     CHECK(symlink("missing", link_path) == 0);
     struct {const char *name; void (*function)(void);} tests[] = {
+        {"uart_ioctl", test_uart_ioctl},
         {"pidfd", test_pidfd}, {"statx", test_statx}, {"utimensat", test_utimensat},
         {"faccessat2", test_faccessat2}, {"close_range", test_close_range},
         {"bindtoifindex", test_bindtoifindex}, {"peergroups", test_peergroups},

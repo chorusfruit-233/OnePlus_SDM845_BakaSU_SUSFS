@@ -3,10 +3,11 @@ set -euo pipefail
 kernel=${1:?prepared kernel source is required}
 output=${2:?output directory is required}
 repo=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
-mkdir -p "$output/include/linux"
+mkdir -p "$output/include/linux" "$output/include/asm-generic"
 output=$(cd "$output" && pwd)
 # Overlay only the ABI under test, leaving target libc's architecture headers intact.
 cp "$kernel/include/uapi/linux/stat.h" "$kernel/include/uapi/linux/nsfs.h" "$output/include/linux/"
+cp "$kernel/include/uapi/asm-generic/ioctls.h" "$output/include/asm-generic/"
 for abi in arm64 arm32; do
     if [[ "$abi" == arm64 ]]; then
         compiler=${CROSS_COMPILE:-aarch64-linux-gnu-}gcc
@@ -17,4 +18,4 @@ for abi in arm64 arm32; do
         -static -I"$output/include" "$repo/tests/host/droidspaces-backports.c" \
         -o "$output/droidspaces-$abi.test"
 done
-(cd "$output" && sha256sum droidspaces-*.test include/linux/*.h > SHA256SUMS)
+(cd "$output" && sha256sum droidspaces-*.test include/linux/*.h include/asm-generic/*.h > SHA256SUMS)

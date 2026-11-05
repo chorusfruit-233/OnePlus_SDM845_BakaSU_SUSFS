@@ -13,10 +13,14 @@ python3 tests/host/run-droidspaces-qemu.py \
   --log artifacts/droidspaces-tests/qemu.log
 ```
 
-Runs eleven syscall groups per ABI on the actual 4.9 guest: pidfd wait/poll/kill,
+Runs twelve syscall groups per ABI on the actual 4.9 guest: pidfd wait/poll/kill,
 statx ABI and bind-mount metadata, utimensat, faccessat2 real/effective credentials,
-close_range, socket options, namespace ioctls, PTY flags/error paths and nexthop
-enumeration. The test uses the kernel's statx/nsfs UAPI with each target libc.
+close_range, socket options, namespace ioctls, PTY flags/error paths, serial ioctl
+forwarding and nexthop enumeration. The test uses the kernel's statx/nsfs/tty
+UAPI with each target libc. The serial case sends Qualcomm's TIOCPMGET (0x5441)
+to the QEMU PL011: its normal ENOTTY fallback must not be replaced by the PTY
+handler's EIO. It covers both ARM64 and AArch32; actual SDM845 clock votes and
+Bluetooth initialization still need device verification.
 It checks real errors and descriptor ownership, not version numbers. Existing
 freezer tests separately verify real frozen=0/1 transitions.
 

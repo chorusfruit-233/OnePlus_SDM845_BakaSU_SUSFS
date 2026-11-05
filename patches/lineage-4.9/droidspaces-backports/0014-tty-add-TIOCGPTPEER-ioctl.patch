@@ -46,6 +46,11 @@ fail without it. It is not needed to boot.
 
 Backport to LineageOS SDM845 4.9: wire the ioctl into ARM64 compat forwarding, preserve O_CLOEXEC on the returned descriptor, and return immediately after devpts path lookup fails instead of dereferencing ERR_PTR.
 
+Qualcomm's existing TIOCPMGET also uses 0x5441. Consume TIOCGPTPEER only
+on PTYs and let other tty drivers handle the command. Otherwise the
+Bluetooth HAL's UART clock-on request returns EIO before reaching
+msm_geni_serial, leaving its clock votes unbalanced and init timing out.
+
 Signed-off-by: 16384 Misaka <chorus.fruit.472@gmail.com>
 ---
  arch/alpha/include/uapi/asm/ioctls.h   |  1 +
@@ -56,12 +61,12 @@ Signed-off-by: 16384 Misaka <chorus.fruit.472@gmail.com>
  arch/sparc/include/uapi/asm/ioctls.h   |  3 +-
  arch/xtensa/include/uapi/asm/ioctls.h  |  1 +
  drivers/tty/pty.c                      | 53 +++++++++++++++++++++
- drivers/tty/tty_io.c                   |  3 ++
+ drivers/tty/tty_io.c                   |  9 ++++
  fs/compat_ioctl.c                      |  1 +
  fs/devpts/inode.c                      | 65 +++++++++++++++++++-------
  include/linux/devpts_fs.h              | 10 ++++
  include/uapi/asm-generic/ioctls.h      |  1 +
- 13 files changed, 125 insertions(+), 17 deletions(-)
+ 13 files changed, 131 insertions(+), 17 deletions(-)
 
 diff --git a/arch/alpha/include/uapi/asm/ioctls.h b/arch/alpha/include/uapi/asm/ioctls.h
 index 7ee8ab5..e9e861d 100644
@@ -228,16 +233,22 @@ index f13f253..95eb187 100644
  			    unsigned int cmd, unsigned long arg)
  {
 diff --git a/drivers/tty/tty_io.c b/drivers/tty/tty_io.c
-index dbc4d7d..039db7c 100644
+index dbc4d7d..b2ba2c8 100644
 --- a/drivers/tty/tty_io.c
 +++ b/drivers/tty/tty_io.c
-@@ -3033,6 +3033,9 @@ long tty_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+@@ -3033,6 +3033,15 @@ long tty_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
  	case TIOCSSERIAL:
  		tty_warn_deprecated_flags(p);
  		break;
 +	case TIOCGPTPEER:
-+		/* Special because the struct file is needed */
-+		return ptm_open_peer(file, tty, (int)arg);
++		/*
++		 * Qualcomm uses 0x5441 for TIOCPMGET on UARTs.
++		 * Only PTYs may consume this number as TIOCGPTPEER.
++		 */
++		if (tty->driver->type == TTY_DRIVER_TYPE_PTY)
++			/* Special because the struct file is needed */
++			return ptm_open_peer(file, tty, (int)arg);
++		break;
  	}
  	if (tty->ops->ioctl) {
  		retval = tty->ops->ioctl(tty, cmd, arg);

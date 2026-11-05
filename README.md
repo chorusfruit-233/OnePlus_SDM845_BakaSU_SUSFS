@@ -236,7 +236,11 @@ statx、真实 V2 freezer 及 WALT；补丁来源和取舍见 `configs/droidspac
 [`3132cc93`](https://github.com/ravindu644/Droidspaces-OSS/commit/3132cc9311c5e2582a9c47c40476925b3a9a2c57)，
 v7.1.0 及更早版本不够；new mount API 的兼容由该运行时处理。nexthop 仅提供空枚举，
 不支持创建对象；close_range 当前仅支持 flags=0。CI 在 4.9 QEMU 中执行 ARM64/ARM32
-各 11 组实际调用测试，包含权限差异和错误路径；不把接口回归通过当作真机容器启动验证。
+各 12 组实际调用测试，包含权限差异、错误路径和串口 ioctl 分发；不把接口回归通过当作真机容器启动验证。
+
+`TIOCGPTPEER` 与高通 UART 的 `TIOCPMGET` 共用 `0x5441`，因此只在 PTY
+设备上处理前者，串口请求继续传递给驱动。这样保留 systemd 的 PTY 功能，
+同时避免拦截蓝牙 HAL 的 UART 时钟开启请求。
 刷入后的实际能力用 v7 后端的 `droidspaces --format check` 检查，操作见
 [`tests/device/README.md`](tests/device/README.md)。配置检查不代表真机已经启动容器。
 
