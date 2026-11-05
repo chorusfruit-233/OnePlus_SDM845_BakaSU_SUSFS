@@ -426,8 +426,9 @@ static void test_async_cgroup(void)
     write_file(path, pid);
     CHECK(!freeze_pid(fixture.pid, true, 0), "freeze Binder before cgroup");
     cgroup_freeze(true);
-    for (uint32_t i = 1; i <= 3; i++) {
-        send_transaction(0, i, true);
+    const uint32_t codes[] = {1, 77, 77, 77, 2, 3};
+    for (unsigned int i = 0; i < sizeof(codes) / sizeof(*codes); i++) {
+        send_transaction(0, codes[i], true);
         wait_result(fixture.client[0].fd, BR_TRANSACTION_COMPLETE);
     }
     struct binder_frozen_status_info status = status_pid(fixture.pid);
@@ -438,9 +439,9 @@ static void test_async_cgroup(void)
     CHECK(!freeze_pid(fixture.pid, false, 0), "Binder thaw");
     CHECK(!poll(&pfd, 1, 50), "Binder thaw alone cannot resume cgroup-frozen server");
     cgroup_freeze(false);
-    for (uint32_t i = 1; i <= 3; i++) {
-        struct response response = i == 1 ? command_result() : command_sync(RECEIVE, 0);
-        CHECK(response.code == i && (response.flags & TF_ONE_WAY), "async delivery order after thaw");
+    for (unsigned int i = 0; i < sizeof(codes) / sizeof(*codes); i++) {
+        struct response response = i == 0 ? command_result() : command_sync(RECEIVE, 0);
+        CHECK(response.code == codes[i] && (response.flags & TF_ONE_WAY), "all same-code async transactions delivered after thaw");
         command_sync(FINISH, 0);
     }
     status = status_pid(fixture.pid);

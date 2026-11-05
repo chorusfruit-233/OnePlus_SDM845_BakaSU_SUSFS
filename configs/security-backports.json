@@ -1,0 +1,115 @@
+{
+  "audit_date": "2026-11-05",
+  "kernel_base": "228c16bfcd256a546e3fde375215f6072135588f",
+  "prepared_before": "4a0fe01b8d6a15954ddc9ba85ac75a6df363e821",
+  "builder_before": "3ee30caa2d308916e70208f76026dd539ca85907",
+  "scope": "All repository patch files and custom integration boundaries; Android Security Bulletins September through November 2026 kernel and Qualcomm sections.",
+  "security_patch_level_changed": false,
+  "series": [
+    {
+      "file": "0001-custom-interface-lifetimes.patch",
+      "sha256": "bb049bc0fe13fcd017063cae260b79c41c57c2ec4d7b3a3cb417e12dd278049d",
+      "description": "Custom interfaces: credential pinning, ReKernel validation/init/parser/netns, Hybrid Mount request snapshots",
+      "cves": [],
+      "upstream": [],
+      "adaptation": "Local audit; preserve existing Netlink text and hm1 wire formats."
+    },
+    {
+      "file": "0002-nfc-llcp-socket-lifetime.patch",
+      "sha256": "4a29b4016737a1e5ed18c1e1cf21b0381b99d555b1c07bef62d8a9ac1ec74a86",
+      "description": "NFC LLCP socket lifetime",
+      "cves": [
+        "CVE-2026-31629",
+        "CVE-2026-64011"
+      ],
+      "upstream": [
+        "https://android.googlesource.com/kernel/common/+/4642ec2b3fdc3289192d3970b5baf6aa14031c32",
+        "https://android.googlesource.com/kernel/common/+/be7eb82f26606f1965d7d4b053e82570ea5f48a1",
+        "https://android.googlesource.com/kernel/common/+/e63aaa33966a89eca6ec07492b0525f0db045bc4"
+      ],
+      "adaptation": "Keep 4.9 close/unlink under the socket lock. CONFIG_NFC remains disabled on the phone."
+    },
+    {
+      "file": "0003-hid-reject-empty-numbered-report.patch",
+      "sha256": "d3437db14a19344cbee90b479ae4b9fcc4608d0595d9bb691c853463383561c4",
+      "description": "HID numbered report bounds",
+      "cves": [
+        "CVE-2026-80604"
+      ],
+      "upstream": [
+        "https://android.googlesource.com/kernel/common/+/e684fde80e17d695cd52aaefb735fa2c76b0866e"
+      ],
+      "adaptation": "4.9 has no separate bufsize parameter; reject zero size in exported raw-event entry point."
+    },
+    {
+      "file": "0004-net-preserve-shared-fragments.patch",
+      "sha256": "ba92cf821fbe76132d2ded7e1135e29ee2b263c35900d60e2be6b15c00882418",
+      "description": "Shared skb fragment ownership",
+      "cves": [
+        "CVE-2026-43284"
+      ],
+      "upstream": [
+        "https://android.googlesource.com/kernel/common/+/32b16e61d1a02c4554d48b544ea4739d12e450e7",
+        "https://android.googlesource.com/kernel/common/+/f6d22ea6ae50acbc3f811a14fb2e55a2c129007d"
+      ],
+      "adaptation": "Use 4.9 tx_flags/SKBTX_SHARED_FRAG. GRO is in skbuff.c; TCP MTU probing copies data. ESP already always calls skb_cow_data, so the published ESP exploit path is not present; fix flag loss defensively."
+    },
+    {
+      "file": "0005-bluetooth-rfcomm-listener-reference.patch",
+      "sha256": "c34fa9d6de055f7a20c7cdeb9d2e5f955f9fbaf41382b832be1fbb0b46e6a28c",
+      "description": "RFCOMM listener reference",
+      "cves": [
+        "CVE-2026-53256"
+      ],
+      "upstream": [
+        "https://android.googlesource.com/kernel/common/+/529c9d587ac146586f9817ee994bd8cfa609769b"
+      ],
+      "adaptation": "Keep 4.9 BH locking and acquire selected listener reference before list unlock. Phone RFCOMM remains disabled."
+    },
+    {
+      "file": "0006-bluetooth-sco-socket-references.patch",
+      "sha256": "331e5c50eeaaef1f14bb25e18c4080b8c9ec64d7213fd2c9780e682fe12fa11e",
+      "description": "SCO connection/listener references",
+      "cves": [
+        "CVE-2026-89774"
+      ],
+      "upstream": [
+        "https://android.googlesource.com/kernel/common/+/598dbca6a3f78f038650c434935c86d8c3a6edfb",
+        "https://android.googlesource.com/kernel/common/+/315636ba7cbf03382cfa7bd8887118f59fe96c5f"
+      ],
+      "adaptation": "Keep 4.9 BH locks; no sleeping lock_sock under a spinlock. Apply reference acquisition to ready, disconnect and receive paths; clear conn->sk before last put."
+    },
+    {
+      "file": "0007-susfs-validate-keys-and-requests.patch",
+      "sha256": "c2116f5592045d875d21d50ae282adc12d695fd3092e2fa69df1159726b9df54",
+      "description": "SUSFS complete hash keys and request ownership",
+      "cves": [],
+      "upstream": [],
+      "adaptation": "Check full inode keys; validate fixed-size strings; serialize first cmdline allocation; retire old reverse rule using its own identity."
+    },
+    {
+      "file": "0008-binder-preserve-oneway-semantics.patch",
+      "sha256": "e5d10f94981c13df8b4efe98f563e736c973f7265eec87d98fc08c74b337a86d",
+      "description": "Preserve Binder oneway delivery",
+      "cves": [],
+      "upstream": [],
+      "adaptation": "Remove inapplicable ReKernel coalescing: wrong queue branch, no TF_UPDATE_TXN opt-in or sender identity. Keep reports and actual Binder/cgroup freezing."
+    },
+    {
+      "file": "0009-susfs-readlink-buffer-semantics.patch",
+      "sha256": "165cc3cfcd92d11f088f7138ed9188657afe2bfbbf61273da6c0659ce08d742a",
+      "description": "SUSFS readlink truncation",
+      "cves": [],
+      "upstream": [],
+      "adaptation": "Match VFS short-buffer semantics, including exact-length buffers; do not append a NUL."
+    },
+    {
+      "file": "0010-bbr-complete-reno-fallback.patch",
+      "sha256": "55868160586220ee00992c5342c182c47ce0bfcdf2bb42a4955040c3b6c0eefc",
+      "description": "BBRv3 complete Reno fallback on allocation failure",
+      "cves": [],
+      "upstream": [],
+      "adaptation": "Use Reno cong_avoid/ssthresh callbacks so TCP core performs loss reduction and pacing; retain the existing module reference."
+    }
+  ]
+}

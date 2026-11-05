@@ -195,6 +195,19 @@ while IFS=$'\t' read -r backport expected_sha; do
     git -C "$kernel_root" apply --whitespace=nowarn "$patch_root/droidspaces-backports/$backport"
 done < <(jq -r '.series[] | [.file, .sha256] | @tsv' "$script_dir/../configs/droidspaces-backports.json")
 
+# Audited compatibility/security fixes apply last, without rewriting donor patches.
+python3 "$script_dir/check-security-audit.py"
+while IFS=$'\t' read -r backport expected_sha; do
+    actual_sha=$(sha256sum "$patch_root/security/$backport" | cut -d' ' -f1)
+    [[ "$actual_sha" == "$expected_sha" ]] || {
+        echo "Security patch checksum mismatch: $backport" >&2
+        exit 1
+    }
+    git -C "$kernel_root" apply --check "$patch_root/security/$backport"
+    git -C "$kernel_root" apply --whitespace=nowarn "$patch_root/security/$backport"
+done < <(jq -r '.series[] | [.file, .sha256] | @tsv' "$script_dir/../configs/security-backports.json")
+python3 "$script_dir/check-security-audit.py" --source "$kernel_root"
+
 # Make version strings describe the actual patched sources, retaining upstream
 # commits separately for compatibility checks and build provenance.
 python3 "$script_dir/source_revisions.py" "$kernel_root"

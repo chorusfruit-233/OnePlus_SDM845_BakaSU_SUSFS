@@ -1,0 +1,54 @@
+Subject: [4.9 backport] RFCOMM listener reference
+
+Keep 4.9 BH locking and acquire selected listener reference before list unlock. Phone RFCOMM remains disabled.
+Advisories: CVE-2026-53256
+Upstream: https://android.googlesource.com/kernel/common/+/529c9d587ac146586f9817ee994bd8cfa609769b
+
+diff --git a/net/bluetooth/rfcomm/sock.c b/net/bluetooth/rfcomm/sock.c
+index 7511df723..73ec510b1 100644
+--- a/net/bluetooth/rfcomm/sock.c
++++ b/net/bluetooth/rfcomm/sock.c
+@@ -147,9 +147,12 @@ static struct sock *rfcomm_get_sock_by_channel(int state, u8 channel, bdaddr_t *
+ 		}
+ 	}
+ 
++	sk = sk ? sk : sk1;
++	if (sk)
++		sock_hold(sk);
+ 	read_unlock(&rfcomm_sk_list.lock);
+ 
+-	return sk ? sk : sk1;
++	return sk;
+ }
+ 
+ static void rfcomm_sock_destruct(struct sock *sk)
+@@ -955,6 +958,7 @@ int rfcomm_connect_ind(struct rfcomm_session *s, u8 channel, struct rfcomm_dlc *
+ 	struct sock *sk, *parent;
+ 	bdaddr_t src, dst;
+ 	int result = 0;
++	bool defer_setup = false;
+ 
+ 	BT_DBG("session %p channel %d", s, channel);
+ 
+@@ -966,6 +970,9 @@ int rfcomm_connect_ind(struct rfcomm_session *s, u8 channel, struct rfcomm_dlc *
+ 		return 0;
+ 
+ 	bh_lock_sock(parent);
++	if (parent->sk_state != BT_LISTEN)
++		goto done;
++	defer_setup = test_bit(BT_SK_DEFER_SETUP, &bt_sk(parent)->flags);
+ 
+ 	/* Check for backlog size */
+ 	if (sk_acceptq_is_full(parent)) {
+@@ -994,9 +1001,10 @@ int rfcomm_connect_ind(struct rfcomm_session *s, u8 channel, struct rfcomm_dlc *
+ done:
+ 	bh_unlock_sock(parent);
+ 
+-	if (test_bit(BT_SK_DEFER_SETUP, &bt_sk(parent)->flags))
++	if (defer_setup)
+ 		parent->sk_state_change(parent);
+ 
++	sock_put(parent);
+ 	return result;
+ }
+ 

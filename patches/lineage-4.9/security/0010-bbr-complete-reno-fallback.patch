@@ -1,0 +1,41 @@
+Subject: [4.9 backport] Use complete Reno callbacks when BBR state allocation fails
+
+The existing cong_control fallback bypasses TCP loss reduction and pacing.
+Switch to a Reno callback table while retaining BBR module ownership, so
+no allocation and no module release within a running BBR callback is needed.
+
+diff --git a/net/ipv4/tcp_bbr3.c b/net/ipv4/tcp_bbr3.c
+index 1a2ea198c..592604005 100644
+--- a/net/ipv4/tcp_bbr3.c
++++ b/net/ipv4/tcp_bbr3.c
+@@ -2108,6 +2108,18 @@ static void bbr3_main(struct sock *sk, const struct rate_sample *rs)
+ 	bbr->ecn_in_cycle  |= rs->delivered_ce > 0;
+ }
+ 
++/* Keep the existing module reference while using the complete Reno path.
++ * Calling only tcp_reno_cong_avoid() from cong_control would skip the TCP
++ * core's loss reduction and pacing updates.
++ */
++static struct tcp_congestion_ops bbr3_reno_fallback __read_mostly = {
++	.flags		= TCP_CONG_NON_RESTRICTED,
++	.name		= "reno",
++	.owner		= THIS_MODULE,
++	.ssthresh	= tcp_reno_ssthresh,
++	.cong_avoid	= tcp_reno_cong_avoid,
++};
++
+ static void bbr3_init(struct sock *sk)
+ {
+ 	struct tcp_sock *tp = tcp_sk(sk);
+@@ -2116,8 +2128,10 @@ static void bbr3_init(struct sock *sk)
+ 
+ 	*bbr3_ptr = NULL;
+ 	bbr = kmalloc(sizeof(struct bbr3), GFP_ATOMIC);
+-	if (unlikely(!bbr))
++	if (unlikely(!bbr)) {
++		inet_csk(sk)->icsk_ca_ops = &bbr3_reno_fallback;
+ 		return;
++	}
+ 
+ 	memset(bbr, 0, sizeof(struct bbr3));
+ 

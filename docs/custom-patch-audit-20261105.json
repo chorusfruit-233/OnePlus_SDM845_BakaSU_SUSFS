@@ -1,0 +1,761 @@
+{
+  "date": "2026-11-05",
+  "method": "Manual review of integration boundaries, input validation, ownership and concurrency, with existing and added fault/runtime tests. Coverage records do not imply formal verification or absence of all possible defects.",
+  "original_patch_count": 36,
+  "patches": [
+    {
+      "file": "patches/lineage-4.9/ath9k-htc-symbols.patch",
+      "sha256": "5577c27f22da0679916f54d513e86667d8e319afb64badbdda6c796332b613c6",
+      "group": "Wi-Fi symbol names",
+      "review": "Namespacing declarations/definitions/call sites; no changes to packet parsing.",
+      "result": "no-new-finding",
+      "verification": "Phone link and symbol checks",
+      "touched_files": [
+        "drivers/net/wireless/ath/ath9k/htc_drv_beacon.c",
+        "drivers/net/wireless/ath/ath9k/htc_drv_init.c",
+        "drivers/net/wireless/ath/ath9k/htc_drv_main.c",
+        "drivers/net/wireless/ath/ath9k/htc_drv_txrx.c",
+        "drivers/net/wireless/ath/ath9k/htc_hst.c",
+        "drivers/net/wireless/ath/ath9k/htc_hst.h",
+        "drivers/net/wireless/ath/ath9k/wmi.c"
+      ]
+    },
+    {
+      "file": "patches/lineage-4.9/bakasu-compat-4.9.patch",
+      "sha256": "e7bb8eaf4f8f0bfe453a2fe8869bc6f1e186289bbb134286ed2526e2d346282b",
+      "group": "BakaSU compatibility",
+      "review": "Preinit filename/FD ownership and retry paths, blacklist symbol collision, host code generation ABI.",
+      "result": "no-new-finding",
+      "verification": "BakaSU integration/fault tests and actual preinit QEMU",
+      "touched_files": [
+        "kernel/feature/module_blacklist.c",
+        "kernel/preinit/preinit.c",
+        "kernel/preinit/preinit.h",
+        "kernel/tools/code_generation/preinit_runner/preinit_runner.mk",
+        "kernel/tools/kernel_compat.mk"
+      ]
+    },
+    {
+      "file": "patches/lineage-4.9/bakasu-preinit-module-4.9.patch",
+      "sha256": "07acc1065481ed3db48d972f00bbcb9bcf1b38cf30f62b85cbd2cc2193345ad1",
+      "group": "BakaSU inline hooks",
+      "review": "Preinit exec failure cleanup; module permission checks precede post-load blacklist notification.",
+      "result": "no-new-finding",
+      "verification": "BakaSU integration/fault tests and actual preinit QEMU",
+      "touched_files": [
+        "fs/exec.c",
+        "kernel/module.c"
+      ]
+    },
+    {
+      "file": "patches/lineage-4.9/bakasu-selinux-4.9.patch",
+      "sha256": "b48b4445841a7d0f69576a79011460ae288db1b62f4cf29b3aa32d1101c8ba95",
+      "group": "BakaSU SELinux",
+      "review": "Legacy policy layouts, hook installation rollback, persistence failure propagation and priority-filter configuration guards.",
+      "result": "no-new-finding",
+      "verification": "Existing ABI/cleanup/integration fault fixtures; SELinux device behavior requires device validation",
+      "touched_files": [
+        "kernel/feature/selinux_hide.c",
+        "kernel/tools/susfs_compat.mk"
+      ]
+    },
+    {
+      "file": "patches/lineage-4.9/bakasu-susfs-sync-4.9.patch",
+      "sha256": "f0f1e070cd7fa41e35b9837e5cd3bdd4153ad62ce23b987951b7e6fef5786e65",
+      "group": "BakaSU SUSFS sync",
+      "review": "Feature dependencies, manager/tracker wrapper and compatibility dispatch; main remains tracked.",
+      "result": "no-new-finding",
+      "verification": "Prepared source compatibility guard, ABI fixtures, phone build",
+      "touched_files": [
+        "kernel/Kconfig",
+        "kernel/manager/throne_tracker.c",
+        "kernel/supercall/dispatch.c"
+      ]
+    },
+    {
+      "file": "patches/lineage-4.9/bbg-slot-allow.patch",
+      "sha256": "69f8deca318ed7d85a1cef898ea6c5d4806ca3fdc7b69d0c8db933892fcb6a2b",
+      "group": "Baseband Guard",
+      "review": "A/B exception applies only after matching an allowed partition; unrelated protected partitions retain deny behavior.",
+      "result": "no-new-finding",
+      "verification": "Phone compile/link; no flash or modem mutation in tests",
+      "touched_files": [
+        "blkdev_helper.c"
+      ]
+    },
+    {
+      "file": "patches/lineage-4.9/bbrv3-4.9-adaptation.patch",
+      "sha256": "60f98aef5393f3d04466d11fca6183d1b6889a9441fe5d04b9a9ff2cee601a76",
+      "group": "BBRv3",
+      "review": "Congestion state allocation, complete Reno fallback, module ownership, rate/ECN compatibility and NULL PLB context guard. PLB remains unsupported.",
+      "result": "fixed",
+      "verification": "security/0010; allocation-failure/core recovery regression and phone build",
+      "touched_files": [
+        "net/ipv4/tcp_bbr3.c"
+      ]
+    },
+    {
+      "file": "patches/lineage-4.9/binder-freezer-4.9.patch",
+      "sha256": "e83ffb47e4db25256570f5f65b670b032251f9f1d46aa2bf95274ecbc27f0790",
+      "group": "Binder freezer",
+      "review": "Freeze rollback, outstanding transaction accounting, queue ownership, synchronous failure and asynchronous delivery.",
+      "result": "no-new-finding",
+      "verification": "ARM64/ARM32 Binder transaction QEMU suites",
+      "touched_files": [
+        "drivers/android/binder.c",
+        "include/uapi/linux/android/binder.h"
+      ]
+    },
+    {
+      "file": "patches/lineage-4.9/cake-4.9-adaptation.patch",
+      "sha256": "2998c8bab8d2c852c9ff75fb49f4e530ab041ff8cb6b7d33f05b83d82c33834d",
+      "group": "CAKE",
+      "review": "Modern netlink enum compatibility and header ABI with pinned CAKE source.",
+      "result": "no-new-finding",
+      "verification": "CAKE real netlink configuration and packet/statistics QEMU",
+      "touched_files": [
+        "include/uapi/linux/pkt_sched.h",
+        "net/sched/sch_cake.c"
+      ]
+    },
+    {
+      "file": "patches/lineage-4.9/cgroup-v2-freezer-4.9.patch",
+      "sha256": "6feb739ac3379caa9f967e90938cd2ce4fde0891192e5ab0fc7214be13bb0f30",
+      "group": "Cgroup V2 freezer",
+      "review": "Task/descendant counters, signal/tracer/migration/fork/exit locking, real frozen events; WALT kept.",
+      "result": "no-new-finding",
+      "verification": "Upstream freezer + supplemental QEMU scenarios",
+      "touched_files": [
+        "drivers/rekernel/rekernel.h",
+        "include/linux/cgroup-defs.h",
+        "include/linux/cgroup.h",
+        "include/linux/sched.h",
+        "kernel/cgroup.c",
+        "kernel/fork.c",
+        "kernel/sched/core.c",
+        "kernel/signal.c"
+      ]
+    },
+    {
+      "file": "patches/lineage-4.9/droidspaces-4.9.patch",
+      "sha256": "1c4b09621c38014f5a4289db3eda6190a5cc71d6bfbecdef8dd294b871c83b87",
+      "group": "Droidspaces config",
+      "review": "Namespace/container requirements and swap accounting; no CFS CPU quota substitution.",
+      "result": "no-new-finding",
+      "verification": "Generated configuration guard and memcg QEMU",
+      "touched_files": [
+        "arch/arm64/configs/enchilada_defconfig"
+      ]
+    },
+    {
+      "file": "patches/lineage-4.9/droidspaces-backports/0001-pidfd-add-P_PIDFD-to-waitid.patch",
+      "sha256": "8d6fe03a556d35b0e2a1cbc59dae998fd39db46d9417470060f59958b1a5e713",
+      "group": "Droidspaces systemd ABI",
+      "review": "pidfd reference lifetime, waitid flags and non-pidfd rejection",
+      "result": "no-new-finding",
+      "verification": "13 real syscall groups on ARM64/AArch32",
+      "touched_files": [
+        "include/linux/pid.h",
+        "include/uapi/linux/wait.h",
+        "kernel/exit.c",
+        "kernel/fork.c",
+        "kernel/signal.c"
+      ]
+    },
+    {
+      "file": "patches/lineage-4.9/droidspaces-backports/0002-fork-don-t-check-parent_tidptr-with-CLONE_PIDFD.patch",
+      "sha256": "dfebcab6228ea63a762e34cea288f3d135b520212b4f4b42f914e083876c6d78",
+      "group": "Droidspaces systemd ABI",
+      "review": "CLONE_PIDFD output-pointer semantics",
+      "result": "no-new-finding",
+      "verification": "13 real syscall groups on ARM64/AArch32",
+      "touched_files": [
+        "kernel/fork.c"
+      ]
+    },
+    {
+      "file": "patches/lineage-4.9/droidspaces-backports/0003-net-introduce-SO_BINDTOIFINDEX-sockopt.patch",
+      "sha256": "359c1b0ec165394789d43ffa84544e0c190f2a091833ecbf4e0057a416c8d630",
+      "group": "Droidspaces systemd ABI",
+      "review": "ifindex bounds and CAP_NET_RAW",
+      "result": "no-new-finding",
+      "verification": "13 real syscall groups on ARM64/AArch32",
+      "touched_files": [
+        "arch/alpha/include/uapi/asm/socket.h",
+        "arch/avr32/include/uapi/asm/socket.h",
+        "arch/frv/include/uapi/asm/socket.h",
+        "arch/ia64/include/uapi/asm/socket.h",
+        "arch/m32r/include/uapi/asm/socket.h",
+        "arch/mips/include/uapi/asm/socket.h",
+        "arch/mn10300/include/uapi/asm/socket.h",
+        "arch/parisc/include/uapi/asm/socket.h",
+        "arch/powerpc/include/uapi/asm/socket.h",
+        "arch/s390/include/uapi/asm/socket.h",
+        "arch/sparc/include/uapi/asm/socket.h",
+        "arch/xtensa/include/uapi/asm/socket.h",
+        "include/uapi/asm-generic/socket.h",
+        "net/core/sock.c"
+      ]
+    },
+    {
+      "file": "patches/lineage-4.9/droidspaces-backports/0004-statx-add-mount-ID.patch",
+      "sha256": "8690fc7abd0857bfb163b28e61113b4260e25ac4123b168a84d93a1e9b4de465",
+      "group": "Droidspaces systemd ABI",
+      "review": "statx ABI offsets, mount ID/mount-root masks",
+      "result": "no-new-finding",
+      "verification": "13 real syscall groups on ARM64/AArch32",
+      "touched_files": [
+        "fs/stat.c",
+        "include/linux/stat.h",
+        "include/uapi/linux/stat.h"
+      ]
+    },
+    {
+      "file": "patches/lineage-4.9/droidspaces-backports/0004b-statx-add-mount_root.patch",
+      "sha256": "dd43db3dbffdc962829ae468b83ae08b48d9fbc127a4e210c291af2f06ed360a",
+      "group": "Droidspaces systemd ABI",
+      "review": "statx ABI offsets, mount ID/mount-root masks",
+      "result": "no-new-finding",
+      "verification": "13 real syscall groups on ARM64/AArch32",
+      "touched_files": [
+        "fs/stat.c",
+        "include/linux/stat.h",
+        "include/uapi/linux/stat.h"
+      ]
+    },
+    {
+      "file": "patches/lineage-4.9/droidspaces-backports/0005-utimensat-AT_EMPTY_PATH-support.patch",
+      "sha256": "401bc7959a072972e7a6f53cb72f43ef31f848fa1b6c72cc6cb8895d041df3a2",
+      "group": "Droidspaces systemd ABI",
+      "review": "utimensat flags and empty-path handling",
+      "result": "no-new-finding",
+      "verification": "13 real syscall groups on ARM64/AArch32",
+      "touched_files": [
+        "fs/utimes.c"
+      ]
+    },
+    {
+      "file": "patches/lineage-4.9/droidspaces-backports/0006-vfs-add-faccessat2-syscall.patch",
+      "sha256": "8d81328f1d8fe7f32402f2b1bfb2d907e83cc1298bba9ce356ee0830a31507ca",
+      "group": "Droidspaces systemd ABI",
+      "review": "faccessat2 flags, real/effective credential replacement, unwind and SUSFS hook preservation",
+      "result": "no-new-finding",
+      "verification": "13 real syscall groups on ARM64/AArch32",
+      "touched_files": [
+        "arch/arm64/include/asm/unistd.h",
+        "arch/arm64/include/asm/unistd32.h",
+        "fs/open.c",
+        "include/linux/syscalls.h",
+        "include/uapi/asm-generic/unistd.h",
+        "include/uapi/linux/fcntl.h"
+      ]
+    },
+    {
+      "file": "patches/lineage-4.9/droidspaces-backports/0007-open-add-close_range.patch",
+      "sha256": "693aacafd2adc054837d0f38187724ce21ce3ca861dbad1bfcdc7f0794612643",
+      "group": "Droidspaces systemd ABI",
+      "review": "FD range bounds, unsupported flags and rescheduling",
+      "result": "no-new-finding",
+      "verification": "13 real syscall groups on ARM64/AArch32",
+      "touched_files": [
+        "fs/file.c",
+        "fs/open.c",
+        "include/linux/fdtable.h",
+        "include/linux/syscalls.h"
+      ]
+    },
+    {
+      "file": "patches/lineage-4.9/droidspaces-backports/0008-arch-wire-up-close_range.patch",
+      "sha256": "33882e4b3a672ad366123f5df73cd08a29c60c5d189fb1eccf268c17ee46bbb3",
+      "group": "Droidspaces systemd ABI",
+      "review": "ARM64/AArch32 close_range syscall table entries",
+      "result": "no-new-finding",
+      "verification": "13 real syscall groups on ARM64/AArch32",
+      "touched_files": [
+        "arch/arm64/include/asm/unistd32.h",
+        "include/uapi/asm-generic/unistd.h"
+      ]
+    },
+    {
+      "file": "patches/lineage-4.9/droidspaces-backports/0009-rtnetlink-accept-nexthop-message-types-and-multicast.patch",
+      "sha256": "1e7aea986d1ff65e8be8050684ab42ec5a784178258bbc11be7a52eda67ffc62",
+      "group": "Droidspaces systemd ABI",
+      "review": "rtnetlink type table bounds, subscriptions and unsupported nexthop operations",
+      "result": "no-new-finding",
+      "verification": "13 real syscall groups on ARM64/AArch32",
+      "touched_files": [
+        "include/uapi/linux/rtnetlink.h",
+        "net/core/rtnetlink.c",
+        "security/selinux/nlmsgtab.c"
+      ]
+    },
+    {
+      "file": "patches/lineage-4.9/droidspaces-backports/0011-net-introduce-SO_PEERGROUPS-getsockopt.patch",
+      "sha256": "fba109250c3e047d0ab3def2dbf0e9f9ad8d235efadb5c6795b312be6405f4ae",
+      "group": "Droidspaces systemd ABI",
+      "review": "peer credential replacement and lifetime across usercopy",
+      "result": "fixed",
+      "verification": "13 real syscall groups on ARM64/AArch32; peer credential forced replacement fixture",
+      "touched_files": [
+        "arch/alpha/include/uapi/asm/socket.h",
+        "arch/avr32/include/uapi/asm/socket.h",
+        "arch/frv/include/uapi/asm/socket.h",
+        "arch/ia64/include/uapi/asm/socket.h",
+        "arch/m32r/include/uapi/asm/socket.h",
+        "arch/mips/include/uapi/asm/socket.h",
+        "arch/mn10300/include/uapi/asm/socket.h",
+        "arch/parisc/include/uapi/asm/socket.h",
+        "arch/powerpc/include/uapi/asm/socket.h",
+        "arch/s390/include/uapi/asm/socket.h",
+        "arch/sparc/include/uapi/asm/socket.h",
+        "arch/xtensa/include/uapi/asm/socket.h",
+        "include/uapi/asm-generic/socket.h",
+        "net/core/sock.c"
+      ]
+    },
+    {
+      "file": "patches/lineage-4.9/droidspaces-backports/0012-nsfs-Add-an-ioctl-to-return-the-namespace-type.patch",
+      "sha256": "38bd795d58781dcfa3f962a7d44aaa411cc449fff4ebb4e51d4e69c6a9ff714a",
+      "group": "Droidspaces systemd ABI",
+      "review": "namespace type dispatch",
+      "result": "no-new-finding",
+      "verification": "13 real syscall groups on ARM64/AArch32",
+      "touched_files": [
+        "fs/nsfs.c",
+        "include/uapi/linux/nsfs.h"
+      ]
+    },
+    {
+      "file": "patches/lineage-4.9/droidspaces-backports/0013-nsfs-Add-an-ioctl-to-return-owner-UID-of-a-userns.patch",
+      "sha256": "f3766a5c935184c5ee37e6172c85f2edc4f1be5ecc1dd970ece3dd6ca747899b",
+      "group": "Droidspaces systemd ABI",
+      "review": "user-namespace owner mapping and compat pointer forwarding",
+      "result": "no-new-finding",
+      "verification": "13 real syscall groups on ARM64/AArch32",
+      "touched_files": [
+        "fs/nsfs.c",
+        "include/uapi/linux/nsfs.h"
+      ]
+    },
+    {
+      "file": "patches/lineage-4.9/droidspaces-backports/0013b-nsfs-forward-compatible-ioctls.patch",
+      "sha256": "961971ecb0cff4bc972965b4c1e5201381d72a5303dace7d7a7ee2b6a9f33ef2",
+      "group": "Droidspaces systemd ABI",
+      "review": "user-namespace owner mapping and compat pointer forwarding",
+      "result": "no-new-finding",
+      "verification": "13 real syscall groups on ARM64/AArch32",
+      "touched_files": [
+        "fs/nsfs.c"
+      ]
+    },
+    {
+      "file": "patches/lineage-4.9/droidspaces-backports/0014-tty-add-TIOCGPTPEER-ioctl.patch",
+      "sha256": "3177d7d150451e76d0d5568df245465c8cee73725f966498f8b856edf0ab8adc",
+      "group": "Droidspaces systemd ABI",
+      "review": "PTY peer FD error handling and QCOM TIOCPMGET ioctl collision",
+      "result": "previous-fix-retained",
+      "verification": "13 real syscall groups on ARM64/AArch32",
+      "touched_files": [
+        "arch/alpha/include/uapi/asm/ioctls.h",
+        "arch/mips/include/uapi/asm/ioctls.h",
+        "arch/parisc/include/uapi/asm/ioctls.h",
+        "arch/powerpc/include/uapi/asm/ioctls.h",
+        "arch/sh/include/uapi/asm/ioctls.h",
+        "arch/sparc/include/uapi/asm/ioctls.h",
+        "arch/xtensa/include/uapi/asm/ioctls.h",
+        "drivers/tty/pty.c",
+        "drivers/tty/tty_io.c",
+        "fs/compat_ioctl.c",
+        "fs/devpts/inode.c",
+        "include/linux/devpts_fs.h",
+        "include/uapi/asm-generic/ioctls.h"
+      ]
+    },
+    {
+      "file": "patches/lineage-4.9/hybridmount-4.9.patch",
+      "sha256": "68652041723eaadbe0f1b1bf96b2117042095265f1f83e2fc7229a9a4632f6b2",
+      "group": "Hybrid Mount",
+      "review": "Shared user-page parser, RCU/SRCU reader ownership, inode eviction, rule replacement, virtual directory topology, keyring privilege boundary.",
+      "result": "fixed",
+      "verification": "security/0001; fault injection plus existing lifecycle/VFS fixtures and actual ext4/QEMU",
+      "touched_files": [
+        "fs/Kconfig",
+        "fs/Makefile",
+        "fs/hybridmount/Kconfig",
+        "fs/hybridmount/LICENSE",
+        "fs/hybridmount/LOCAL_ADAPTATIONS.md",
+        "fs/hybridmount/Makefile",
+        "fs/hybridmount/PROVENANCE",
+        "fs/hybridmount/UPSTREAM_README.md",
+        "fs/hybridmount/hybridmount.c",
+        "fs/hybridmount/hybridmount.h"
+      ]
+    },
+    {
+      "file": "patches/lineage-4.9/kernel-4.9-adaptation.patch",
+      "sha256": "eb06e665a02d3f82c89507ca0db198fa591791e0dfb1517b43888d5dfc87e4ee",
+      "group": "Base integration",
+      "review": "Config dependencies, VFS/LSM entry points, ARM64 prefetch/alignment, cpufreq bounds, F2FS/alarmtimer and congestion state additions.",
+      "result": "no-new-finding",
+      "verification": "Phone image + all QEMU suites; actual SDM845 hardware behavior requires device validation",
+      "touched_files": [
+        "arch/arm64/configs/enchilada_defconfig",
+        "arch/arm64/lib/clear_page.S",
+        "arch/arm64/lib/copy_template.S",
+        "drivers/Kconfig",
+        "drivers/Makefile",
+        "drivers/cpufreq/cpufreq.c",
+        "fs/dcache.c",
+        "fs/f2fs/gc.h",
+        "include/linux/fs.h",
+        "include/linux/tcp.h",
+        "include/net/tcp.h",
+        "include/uapi/linux/inet_diag.h",
+        "include/uapi/linux/pkt_sched.h",
+        "kernel/cgroup.c",
+        "kernel/time/alarmtimer.c",
+        "net/ipv4/Kconfig",
+        "net/ipv4/Makefile",
+        "net/ipv4/tcp_rate.c",
+        "net/sched/Kconfig",
+        "net/sched/Makefile",
+        "security/Kconfig",
+        "security/Makefile",
+        "security/selinux/Makefile",
+        "security/selinux/include/objsec.h"
+      ]
+    },
+    {
+      "file": "patches/lineage-4.9/mihomo-cgroup-4.9.patch",
+      "sha256": "742a15d12bb11f04a92c3552a4386926610c07574bf9fb606be566561811ca32",
+      "group": "Mihomo cgroup",
+      "review": "Attach-type bounds, hierarchy program publication/unwind, socket address validation and IPv4/IPv6 hook placement.",
+      "result": "no-new-finding",
+      "verification": "Existing cgroup attach/rewrite and detach/lifetime QEMU tests",
+      "touched_files": [
+        "include/linux/bpf-cgroup.h",
+        "include/linux/bpf.h",
+        "include/linux/bpf_types.h",
+        "include/net/sock.h",
+        "include/net/udp.h",
+        "include/uapi/linux/bpf.h",
+        "kernel/bpf/bpf_lru_list.c",
+        "kernel/bpf/bpf_lru_list.h",
+        "kernel/bpf/cgroup.c",
+        "kernel/bpf/hashtab.c",
+        "kernel/bpf/syscall.c",
+        "kernel/cgroup.c",
+        "net/core/filter.c",
+        "net/ipv4/af_inet.c",
+        "net/ipv4/tcp_ipv4.c",
+        "net/ipv4/udp.c",
+        "net/ipv6/tcp_ipv6.c",
+        "net/ipv6/udp.c"
+      ]
+    },
+    {
+      "file": "patches/lineage-4.9/mihomo-ebpf-4.9.patch",
+      "sha256": "9245cd8c8cd1afaba0321795d1631c2f790be89f4888e9f723d2e87d4275819b",
+      "group": "Mihomo eBPF",
+      "review": "4.19.325 donor provenance and local ABI deltas; verifier bounds/alignment, array/map lifetime, capability gate, unprivileged-default-off, JIT integration.",
+      "result": "no-new-finding",
+      "verification": "Existing real Mihomo verifier and packet rewrite QEMU suites; not a formal proof of the entire BPF verifier",
+      "touched_files": [
+        "arch/arm64/include/asm/insn.h",
+        "arch/arm64/kernel/insn.c",
+        "arch/arm64/net/bpf_jit.h",
+        "arch/arm64/net/bpf_jit_comp.c",
+        "include/linux/bpf.h",
+        "include/linux/bpf_legacy_compat.h",
+        "include/linux/bpf_lirc.h",
+        "include/linux/bpf_trace.h",
+        "include/linux/bpf_types.h",
+        "include/linux/bpf_verifier.h",
+        "include/linux/btf.h",
+        "include/linux/filter.h",
+        "include/linux/tnum.h",
+        "include/uapi/linux/bpf.h",
+        "include/uapi/linux/btf.h",
+        "kernel/bpf/Makefile",
+        "kernel/bpf/arraymap.c",
+        "kernel/bpf/bpf_lru_list.c",
+        "kernel/bpf/bpf_lru_list.h",
+        "kernel/bpf/btf.c",
+        "kernel/bpf/cgroup.c",
+        "kernel/bpf/core.c",
+        "kernel/bpf/disasm.c",
+        "kernel/bpf/disasm.h",
+        "kernel/bpf/hashtab.c",
+        "kernel/bpf/helpers.c",
+        "kernel/bpf/inode.c",
+        "kernel/bpf/lpm_trie.c",
+        "kernel/bpf/map_in_map.c",
+        "kernel/bpf/map_in_map.h",
+        "kernel/bpf/percpu_freelist.c",
+        "kernel/bpf/percpu_freelist.h",
+        "kernel/bpf/stackmap.c",
+        "kernel/bpf/syscall.c",
+        "kernel/bpf/test_run.c",
+        "kernel/bpf/tnum.c",
+        "kernel/bpf/verifier.c",
+        "kernel/trace/bpf_trace.c",
+        "net/core/filter.c",
+        "techpack/Kbuild"
+      ]
+    },
+    {
+      "file": "patches/lineage-4.9/mihomo-tc-4.9.patch",
+      "sha256": "7f84ad1e5c05ff939937488076cedc8eb552727815b9d38d19f857ab9cfec9cb",
+      "group": "Mihomo TC",
+      "review": "Verifier socket reference acquisition/release, socket kind checks, netns/ingress validation and skb ownership transfer.",
+      "result": "no-new-finding",
+      "verification": "Existing direct TCP/UDP/IPv6 lookup, assign/release and invalid program QEMU tests",
+      "touched_files": [
+        "include/linux/bpf.h",
+        "include/linux/bpf_verifier.h",
+        "include/net/addrconf.h",
+        "include/net/sock.h",
+        "include/uapi/linux/bpf.h",
+        "kernel/bpf/verifier.c",
+        "net/core/filter.c",
+        "net/ipv4/inet_hashtables.c",
+        "net/ipv4/ip_input.c",
+        "net/ipv6/af_inet6.c",
+        "net/ipv6/ip6_input.c",
+        "net/ipv6/route.c"
+      ]
+    },
+    {
+      "file": "patches/lineage-4.9/rekernel-4.9.patch",
+      "sha256": "a208ed5ccad31182f8663c7ff0502711d3221f57807be1ed7bbe6a6d763cfd43",
+      "group": "ReKernel",
+      "review": "Netlink lengths/credentials/removal, initialization context, skb header lifetime, netns hooks and Binder transaction coalescing.",
+      "result": "fixed",
+      "verification": "security/0001 and 0008; source faults, real Netlink/netns QEMU, same-code frozen Binder transactions",
+      "touched_files": [
+        "drivers/Kconfig",
+        "drivers/Makefile",
+        "drivers/android/binder.c",
+        "drivers/rekernel/Kconfig",
+        "drivers/rekernel/Makefile",
+        "drivers/rekernel/rekernel.c",
+        "drivers/rekernel/rekernel.h",
+        "kernel/signal.c"
+      ]
+    },
+    {
+      "file": "patches/lineage-4.9/rtl8812au-4.9-adaptation.patch",
+      "sha256": "ae6a86659c19bb5a5b214d73aa33c89e73b4875055771a4a6165f9599d104514",
+      "group": "RTL8812AU compatibility",
+      "review": "cfg80211 roam/connect signatures against the Lineage backported ABI; Kconfig/link wiring.",
+      "result": "no-new-finding",
+      "verification": "Phone compile/link; USB radio hardware not emulated",
+      "touched_files": [
+        "drivers/net/wireless/realtek/Kconfig",
+        "drivers/net/wireless/realtek/Makefile"
+      ]
+    },
+    {
+      "file": "patches/lineage-4.9/security/0001-custom-interface-lifetimes.patch",
+      "sha256": "bb049bc0fe13fcd017063cae260b79c41c57c2ec4d7b3a3cb417e12dd278049d",
+      "group": "Security audit follow-up",
+      "review": "Local audit; preserve existing Netlink text and hm1 wire formats.",
+      "result": "fix-added",
+      "verification": "Source fault regressions, expanded QEMU and phone build; see audit report",
+      "touched_files": [
+        "drivers/rekernel/rekernel.c",
+        "fs/hybridmount/hybridmount.c",
+        "net/core/sock.c"
+      ]
+    },
+    {
+      "file": "patches/lineage-4.9/security/0002-nfc-llcp-socket-lifetime.patch",
+      "sha256": "4a29b4016737a1e5ed18c1e1cf21b0381b99d555b1c07bef62d8a9ac1ec74a86",
+      "group": "Security audit follow-up",
+      "review": "Keep 4.9 close/unlink under the socket lock. CONFIG_NFC remains disabled on the phone.",
+      "result": "fix-added",
+      "verification": "Source fault regressions, expanded QEMU and phone build; see audit report",
+      "touched_files": [
+        "net/nfc/llcp_core.c",
+        "net/nfc/llcp_sock.c"
+      ]
+    },
+    {
+      "file": "patches/lineage-4.9/security/0003-hid-reject-empty-numbered-report.patch",
+      "sha256": "d3437db14a19344cbee90b479ae4b9fcc4608d0595d9bb691c853463383561c4",
+      "group": "Security audit follow-up",
+      "review": "4.9 has no separate bufsize parameter; reject zero size in exported raw-event entry point.",
+      "result": "fix-added",
+      "verification": "Source fault regressions, expanded QEMU and phone build; see audit report",
+      "touched_files": [
+        "drivers/hid/hid-core.c"
+      ]
+    },
+    {
+      "file": "patches/lineage-4.9/security/0004-net-preserve-shared-fragments.patch",
+      "sha256": "ba92cf821fbe76132d2ded7e1135e29ee2b263c35900d60e2be6b15c00882418",
+      "group": "Security audit follow-up",
+      "review": "Use 4.9 tx_flags/SKBTX_SHARED_FRAG. GRO is in skbuff.c; TCP MTU probing copies data. ESP already always calls skb_cow_data, so the published ESP exploit path is not present; fix flag loss defensively.",
+      "result": "fix-added",
+      "verification": "Source fault regressions, expanded QEMU and phone build; see audit report",
+      "touched_files": [
+        "net/core/skbuff.c"
+      ]
+    },
+    {
+      "file": "patches/lineage-4.9/security/0005-bluetooth-rfcomm-listener-reference.patch",
+      "sha256": "c34fa9d6de055f7a20c7cdeb9d2e5f955f9fbaf41382b832be1fbb0b46e6a28c",
+      "group": "Security audit follow-up",
+      "review": "Keep 4.9 BH locking and acquire selected listener reference before list unlock. Phone RFCOMM remains disabled.",
+      "result": "fix-added",
+      "verification": "Source fault regressions, expanded QEMU and phone build; see audit report",
+      "touched_files": [
+        "net/bluetooth/rfcomm/sock.c"
+      ]
+    },
+    {
+      "file": "patches/lineage-4.9/security/0006-bluetooth-sco-socket-references.patch",
+      "sha256": "331e5c50eeaaef1f14bb25e18c4080b8c9ec64d7213fd2c9780e682fe12fa11e",
+      "group": "Security audit follow-up",
+      "review": "Keep 4.9 BH locks; no sleeping lock_sock under a spinlock. Apply reference acquisition to ready, disconnect and receive paths; clear conn->sk before last put.",
+      "result": "fix-added",
+      "verification": "Source fault regressions, expanded QEMU and phone build; see audit report",
+      "touched_files": [
+        "net/bluetooth/sco.c"
+      ]
+    },
+    {
+      "file": "patches/lineage-4.9/security/0007-susfs-validate-keys-and-requests.patch",
+      "sha256": "c2116f5592045d875d21d50ae282adc12d695fd3092e2fa69df1159726b9df54",
+      "group": "Security audit follow-up",
+      "review": "Check full inode keys; validate fixed-size strings; serialize first cmdline allocation; retire old reverse rule using its own identity.",
+      "result": "fix-added",
+      "verification": "Source fault regressions, expanded QEMU and phone build; see audit report",
+      "touched_files": [
+        "fs/susfs.c"
+      ]
+    },
+    {
+      "file": "patches/lineage-4.9/security/0008-binder-preserve-oneway-semantics.patch",
+      "sha256": "e5d10f94981c13df8b4efe98f563e736c973f7265eec87d98fc08c74b337a86d",
+      "group": "Security audit follow-up",
+      "review": "Remove inapplicable ReKernel coalescing: wrong queue branch, no TF_UPDATE_TXN opt-in or sender identity. Keep reports and actual Binder/cgroup freezing.",
+      "result": "fix-added",
+      "verification": "Source fault regressions, expanded QEMU and phone build; see audit report",
+      "touched_files": [
+        "drivers/android/binder.c"
+      ]
+    },
+    {
+      "file": "patches/lineage-4.9/security/0009-susfs-readlink-buffer-semantics.patch",
+      "sha256": "165cc3cfcd92d11f088f7138ed9188657afe2bfbbf61273da6c0659ce08d742a",
+      "group": "Security audit follow-up",
+      "review": "Match VFS short-buffer semantics, including exact-length buffers; do not append a NUL.",
+      "result": "fix-added",
+      "verification": "Source fault regressions, expanded QEMU and phone build; see audit report",
+      "touched_files": [
+        "fs/susfs.c"
+      ]
+    },
+    {
+      "file": "patches/lineage-4.9/security/0010-bbr-complete-reno-fallback.patch",
+      "sha256": "55868160586220ee00992c5342c182c47ce0bfcdf2bb42a4955040c3b6c0eefc",
+      "group": "Security audit follow-up",
+      "review": "Use Reno cong_avoid/ssthresh callbacks so TCP core performs loss reduction and pacing; retain the existing module reference.",
+      "result": "fix-added",
+      "verification": "Source fault regressions, expanded QEMU and phone build; see audit report",
+      "touched_files": [
+        "net/ipv4/tcp_bbr3.c"
+      ]
+    },
+    {
+      "file": "patches/lineage-4.9/susfs-4.9.patch",
+      "sha256": "d03e35a2c3b8fd3334b3531ba7842c330b132d65980deaceccf52e6211d814a1",
+      "group": "SUSFS",
+      "review": "Inode hash collisions, string boundaries, first allocation, reverse-rule replacement, readlink ABI and priority-filter publication/fault cleanup.",
+      "result": "fixed",
+      "verification": "security/0007 and 0009; collision/readlink fixtures, existing priority-filter fault suite and both config builds",
+      "touched_files": [
+        "block/ioprio.c",
+        "fs/Makefile",
+        "fs/namei.c",
+        "fs/namespace.c",
+        "fs/notify/fdinfo.c",
+        "fs/proc/base.c",
+        "fs/proc/cmdline.c",
+        "fs/proc/fd.c",
+        "fs/proc/task_mmu.c",
+        "fs/proc_namespace.c",
+        "fs/readdir.c",
+        "fs/stat.c",
+        "fs/statfs.c",
+        "fs/super.c",
+        "fs/susfs.c",
+        "include/linux/susfs.h",
+        "include/linux/susfs_def.h",
+        "kernel/kallsyms.c",
+        "kernel/sys.c",
+        "mm/memory.c",
+        "security/selinux/avc.c"
+      ]
+    },
+    {
+      "file": "patches/tests/freezer-selftest-fortify.patch",
+      "sha256": "8d5962c3f6b7fc0de5fda69a5672597da6bc36b2f9d7dd17045f5157b42b64a5",
+      "group": "Test harness",
+      "review": "Check ignored write result in upstream selftest under fortified libc.",
+      "result": "no-new-finding",
+      "verification": "Static ARM64 selftest compile/run",
+      "touched_files": [
+        "tools/testing/selftests/cgroup/cgroup_util.c"
+      ]
+    },
+    {
+      "file": "patches/tests/freezer-selftest-waits.patch",
+      "sha256": "e90fac9b96c12175194b2f976de1ed1fe508b661159e00c263dace7e200f1421",
+      "group": "Test harness",
+      "review": "Bounded wait/reap changes for slow QEMU; no production behavior change.",
+      "result": "no-new-finding",
+      "verification": "Freezer QEMU suite",
+      "touched_files": [
+        "tools/testing/selftests/cgroup/test_freezer.c"
+      ]
+    }
+  ],
+  "integration_files": [
+    {
+      "file": "scripts/susfs-inline-hook.sh",
+      "sha256": "01762f2ac34ef0daa479e391cc956d311d1645e337d013efbc1d40604fe723a9"
+    },
+    {
+      "file": "scripts/prepare-sources.sh",
+      "sha256": "edbb8ac6e0eb0c627d295f94db19de927e4759210c916bc8923b0cd3d2eb03ca"
+    },
+    {
+      "file": "scripts/source_revisions.py",
+      "sha256": "62e198b8aade511ec197c53207693b64c46e1292e270e3627bfa02da78fc4fe2"
+    },
+    {
+      "file": "scripts/package-ak3.sh",
+      "sha256": "647be69302e7a597f05b719a844f5ba7da32c78401580e6fa91066187eca6955"
+    },
+    {
+      "file": "ak3/anykernel.sh",
+      "sha256": "d1e6691f4293d71936dc143bf2f0a2f978252c532fc3250ed3184bcae3044d49"
+    }
+  ],
+  "prepared_security_files": {
+    "drivers/android/binder.c": "637a4b9c59a9974b1e371dd49ddfcc1e0fd2fb4a5e8aa8d35b0ab12514102771",
+    "drivers/hid/hid-core.c": "547cab3499d08e7cc195f01c4f8ef48b1c80ec6686acc0d2e5ad1617354f8d08",
+    "drivers/rekernel/rekernel.c": "a938df7f5e95c3402ccbe40a971d0606306c5daee08a6ce80fee98a2c3e4109a",
+    "fs/hybridmount/hybridmount.c": "991799b3e4bef9ae565b368808a4e1c8a034aeae8b5dc8a3ee9068364f140be9",
+    "fs/susfs.c": "7c7243c35df53ceac878deaa0cbc9bbe85b2c11507f1e971b54b334aedecd578",
+    "net/bluetooth/rfcomm/sock.c": "147b146d8125c88853101de01344d7f1699758fafb6e1e89fa00223fb2f22abe",
+    "net/bluetooth/sco.c": "302f842d00336f871420578524c32bfdbcae6a8b11aabfc2ebed1ce6be4186cf",
+    "net/core/skbuff.c": "f7a07639124a6aacd689b8d00909f10732c95d8cee90b9ec3fdaf38969057368",
+    "net/core/sock.c": "943054e608ba1a865fda598188fc037c57b9f6bd246bbbf5e16cf3954ab02180",
+    "net/ipv4/tcp_bbr3.c": "7b53d92e98d967b6876b94a7abb79c9ea9ad0280b2a992aca5d245d61f283656",
+    "net/nfc/llcp_core.c": "0195108ac864fd583f539cdb80d68b15ec6939808675edd51b8bc64eba7cc7d9",
+    "net/nfc/llcp_sock.c": "c4002101bd2332fabd3287f4f7ea426f05eeb777c9fc7a03670f16aee47983ab"
+  }
+}

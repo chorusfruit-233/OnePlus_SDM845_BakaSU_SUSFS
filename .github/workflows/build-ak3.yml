@@ -336,6 +336,16 @@ jobs:
           python3 tests/host/run-hybridmount-tests.py --source kernel \
             | tee artifacts/component-tests/hybridmount.log
 
+      - name: Test security fixes with forced lifetime and input failures
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/security-tests
+          python3 scripts/check-security-audit.py --source kernel
+          python3 tests/host/test-security-source.py --source kernel \
+            | tee artifacts/security-tests/source-faults.log
+          cp configs/security-backports.json docs/security-advisories-20261105.json \
+            docs/custom-patch-audit-20261105.json artifacts/security-tests/
+
       - name: Build pinned upstream cgroup freezer self-tests
         run: |
           set -euo pipefail
@@ -422,9 +432,7 @@ jobs:
           mkdir -p kernel/out-bpf-qemu
           cp tests/host/bpf-qemu.config kernel/out-bpf-qemu/.config
           make -C kernel O=out-bpf-qemu ARCH=arm64 olddefconfig
-          make -C kernel O=out-bpf-qemu ARCH=arm64 \
-            CROSS_COMPILE="ccache aarch64-linux-gnu-" \
-            KCFLAGS=-Wno-error -j"$(nproc)" Image
+          bash tests/host/build-security-qemu.sh kernel out-bpf-qemu
           python3 tests/host/run-ebpf-qemu.py \
             --kernel kernel/out-bpf-qemu/arch/arm64/boot/Image \
             --busybox anykernel3/tools/busybox \
@@ -476,6 +484,15 @@ jobs:
         with:
           name: bakasu-runtime-tests
           path: artifacts/bakasu-tests/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload security audit and fault-injection results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: security-audit-tests
+          path: artifacts/security-tests/
           if-no-files-found: ignore
           retention-days: 14
 
@@ -568,7 +585,8 @@ jobs:
             ak3/anykernel.sh "artifacts/$package"
           (cd artifacts && sha256sum "$package" > SHA256SUMS)
           cp kernel/out/arch/arm64/boot/Image.gz-dtb artifacts/
-          cp configs/droidspaces-backports.json artifacts/
+          cp configs/droidspaces-backports.json configs/security-backports.json artifacts/
+          cp docs/security-advisories-20261105.json docs/custom-patch-audit-20261105.json artifacts/
           {
             echo "builder=$(git rev-parse HEAD)"
             echo "kernel=$(git -C kernel rev-parse HEAD)"
@@ -578,6 +596,10 @@ jobs:
             echo "bakasu_upstream=$(python3 scripts/source_revisions.py kernel/KernelSU --upstream)"
             echo "source_revisions=source-revisions.json"
             echo "source_status=committed-adaptations-clean"
+            echo "security_audit=2026-11-05"
+            echo "security_patchset=$(sha256sum configs/security-backports.json | cut -c1-12)"
+            echo "security_scope=ASB-2026-09-through-2026-11-kernel-and-Qualcomm;custom-patch-audit"
+            echo "android_security_patch_level=unchanged"
             echo "bakasu_reviewed_commit=$(jq -r .susfs.bakasu_reviewed_commit configs/vendored-upstreams.json)"
             echo "bakasu_compat_patch=$(sha256sum patches/lineage-4.9/bakasu-compat-4.9.patch | cut -c1-12)"
             echo "bakasu_preinit_hooks=$(sha256sum patches/lineage-4.9/bakasu-preinit-module-4.9.patch | cut -c1-12)"

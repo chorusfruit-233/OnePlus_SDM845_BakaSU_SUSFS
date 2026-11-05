@@ -1,0 +1,190 @@
+Subject: [4.9 backport] SCO connection/listener references
+
+Keep 4.9 BH locks; no sleeping lock_sock under a spinlock. Apply reference acquisition to ready, disconnect and receive paths; clear conn->sk before last put.
+Advisories: CVE-2026-89774
+Upstream: https://android.googlesource.com/kernel/common/+/598dbca6a3f78f038650c434935c86d8c3a6edfb
+Upstream: https://android.googlesource.com/kernel/common/+/315636ba7cbf03382cfa7bd8887118f59fe96c5f
+
+diff --git a/net/bluetooth/sco.c b/net/bluetooth/sco.c
+index 9892ce82c..78b7544f1 100644
+--- a/net/bluetooth/sco.c
++++ b/net/bluetooth/sco.c
+@@ -166,10 +166,11 @@ static void sco_conn_del(struct hci_conn *hcon, int err)
+ 	/* Kill socket */
+ 	sco_conn_lock(conn);
+ 	sk = conn->sk;
++	if (sk)
++		sock_hold(sk);
+ 	sco_conn_unlock(conn);
+ 
+ 	if (sk) {
+-		sock_hold(sk);
+ 		bh_lock_sock(sk);
+ 		sco_sock_clear_timer(sk);
+ 		sco_chan_del(sk, err);
+@@ -283,6 +284,8 @@ static void sco_recv_frame(struct sco_conn *conn, struct sk_buff *skb)
+ 
+ 	sco_conn_lock(conn);
+ 	sk = conn->sk;
++	if (sk)
++		sock_hold(sk);
+ 	sco_conn_unlock(conn);
+ 
+ 	if (!sk)
+@@ -290,11 +293,12 @@ static void sco_recv_frame(struct sco_conn *conn, struct sk_buff *skb)
+ 
+ 	BT_DBG("sk %p len %d", sk, skb->len);
+ 
+-	if (sk->sk_state != BT_CONNECTED)
+-		goto drop;
+-
+-	if (!sock_queue_rcv_skb(sk, skb))
++	if (READ_ONCE(sk->sk_state) == BT_CONNECTED &&
++	    !sock_queue_rcv_skb(sk, skb)) {
++		sock_put(sk);
+ 		return;
++	}
++	sock_put(sk);
+ 
+ drop:
+ 	kfree_skb(skb);
+@@ -338,9 +342,12 @@ static struct sock *sco_get_sock_listen(bdaddr_t *src)
+ 			sk1 = sk;
+ 	}
+ 
++	sk = sk ? sk : sk1;
++	if (sk)
++		sock_hold(sk);
+ 	read_unlock(&sco_sk_list.lock);
+ 
+-	return sk ? sk : sk1;
++	return sk;
+ }
+ 
+ static void sco_sock_destruct(struct sock *sk)
+@@ -377,6 +384,17 @@ static void sco_sock_kill(struct sock *sk)
+ 
+ 	BT_DBG("sk %p state %d", sk, sk->sk_state);
+ 
++	bh_lock_sock(sk);
++	if (sco_pi(sk)->conn) {
++		struct sco_conn *conn = sco_pi(sk)->conn;
++
++		sco_conn_lock(conn);
++		conn->sk = NULL;
++		sco_pi(sk)->conn = NULL;
++		sco_conn_unlock(conn);
++	}
++	bh_unlock_sock(sk);
++
+ 	/* Kill poor orphan */
+ 	bt_sock_unlink(&sco_sk_list, sk);
+ 	sock_set_flag(sk, SOCK_DEAD);
+@@ -1030,61 +1048,58 @@ static int sco_sock_release(struct socket *sock)
+ 
+ static void sco_conn_ready(struct sco_conn *conn)
+ {
+-	struct sock *parent;
+-	struct sock *sk = conn->sk;
++	struct sock *parent, *sk;
++	bdaddr_t src;
+ 
+-	BT_DBG("conn %p", conn);
++	sco_conn_lock(conn);
++	sk = conn->sk;
++	if (sk)
++		sock_hold(sk);
++	else if (conn->hcon)
++		bacpy(&src, &conn->hcon->src);
++	else {
++		sco_conn_unlock(conn);
++		return;
++	}
++	sco_conn_unlock(conn);
+ 
+ 	if (sk) {
+-		sco_sock_clear_timer(sk);
+ 		bh_lock_sock(sk);
+-		sk->sk_state = BT_CONNECTED;
+-		sk->sk_state_change(sk);
+-		bh_unlock_sock(sk);
+-	} else {
+-		sco_conn_lock(conn);
+-
+-		if (!conn->hcon) {
+-			sco_conn_unlock(conn);
+-			return;
+-		}
+-
+-		parent = sco_get_sock_listen(&conn->hcon->src);
+-		if (!parent) {
+-			sco_conn_unlock(conn);
+-			return;
+-		}
+-
+-		bh_lock_sock(parent);
+-
+-		sk = sco_sock_alloc(sock_net(parent), NULL,
+-				    BTPROTO_SCO, GFP_ATOMIC, 0);
+-		if (!sk) {
+-			bh_unlock_sock(parent);
+-			sco_conn_unlock(conn);
+-			return;
+-		}
+-
+-		sco_sock_init(sk, parent);
+-
+-		bacpy(&sco_pi(sk)->src, &conn->hcon->src);
+-		bacpy(&sco_pi(sk)->dst, &conn->hcon->dst);
+-
+-		hci_conn_hold(conn->hcon);
+-		__sco_chan_add(conn, sk, parent);
+-
+-		if (test_bit(BT_SK_DEFER_SETUP, &bt_sk(parent)->flags))
+-			sk->sk_state = BT_CONNECT2;
+-		else
++		if (sco_pi(sk)->conn == conn) {
++			sco_sock_clear_timer(sk);
+ 			sk->sk_state = BT_CONNECTED;
+-
+-		/* Wake up parent */
+-		parent->sk_data_ready(parent);
+-
+-		bh_unlock_sock(parent);
+-
+-		sco_conn_unlock(conn);
++			sk->sk_state_change(sk);
++		}
++		bh_unlock_sock(sk);
++		sock_put(sk);
++		return;
+ 	}
++
++	parent = sco_get_sock_listen(&src);
++	if (!parent)
++		return;
++	/* Socket -> connection is also the order used by sco_chan_del(). */
++	bh_lock_sock(parent);
++	sco_conn_lock(conn);
++	if (parent->sk_state != BT_LISTEN || !conn->hcon || conn->sk)
++		goto release;
++	sk = sco_sock_alloc(sock_net(parent), NULL, BTPROTO_SCO, GFP_ATOMIC, 0);
++	if (!sk)
++		goto release;
++	sco_sock_init(sk, parent);
++	bacpy(&sco_pi(sk)->src, &conn->hcon->src);
++	bacpy(&sco_pi(sk)->dst, &conn->hcon->dst);
++	hci_conn_hold(conn->hcon);
++	__sco_chan_add(conn, sk, parent);
++	if (test_bit(BT_SK_DEFER_SETUP, &bt_sk(parent)->flags))
++		sk->sk_state = BT_CONNECT2;
++	else
++		sk->sk_state = BT_CONNECTED;
++	parent->sk_data_ready(parent);
++release:
++	sco_conn_unlock(conn);
++	bh_unlock_sock(parent);
++	sock_put(parent);
+ }
+ 
+ /* ----- SCO interface with lower layer (HCI) ----- */

@@ -13,6 +13,7 @@ import tempfile
 cpio_entry = runpy.run_path(str(Path(__file__).with_name("run-freezer-qemu.py")))["cpio_entry"]
 
 CASES = (
+    "rekernel_control_validation", "rekernel_network_namespaces",
     "memcg_swap_enabled_by_default", "hm_protocol_and_uid_cursor",
     "hm_redirect_stat_readdir_xattr", "hm_ext4_inotify_fdinfo",
     "hm_rule_replacement_uid_and_whiteout", "hm_parent_conversion_and_open_fd_lifetime",
@@ -84,6 +85,9 @@ def main():
     if result.returncode or "COMPONENTS_QEMU_PASS\n" not in output or re.search(
             r"FAIL |Kernel panic|BUG:|WARNING:", output):
         raise SystemExit(f"Component runtime regression failed; see {args.log}")
+    for name in ("hid_empty_report", "shared_copy", "shared_shift", "shared_coalesce", "shared_gro"):
+        if f"PASS security_kernel_{name}" not in output:
+            raise SystemExit(f"Missing actual kernel security case {name}; see {args.log}")
     for case in CASES:
         if f"PASS components_{case}\n" not in output:
             raise SystemExit(f"Missing executed component case {case}; see {args.log}")

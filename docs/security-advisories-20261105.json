@@ -1,0 +1,999 @@
+{
+  "scope": "All repository patch files and custom integration boundaries; Android Security Bulletins September through November 2026 kernel and Qualcomm sections.",
+  "advisories": [
+    {
+      "cve": "CVE-2026-31629",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-09-01",
+      "section": "Kernel",
+      "severity": "Critical",
+      "component": "NFC",
+      "status": "backported",
+      "evidence": "net/nfc/llcp_core.c",
+      "reason": "Missing return after socket close. Phone CONFIG_NFC=n; code fixed and QEMU compile enables NFC.",
+      "upstream": [
+        "https://android.googlesource.com/kernel/common/+/4642ec2b3fdc3289192d3970b5baf6aa14031c32",
+        "https://android.googlesource.com/kernel/common/+/3bcdd92440376888cb93464c916876a581e39ed6"
+      ]
+    },
+    {
+      "cve": "CVE-2026-58846",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-09-01",
+      "section": "Kernel",
+      "severity": "Critical",
+      "component": "Protected Kernel-Based Virtual Machine",
+      "status": "not-applicable",
+      "evidence": "arch/arm64/kvm",
+      "reason": "Protected KVM (pKVM) and the affected protected-hyp extensions are absent from this 4.9 kernel.",
+      "upstream": [
+        "https://android.googlesource.com/kernel/common/+/ad34d15396568919a8ddd306ce2120e76d111b7c"
+      ]
+    },
+    {
+      "cve": "CVE-2026-58848",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-09-01",
+      "section": "Kernel",
+      "severity": "Critical",
+      "component": "Protected Kernel-Based Virtual Machine",
+      "status": "not-applicable",
+      "evidence": "arch/arm64/kvm",
+      "reason": "Protected KVM (pKVM) and the affected protected-hyp extensions are absent from this 4.9 kernel.",
+      "upstream": [
+        "https://android.googlesource.com/kernel/common/+/8f68185b8289dbe43e96f3d2b036c81c83cc58aa"
+      ]
+    },
+    {
+      "cve": "CVE-2026-58941",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-09-01",
+      "section": "Kernel",
+      "severity": "Critical",
+      "component": "Protected Kernel-Based Virtual Machine",
+      "status": "not-applicable",
+      "evidence": "arch/arm64/kvm",
+      "reason": "Protected KVM (pKVM) and the affected protected-hyp extensions are absent from this 4.9 kernel.",
+      "upstream": [
+        "https://android.googlesource.com/kernel/common/+/6bc773e9c9f8ec6c5c431934462badbbb7d21767",
+        "https://android.googlesource.com/kernel/common/+/ba7833622fc3581c388d0da922aaab529aec43b3"
+      ]
+    },
+    {
+      "cve": "CVE-2026-43049",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-09-01",
+      "section": "Kernel",
+      "severity": "High",
+      "component": "Human Interface Device",
+      "status": "already-safe",
+      "evidence": "drivers/hid/hid-logitech-hidpp.c:g920_get_config",
+      "reason": "Force-feedback init warning already returns zero; probe tears down hardware on configuration errors. Phone Logitech HID disabled.",
+      "upstream": [
+        "https://android.googlesource.com/kernel/common/+/20130e92480a0cca90f69d9ccb1d42a06a6e07f0",
+        "https://android.googlesource.com/kernel/common/+/0e9b1ff406b1d9f5ad2a75e2377823928a1c71ea"
+      ]
+    },
+    {
+      "cve": "CVE-2026-52993",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-09-01",
+      "section": "Kernel components",
+      "severity": "Critical",
+      "component": "Transparent Inter-Process Communication",
+      "status": "not-applicable",
+      "evidence": "net/tipc/msg.c:tipc_msg_validate",
+      "reason": "4.9 validator takes an skb, not skb **, and cannot replace/free it as in the vulnerable newer implementation; CONFIG_TIPC=n.",
+      "upstream": [
+        "https://android.googlesource.com/kernel/common/+/b5d8f34c67b13a33c18ef0bd652c1872b6c2ff3c",
+        "https://android.googlesource.com/kernel/common/+/18d3876842e1ef0c4fd796aab12fb4a31704830d"
+      ]
+    },
+    {
+      "cve": "CVE-2026-24087",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-09-01",
+      "section": "Qualcomm components",
+      "severity": "High",
+      "component": "Security",
+      "status": "outside-kernel",
+      "evidence": "ABL/tianocore/edk2",
+      "reason": "Bootloader/UEFI source, not the Linux kernel. No change to bootloader or firmware is made.",
+      "upstream": [
+        "https://git.codelinaro.org/clo/la/abl/tianocore/edk2/-/commit/1b841bccd5ba972e56d7a78e7d1e066a251adc2a"
+      ]
+    },
+    {
+      "cve": "CVE-2026-24088",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-09-01",
+      "section": "Qualcomm components",
+      "severity": "High",
+      "component": "Security",
+      "status": "outside-kernel",
+      "evidence": "ABL/tianocore/edk2",
+      "reason": "Bootloader/UEFI source, not the Linux kernel. No change to bootloader or firmware is made.",
+      "upstream": [
+        "https://git.codelinaro.org/clo/la/abl/tianocore/edk2/-/commit/f08125d8276c21d93a997bd031938454f71ab7b5"
+      ]
+    },
+    {
+      "cve": "CVE-2026-24090",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-09-01",
+      "section": "Qualcomm components",
+      "severity": "High",
+      "component": "Security",
+      "status": "outside-kernel",
+      "evidence": "ABL/tianocore/edk2",
+      "reason": "Bootloader/UEFI source, not the Linux kernel. No change to bootloader or firmware is made.",
+      "upstream": [
+        "https://git.codelinaro.org/clo/la/abl/tianocore/edk2/-/commit/07665c08352d0051a627d5b42ae0ad1487f29afc"
+      ]
+    },
+    {
+      "cve": "CVE-2026-24091",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-09-01",
+      "section": "Qualcomm components",
+      "severity": "High",
+      "component": "Security",
+      "status": "outside-kernel",
+      "evidence": "ABL/tianocore/edk2",
+      "reason": "Bootloader/UEFI source, not the Linux kernel. No change to bootloader or firmware is made.",
+      "upstream": [
+        "https://git.codelinaro.org/clo/le/abl/tianocore/edk2/-/commit/bdeb44d4f7aad3a6dbee39ca9eeaf80c8c201f12"
+      ]
+    },
+    {
+      "cve": "CVE-2026-24092",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-09-01",
+      "section": "Qualcomm components",
+      "severity": "High",
+      "component": "Security",
+      "status": "outside-kernel",
+      "evidence": "ABL/tianocore/edk2",
+      "reason": "Bootloader/UEFI source, not the Linux kernel. No change to bootloader or firmware is made.",
+      "upstream": [
+        "https://git.codelinaro.org/clo/la/abl/tianocore/edk2/-/commit/ce8892521b2ac7ebd7e8cee30c78b624fe01d9fd"
+      ]
+    },
+    {
+      "cve": "CVE-2026-25289",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-09-01",
+      "section": "Qualcomm closed-source components",
+      "severity": "Critical",
+      "component": "Closed-source component",
+      "status": "outside-kernel",
+      "evidence": "Qualcomm proprietary components",
+      "reason": "No fixable source in this kernel repository. Requires applicable device/vendor firmware or ROM updates; not claimed remediated.",
+      "upstream": [
+        "#asterisk"
+      ]
+    },
+    {
+      "cve": "CVE-2026-21383",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-09-01",
+      "section": "Qualcomm closed-source components",
+      "severity": "High",
+      "component": "Closed-source component",
+      "status": "outside-kernel",
+      "evidence": "Qualcomm proprietary components",
+      "reason": "No fixable source in this kernel repository. Requires applicable device/vendor firmware or ROM updates; not claimed remediated.",
+      "upstream": [
+        "#asterisk"
+      ]
+    },
+    {
+      "cve": "CVE-2026-24079",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-09-01",
+      "section": "Qualcomm closed-source components",
+      "severity": "High",
+      "component": "Closed-source component",
+      "status": "outside-kernel",
+      "evidence": "Qualcomm proprietary components",
+      "reason": "No fixable source in this kernel repository. Requires applicable device/vendor firmware or ROM updates; not claimed remediated.",
+      "upstream": [
+        "#asterisk"
+      ]
+    },
+    {
+      "cve": "CVE-2026-24080",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-09-01",
+      "section": "Qualcomm closed-source components",
+      "severity": "High",
+      "component": "Closed-source component",
+      "status": "outside-kernel",
+      "evidence": "Qualcomm proprietary components",
+      "reason": "No fixable source in this kernel repository. Requires applicable device/vendor firmware or ROM updates; not claimed remediated.",
+      "upstream": [
+        "#asterisk"
+      ]
+    },
+    {
+      "cve": "CVE-2026-24081",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-09-01",
+      "section": "Qualcomm closed-source components",
+      "severity": "High",
+      "component": "Closed-source component",
+      "status": "outside-kernel",
+      "evidence": "Qualcomm proprietary components",
+      "reason": "No fixable source in this kernel repository. Requires applicable device/vendor firmware or ROM updates; not claimed remediated.",
+      "upstream": [
+        "#asterisk"
+      ]
+    },
+    {
+      "cve": "CVE-2026-24084",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-09-01",
+      "section": "Qualcomm closed-source components",
+      "severity": "High",
+      "component": "Closed-source component",
+      "status": "outside-kernel",
+      "evidence": "Qualcomm proprietary components",
+      "reason": "No fixable source in this kernel repository. Requires applicable device/vendor firmware or ROM updates; not claimed remediated.",
+      "upstream": [
+        "#asterisk"
+      ]
+    },
+    {
+      "cve": "CVE-2026-25259",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-09-01",
+      "section": "Qualcomm closed-source components",
+      "severity": "High",
+      "component": "Closed-source component",
+      "status": "outside-kernel",
+      "evidence": "Qualcomm proprietary components",
+      "reason": "No fixable source in this kernel repository. Requires applicable device/vendor firmware or ROM updates; not claimed remediated.",
+      "upstream": [
+        "#asterisk"
+      ]
+    },
+    {
+      "cve": "CVE-2026-25260",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-09-01",
+      "section": "Qualcomm closed-source components",
+      "severity": "High",
+      "component": "Closed-source component",
+      "status": "outside-kernel",
+      "evidence": "Qualcomm proprietary components",
+      "reason": "No fixable source in this kernel repository. Requires applicable device/vendor firmware or ROM updates; not claimed remediated.",
+      "upstream": [
+        "#asterisk"
+      ]
+    },
+    {
+      "cve": "CVE-2026-25275",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-09-01",
+      "section": "Qualcomm closed-source components",
+      "severity": "High",
+      "component": "Closed-source component",
+      "status": "outside-kernel",
+      "evidence": "Qualcomm proprietary components",
+      "reason": "No fixable source in this kernel repository. Requires applicable device/vendor firmware or ROM updates; not claimed remediated.",
+      "upstream": [
+        "#asterisk"
+      ]
+    },
+    {
+      "cve": "CVE-2026-25288",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-09-01",
+      "section": "Qualcomm closed-source components",
+      "severity": "High",
+      "component": "Closed-source component",
+      "status": "outside-kernel",
+      "evidence": "Qualcomm proprietary components",
+      "reason": "No fixable source in this kernel repository. Requires applicable device/vendor firmware or ROM updates; not claimed remediated.",
+      "upstream": [
+        "#asterisk"
+      ]
+    },
+    {
+      "cve": "CVE-2026-25294",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-09-01",
+      "section": "Qualcomm closed-source components",
+      "severity": "High",
+      "component": "Closed-source component",
+      "status": "outside-kernel",
+      "evidence": "Qualcomm proprietary components",
+      "reason": "No fixable source in this kernel repository. Requires applicable device/vendor firmware or ROM updates; not claimed remediated.",
+      "upstream": [
+        "#asterisk"
+      ]
+    },
+    {
+      "cve": "CVE-2026-53256",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-11-01",
+      "section": "Kernel components",
+      "severity": "Critical",
+      "component": "Bluetooth",
+      "status": "backported",
+      "evidence": "net/bluetooth/rfcomm/sock.c",
+      "reason": "Listener returned without a reference. CONFIG_BT_RFCOMM=n on phone; compile enabled in QEMU.",
+      "upstream": [
+        "https://android.googlesource.com/kernel/common/+/529c9d587ac146586f9817ee994bd8cfa609769b",
+        "https://android.googlesource.com/kernel/common/+/1542c05a4e0c4d0e76670e356bb5322a7e85b083"
+      ]
+    },
+    {
+      "cve": "CVE-2026-59044",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-11-01",
+      "section": "Kernel components",
+      "severity": "Critical",
+      "component": "pKVM",
+      "status": "not-applicable",
+      "evidence": "arch/arm64/kvm",
+      "reason": "Protected KVM (pKVM) and the affected protected-hyp extensions are absent from this 4.9 kernel.",
+      "upstream": [
+        "https://android.googlesource.com/kernel/common/+/a4e59da7cad6b445229ae67c0ebed83a7b18dcb5"
+      ]
+    },
+    {
+      "cve": "CVE-2026-59045",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-11-01",
+      "section": "Kernel components",
+      "severity": "Critical",
+      "component": "pKVM",
+      "status": "not-applicable",
+      "evidence": "arch/arm64/kvm",
+      "reason": "Protected KVM (pKVM) and the affected protected-hyp extensions are absent from this 4.9 kernel.",
+      "upstream": [
+        "https://android.googlesource.com/kernel/common/+/c47ebb7427d5011de67b526eac67b42da640bdc5",
+        "https://android.googlesource.com/kernel/common/+/f0a2d3087b73b442b69fe0a9617ab920400abe15",
+        "https://android.googlesource.com/kernel/common/+/eb970aae88c0f45056f4501b7815a9b5c7ab0435",
+        "https://android.googlesource.com/kernel/common/+/f6510cfbc728061d7a8d4ea4ac91e5fc270aaf6b",
+        "https://android.googlesource.com/kernel/common/+/9f965dd09cad69d0064f8a862d68cfc2163ba9d3",
+        "https://android.googlesource.com/kernel/common/+/22ae719f35b14f88e551f0e858a1087a4b721204",
+        "https://android.googlesource.com/kernel/common/+/bd9aaec66cf50ea3ade2b537d9b730e40fe512e6",
+        "https://android.googlesource.com/kernel/common/+/f89e83e20aa69fbdd5b2f2de284dafcaadbda7c7",
+        "https://android.googlesource.com/kernel/common/+/acce19149cb8ebe92218d0e66c08bc36552ddbdf",
+        "https://android.googlesource.com/kernel/common/+/e10fb80c80387aa1f26695b57df95afe0ef00481",
+        "https://android.googlesource.com/kernel/common/+/01ff2abe4905798e330a70f2970ee33a44419d24"
+      ]
+    },
+    {
+      "cve": "CVE-2026-80604",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-11-01",
+      "section": "Kernel components",
+      "severity": "Critical",
+      "component": "HID",
+      "status": "backported-equivalent",
+      "evidence": "drivers/hid/hid-core.c",
+      "reason": "Older raw-event API has the same zero-length numbered report read; no bufsize argument. Kernel fault regression rejects NULL/zero before read.",
+      "upstream": [
+        "https://android.googlesource.com/kernel/common/+/15475ee563738135a9978f2a0481b1cf972b3b72",
+        "https://android.googlesource.com/kernel/common/+/e684fde80e17d695cd52aaefb735fa2c76b0866e"
+      ]
+    },
+    {
+      "cve": "CVE-2026-89774",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-11-01",
+      "section": "Kernel components",
+      "severity": "Critical",
+      "component": "Bluetooth",
+      "status": "backported-equivalent",
+      "evidence": "net/bluetooth/sco.c",
+      "reason": "Socket/listener pinning adapted to existing BH-lock model; also pin disconnect/receive lookups before conn unlock. Phone CONFIG_BT_BREDR=y.",
+      "upstream": [
+        "https://android.googlesource.com/kernel/common/+/315636ba7cbf03382cfa7bd8887118f59fe96c5f",
+        "https://android.googlesource.com/kernel/common/+/598dbca6a3f78f038650c434935c86d8c3a6edfb",
+        "https://android.googlesource.com/kernel/common/+/84728e305ff666fc2bf2be382b422b51912d7b1c",
+        "https://android.googlesource.com/kernel/common/+/a377ba61de42bb336732bd273330fcbfd3d51f3a"
+      ]
+    },
+    {
+      "cve": "CVE-2026-59048",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-11-01",
+      "section": "Kernel components",
+      "severity": "Critical",
+      "component": "pKVM",
+      "status": "not-applicable",
+      "evidence": "arch/arm64/kvm",
+      "reason": "Protected KVM (pKVM) and the affected protected-hyp extensions are absent from this 4.9 kernel.",
+      "upstream": [
+        "https://android.googlesource.com/kernel/common/+/e46b3a946c957ab463a8abf9333dea702e8a485e",
+        "https://android.googlesource.com/kernel/common/+/5e31aa53a963b254ddac8a88b48e5b64cfc38eea"
+      ]
+    },
+    {
+      "cve": "CVE-2025-38627",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-11-01",
+      "section": "Kernel components",
+      "severity": "High",
+      "component": "Flash-Friendly File System",
+      "status": "not-applicable",
+      "evidence": "fs/f2fs",
+      "reason": "No compress.c or f2fs_free_dic; F2FS is enabled but the affected compression implementation is absent.",
+      "upstream": [
+        "https://android.googlesource.com/kernel/common/+/5d604d40cd3232b09cb339941ef958e49283ed0a",
+        "https://android.googlesource.com/kernel/common/+/4e9efe0d56e73d10e2f72e0328b537cea93198ec",
+        "https://android.googlesource.com/kernel/common/+/84b5a9e56e50b8222cd5999cd8e44d0bdf7fed4f",
+        "https://android.googlesource.com/kernel/common/+/eb95d43efb6bc27e17a5b98031ee41b5f9eee3a8"
+      ]
+    },
+    {
+      "cve": "CVE-2026-23240",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-11-01",
+      "section": "Kernel components",
+      "severity": "High",
+      "component": "Transport Layer Security",
+      "status": "not-applicable",
+      "evidence": "net/tls",
+      "reason": "Kernel TLS tls_sw.c absent.",
+      "upstream": [
+        "https://android.googlesource.com/kernel/common/+/a5de36d6cee74a92c1a21b260bc507e64bc451de"
+      ]
+    },
+    {
+      "cve": "CVE-2026-31533",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-11-01",
+      "section": "Kernel components",
+      "severity": "High",
+      "component": "TLS",
+      "status": "not-applicable",
+      "evidence": "net/tls",
+      "reason": "Kernel TLS tls_sw.c absent.",
+      "upstream": [
+        "https://android.googlesource.com/kernel/common/+/0e43e0a3c94044acc74b8e0927c27972eb5a59e8",
+        "https://android.googlesource.com/kernel/common/+/aa9facde6c5005205874c37db3fd25799d741baf"
+      ]
+    },
+    {
+      "cve": "CVE-2026-43284",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-11-01",
+      "section": "Kernel components",
+      "severity": "High",
+      "component": "Networking",
+      "status": "defense-in-depth",
+      "evidence": "net/core/skbuff.c, net/ipv4/esp4.c, net/ipv6/esp6.c",
+      "reason": "Shared-fragment marker loss exists and is fixed. The advisory ESP path is already protected by unconditional skb_cow_data. TCP probing copies bytes rather than page references.",
+      "upstream": [
+        "https://android.googlesource.com/kernel/common/+/f6d22ea6ae50acbc3f811a14fb2e55a2c129007d",
+        "https://android.googlesource.com/kernel/common/+/32b16e61d1a02c4554d48b544ea4739d12e450e7",
+        "https://android.googlesource.com/kernel/common/+/c7fb8c4114577c9f5b34a82259f3d7b8addbacb1",
+        "https://android.googlesource.com/kernel/common/+/055c84c410288cf5169e180f8aca0792b6b8c9de"
+      ]
+    },
+    {
+      "cve": "CVE-2026-43499",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-11-01",
+      "section": "Kernel components",
+      "severity": "High",
+      "component": "Locking",
+      "status": "already-fixed",
+      "evidence": "kernel/locking/rtmutex.c:remove_waiter",
+      "reason": "Base 228c16 includes skip-not-queued and waiter->task fixes.",
+      "upstream": [
+        "https://android.googlesource.com/kernel/common/+/5339d13d8b945cd5841d0e70728ee67474ea74f7",
+        "https://android.googlesource.com/kernel/common/+/e7d9bd94fbdbf9842ea6f1b6d5af45758e87e3d6",
+        "https://android.googlesource.com/kernel/common/+/63493728373acb0b79eb6c94cf462cece1d8110f",
+        "https://android.googlesource.com/kernel/common/+/eb88e44c4e7ac2f5a13b2b51b9dfa2aea677e3e1"
+      ]
+    },
+    {
+      "cve": "CVE-2026-46242",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-11-01",
+      "section": "Kernel components",
+      "severity": "High",
+      "component": "Fs",
+      "status": "not-applicable",
+      "evidence": "fs/eventpoll.c",
+      "reason": "Old ep_mutex implementation; no refcount-based ep_remove/epi_fget/f_ep flow introduced by 58c9b016e128.",
+      "upstream": [
+        "https://android.googlesource.com/kernel/common/+/58c9b016e12855286370dfb704c08498edbc857a",
+        "https://android.googlesource.com/kernel/common/+/4a33cb8c9fe2dd18962c39568401e35b5de0ae59",
+        "https://android.googlesource.com/kernel/common/+/c7a8aea27b87b74f62a2b2a5d16100caa2cba79c",
+        "https://android.googlesource.com/kernel/common/+/5255cec633890d782c8a1daf792801eb527d0ac8",
+        "https://android.googlesource.com/kernel/common/+/035da2cab032309d387d2935543743fb36c722c3",
+        "https://android.googlesource.com/kernel/common/+/59f29da4ef0793f38ad1dbc01a9ee11bd4df636c",
+        "https://android.googlesource.com/kernel/common/+/b51793e6880dff374dfcd95f8335bfa1e556fadb",
+        "https://android.googlesource.com/kernel/common/+/e0384993ef8206abe4e644c0cb4bdb59d2c7bb4b",
+        "https://android.googlesource.com/kernel/common/+/02f217a4bffc8a00313bf52ebb96003d7ae1d5d8",
+        "https://android.googlesource.com/kernel/common/+/500d67e5110ab44ec1501113db76aa07287c112b",
+        "https://android.googlesource.com/kernel/common/+/690d6106eec64f970d6b2bf87599838b016b1b00",
+        "https://android.googlesource.com/kernel/common/+/3de54f8c502a7ac39095c2b5d30dfe8c17f8a411",
+        "https://android.googlesource.com/kernel/common/+/3dff0800fae61e0de35ef20694c86106da64266d",
+        "https://android.googlesource.com/kernel/common/+/64cea30f9b932d729e64a4098ad00d64e65f4813",
+        "https://android.googlesource.com/kernel/common/+/2d6bc6abd42ae07fa460c0a0de524ed439a61207",
+        "https://android.googlesource.com/kernel/common/+/f01453f20745731644a2bcc8c2a904e73f4db323",
+        "https://android.googlesource.com/kernel/common/+/257b1c2c78c25643526609dee0c15f1544eb3252",
+        "https://android.googlesource.com/kernel/common/+/58c9b016e12855286370dfb704c08498edbc857a"
+      ]
+    },
+    {
+      "cve": "CVE-2026-58824",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-11-01",
+      "section": "Kernel components",
+      "severity": "High",
+      "component": "Protected Kernel-Based Virtual Machine",
+      "status": "not-applicable",
+      "evidence": "arch/arm64/kvm",
+      "reason": "Protected KVM (pKVM) and the affected protected-hyp extensions are absent from this 4.9 kernel.",
+      "upstream": [
+        "https://android.googlesource.com/kernel/common/+/8be8949794c96f10348fdd3d8dc7740fdfecd4e2",
+        "https://android.googlesource.com/kernel/common/+/5a6735b89ba7c8684d36e2ecd9b02e834e97de9c"
+      ]
+    },
+    {
+      "cve": "CVE-2026-58825",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-11-01",
+      "section": "Kernel components",
+      "severity": "High",
+      "component": "Direct Memory Access Buffer",
+      "status": "not-applicable",
+      "evidence": "drivers/dma-buf, include/linux/sched.h",
+      "reason": "No per-process DMA-BUF task->dmabuf_info accounting extension.",
+      "upstream": [
+        "https://android.googlesource.com/kernel/common/+/efe16a3021b9f95eb1cb83e98d0d1db9bff94ce4",
+        "https://android.googlesource.com/kernel/common/+/009c5006c969826d37a2c5fc2721a7bb20d72555"
+      ]
+    },
+    {
+      "cve": "CVE-2026-58826",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-11-01",
+      "section": "Kernel components",
+      "severity": "High",
+      "component": "Direct Memory Access Buffer",
+      "status": "not-applicable",
+      "evidence": "drivers/dma-buf, include/linux/sched.h",
+      "reason": "No per-process DMA-BUF task->dmabuf_info accounting extension.",
+      "upstream": [
+        "https://android.googlesource.com/kernel/common/+/13beada2dac38c2d7303f1700aa16fb5053b919d",
+        "https://android.googlesource.com/kernel/common/+/efe16a3021b9f95eb1cb83e98d0d1db9bff94ce4",
+        "https://android.googlesource.com/kernel/common/+/f7d26609785ce56170645d56f306db38e8ba277a",
+        "https://android.googlesource.com/kernel/common/+/009c5006c969826d37a2c5fc2721a7bb20d72555"
+      ]
+    },
+    {
+      "cve": "CVE-2026-58827",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-11-01",
+      "section": "Kernel components",
+      "severity": "High",
+      "component": "Direct Memory Access Buffer",
+      "status": "not-applicable",
+      "evidence": "drivers/dma-buf, include/linux/sched.h",
+      "reason": "No per-process DMA-BUF task->dmabuf_info accounting extension.",
+      "upstream": [
+        "https://android.googlesource.com/kernel/common/+/769fa413e80cca30ff767f6f3e18f920d0353f67",
+        "https://android.googlesource.com/kernel/common/+/6642375b48bea1fc287a9281db591a8edc74db79"
+      ]
+    },
+    {
+      "cve": "CVE-2026-58828",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-11-01",
+      "section": "Kernel components",
+      "severity": "High",
+      "component": "Direct Memory Access Buffer",
+      "status": "not-applicable",
+      "evidence": "drivers/dma-buf, include/linux/sched.h",
+      "reason": "No per-process DMA-BUF task->dmabuf_info accounting extension.",
+      "upstream": [
+        "https://android.googlesource.com/kernel/common/+/b597ddd55fd100d3eca5b9c2024a5a09dcc950ec",
+        "https://android.googlesource.com/kernel/common/+/0285abdfbfb9f99898d647dafb2ea7d4bdd22527",
+        "https://android.googlesource.com/kernel/common/+/dd1ca7920b1eb7db5dbd34590c811cd99e2c3fdf",
+        "https://android.googlesource.com/kernel/common/+/f118039ccd1a98d1c4931816832b28c3c9e8e471"
+      ]
+    },
+    {
+      "cve": "CVE-2026-58829",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-11-01",
+      "section": "Kernel components",
+      "severity": "High",
+      "component": "FUSE",
+      "status": "not-applicable",
+      "evidence": "fs/fuse",
+      "reason": "No backing.c/fuse_backing_mmap passthrough implementation.",
+      "upstream": [
+        "https://android.googlesource.com/kernel/common/+/984713cde654f06871c542c469e3c226c8a79d9b",
+        "https://android.googlesource.com/kernel/common/+/517040c192cebb334766f43604e6a7ebb79d43ae"
+      ]
+    },
+    {
+      "cve": "CVE-2026-58844",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-11-01",
+      "section": "Kernel components",
+      "severity": "High",
+      "component": "Protected Kernel-Based Virtual Machine",
+      "status": "not-applicable",
+      "evidence": "arch/arm64/kvm",
+      "reason": "Protected KVM (pKVM) and the affected protected-hyp extensions are absent from this 4.9 kernel.",
+      "upstream": [
+        "https://android.googlesource.com/kernel/common/+/329d7c6e7215f52bb5922b4bcaa6bf713fa4ccff",
+        "https://android.googlesource.com/kernel/common/+/f4633d3767965e89b835bca04981b67cc8aa78bd",
+        "https://android.googlesource.com/kernel/common/+/8c62fa09cc8a04cbaaa5d00b5dcd51279bee3bdb",
+        "https://android.googlesource.com/kernel/common/+/f0a3950f0fa3988e9af43b5656f72fa675672c82",
+        "https://android.googlesource.com/kernel/common/+/7d6d4a26e7ead0bc501f3ed6809a66c2f3d49365",
+        "https://android.googlesource.com/kernel/common/+/82cd807f41d89d5cf2b4c3ac7affdb91188baea7",
+        "https://android.googlesource.com/kernel/common/+/2f86c81dc9453ed385c4f0703d6bd664d0997567",
+        "https://android.googlesource.com/kernel/common/+/d518f4cc29a9a95f631c8c811fe6791ad08c4f56",
+        "https://android.googlesource.com/kernel/common/+/d9b4efaed7a573d245dc5873c7d6c304a9936fdd"
+      ]
+    },
+    {
+      "cve": "CVE-2026-58845",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-11-01",
+      "section": "Kernel components",
+      "severity": "High",
+      "component": "Memory Management",
+      "status": "not-applicable",
+      "evidence": "mm",
+      "reason": "Android 16 KiB page-padding extension absent.",
+      "upstream": [
+        "https://android.googlesource.com/kernel/common/+/3b9b40df51bda90ffb2833dcef11905e751dafdb",
+        "https://android.googlesource.com/kernel/common/+/ed0e57e1e27a9eecd6c1a3dd1dd9ed1b8d1a06b4"
+      ]
+    },
+    {
+      "cve": "CVE-2026-58847",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-11-01",
+      "section": "Kernel components",
+      "severity": "High",
+      "component": "Protected Kernel-Based Virtual Machine",
+      "status": "not-applicable",
+      "evidence": "arch/arm64/kvm",
+      "reason": "Protected KVM (pKVM) and the affected protected-hyp extensions are absent from this 4.9 kernel.",
+      "upstream": [
+        "https://android.googlesource.com/kernel/common/+/8c62fa09cc8a04cbaaa5d00b5dcd51279bee3bdb"
+      ]
+    },
+    {
+      "cve": "CVE-2026-58942",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-11-01",
+      "section": "Kernel components",
+      "severity": "High",
+      "component": "Memory Management",
+      "status": "not-applicable",
+      "evidence": "mm",
+      "reason": "Android 16 KiB page-padding extension absent.",
+      "upstream": [
+        "https://android.googlesource.com/kernel/common/+/27d9c79c71ceaaee3c31337658a699364ec7d833",
+        "https://android.googlesource.com/kernel/common/+/019d909caeb85547b9aed2beea73101ea73b958f"
+      ]
+    },
+    {
+      "cve": "CVE-2026-59042",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-11-01",
+      "section": "Kernel components",
+      "severity": "High",
+      "component": "pKVM",
+      "status": "not-applicable",
+      "evidence": "arch/arm64/kvm",
+      "reason": "Protected KVM (pKVM) and the affected protected-hyp extensions are absent from this 4.9 kernel.",
+      "upstream": [
+        "https://android.googlesource.com/kernel/common/+/1569a00286640e452ce917ee8b3cec04c5cc3715",
+        "https://android.googlesource.com/kernel/common/+/382cffbd3842b64260993d2438926a9f2a0a447e"
+      ]
+    },
+    {
+      "cve": "CVE-2026-59043",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-11-01",
+      "section": "Kernel components",
+      "severity": "High",
+      "component": "pKVM",
+      "status": "not-applicable",
+      "evidence": "arch/arm64/kvm",
+      "reason": "Protected KVM (pKVM) and the affected protected-hyp extensions are absent from this 4.9 kernel.",
+      "upstream": [
+        "https://android.googlesource.com/kernel/common/+/82cd807f41d89d5cf2b4c3ac7affdb91188baea7"
+      ]
+    },
+    {
+      "cve": "CVE-2026-64011",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-11-01",
+      "section": "Kernel components",
+      "severity": "High",
+      "component": "NFC",
+      "status": "backported",
+      "evidence": "net/nfc/llcp_sock.c, net/nfc/llcp_core.c",
+      "reason": "Connecting socket unlink and connection completion race. Phone CONFIG_NFC=n; preserve close lock over unlink.",
+      "upstream": [
+        "https://android.googlesource.com/kernel/common/+/be7eb82f26606f1965d7d4b053e82570ea5f48a1",
+        "https://android.googlesource.com/kernel/common/+/e63aaa33966a89eca6ec07492b0525f0db045bc4",
+        "https://android.googlesource.com/kernel/common/+/1188bc5d16e4f9511414b35b6c56a79f2a5d9529",
+        "https://android.googlesource.com/kernel/common/+/0ad33340b17e71d9764987f0cd30530ad850e817"
+      ]
+    },
+    {
+      "cve": "CVE-2026-64427",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-11-01",
+      "section": "Kernel components",
+      "severity": "High",
+      "component": "Human Interface Device",
+      "status": "already-safe",
+      "evidence": "drivers/hid/hid-logitech-dj.c:logi_dj_probe",
+      "reason": "hid_validate_values already validates output DJ_SHORT field length before hid_hw_start.",
+      "upstream": [
+        "https://android.googlesource.com/kernel/common/+/17843f6d225d81b6f210b89bd54123611de7bba7",
+        "https://android.googlesource.com/kernel/common/+/c47a6316399f7dfbddb1d383578838e3969ae90f",
+        "https://android.googlesource.com/kernel/common/+/5db2dcc7b20c370157de9a46978d5a3d005b169c",
+        "https://android.googlesource.com/kernel/common/+/6f13426533c438eaf78caf2a8171fc839417dd45",
+        "https://android.googlesource.com/kernel/common/+/a1f098e5a82ad297062244ee20a44b6131c199c1",
+        "https://android.googlesource.com/kernel/common/+/2b71b414641a5cac8a3bf2a736518e09a73badf5"
+      ]
+    },
+    {
+      "cve": "CVE-2026-64560",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-11-01",
+      "section": "Kernel components",
+      "severity": "High",
+      "component": "Kernel",
+      "status": "not-applicable",
+      "evidence": "kernel/time/posix-cpu-timers.c, kernel/exit.c:__exit_signal",
+      "reason": "Retains task references and old de_thread cleanup workaround; no 55e8c8eb2c7b pid-reference conversion. __exit_signal explicitly cleans group CPU timers when the old leader is reaped.",
+      "upstream": [
+        "https://android.googlesource.com/kernel/common/+/585f2c9c9560f7e0dadafbba251183cea83d9dc4",
+        "https://android.googlesource.com/kernel/common/+/8eff909dd82da10a599468a514cc1ad07e90c3cc"
+      ]
+    },
+    {
+      "cve": "CVE-2026-46232",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-11-01",
+      "section": "Kernel components",
+      "severity": "High",
+      "component": "HID",
+      "status": "already-safe",
+      "evidence": "drivers/hid/hid-sony.c:dualshock4_parse_report",
+      "reason": "No hid-playstation.c; legacy Sony handler bounds num_touch_data by 3 USB/4 Bluetooth reports.",
+      "upstream": [
+        "https://android.googlesource.com/kernel/common/+/a5dca2389c9e2e3c43bedb72f556bf0eafe0cffd",
+        "https://android.googlesource.com/kernel/common/+/aab498d0885fd97d010a0cd1013a3479269f41d0",
+        "https://android.googlesource.com/kernel/common/+/60eed3576bb0cf3ceb11625240beb63b48f6e3c2",
+        "https://android.googlesource.com/kernel/common/+/cf8ba5678385b2b8832ed2e87c035925eb12bc4a"
+      ]
+    },
+    {
+      "cve": "CVE-2026-23184",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-11-01",
+      "section": "Kernel components",
+      "severity": "High",
+      "component": "Binder",
+      "status": "not-applicable",
+      "evidence": "drivers/android/binder.c",
+      "reason": "No upstream binder_netlink_report or BR_TRANSACTION_PENDING_FROZEN; ReKernel reports before transaction publication.",
+      "upstream": [
+        "https://android.googlesource.com/kernel/common/+/1c8fffa12a81f62411312825521d63a81d1ca92e"
+      ]
+    },
+    {
+      "cve": "CVE-2026-59046",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-11-01",
+      "section": "Kernel components",
+      "severity": "High",
+      "component": "pKVM",
+      "status": "not-applicable",
+      "evidence": "arch/arm64/kvm",
+      "reason": "Protected KVM (pKVM) and the affected protected-hyp extensions are absent from this 4.9 kernel.",
+      "upstream": [
+        "https://android.googlesource.com/kernel/common/+/4a75aa4e840f294efd47084e083a6e91069bce58",
+        "https://android.googlesource.com/kernel/common/+/525cfccadb92e7c9314d03cce600fed7335874d9"
+      ]
+    },
+    {
+      "cve": "CVE-2026-59047",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-11-01",
+      "section": "Kernel components",
+      "severity": "High",
+      "component": "pKVM",
+      "status": "not-applicable",
+      "evidence": "arch/arm64/kvm",
+      "reason": "Protected KVM (pKVM) and the affected protected-hyp extensions are absent from this 4.9 kernel.",
+      "upstream": [
+        "https://android.googlesource.com/kernel/common/+/ba356506706b7bd953c501ea91ee7c0d55c1ad83"
+      ]
+    },
+    {
+      "cve": "CVE-2026-25291",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-11-01",
+      "section": "Qualcomm components",
+      "severity": "High",
+      "component": "Security",
+      "status": "not-applicable",
+      "evidence": "drivers/gpu/msm",
+      "reason": "No shmem-folio hooks/kgsl_shmem_fill_page backing allocation implementation.",
+      "upstream": [
+        "https://git.codelinaro.org/clo/la/platform/vendor/qcom/opensource/graphics-kernel/-/commit/c6c74d057c0c1d128ad30da9460765bc02ea85f4"
+      ]
+    },
+    {
+      "cve": "CVE-2026-25301",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-11-01",
+      "section": "Qualcomm components",
+      "severity": "High",
+      "component": "Security",
+      "status": "not-applicable",
+      "evidence": "drivers/gpu/msm",
+      "reason": "Adreno Gen8.11 snapshot register list absent; SDM845 uses Adreno 630.",
+      "upstream": [
+        "https://git.codelinaro.org/clo/la/platform/vendor/qcom/opensource/graphics-kernel/-/commit/be1b91c10f5d045f608e88e99598766f3865bfef"
+      ]
+    },
+    {
+      "cve": "CVE-2026-57537",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-11-01",
+      "section": "Qualcomm components",
+      "severity": "High",
+      "component": "Security",
+      "status": "not-applicable",
+      "evidence": "drivers/char/adsprpc.c",
+      "reason": "No new DSP frpc_coredump/channel gmaps implementation.",
+      "upstream": [
+        "https://git.codelinaro.org/clo/la/platform/vendor/qcom/opensource/dsp-kernel/-/commit/3dacc0ac01d64242ffb367c949b36b3e54368950"
+      ]
+    },
+    {
+      "cve": "CVE-2026-57545",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-11-01",
+      "section": "Qualcomm components",
+      "severity": "High",
+      "component": "Security",
+      "status": "not-applicable",
+      "evidence": "drivers/gpu/msm",
+      "reason": "No adreno_hwsched/get_active_cmdobj_lpac implementation.",
+      "upstream": [
+        "https://git.codelinaro.org/clo/la/kernel/msm-5.10/-/commit/874311dc075047c51c9231e3de1bae0a7677b3b7"
+      ]
+    },
+    {
+      "cve": "CVE-2026-57548",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-11-01",
+      "section": "Qualcomm components",
+      "severity": "High",
+      "component": "Security",
+      "status": "not-applicable",
+      "evidence": "drivers/gpu/msm",
+      "reason": "Gen8 hardware scheduler cmd_list implementation absent.",
+      "upstream": [
+        "https://git.codelinaro.org/clo/la/platform/vendor/qcom/opensource/graphics-kernel/-/commit/af2e26b0b01a5ca8ef30bf20ee17a1360563bb70",
+        "https://git.codelinaro.org/clo/la/platform/vendor/qcom/opensource/graphics-kernel/-/commit/73214990504422a964b091964cde3c59780b7ff2"
+      ]
+    },
+    {
+      "cve": "CVE-2026-57549",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-11-01",
+      "section": "Qualcomm components",
+      "severity": "High",
+      "component": "Security",
+      "status": "not-applicable",
+      "evidence": "drivers/gpu/msm",
+      "reason": "Gen7/Gen8 hardware fence lists absent.",
+      "upstream": [
+        "https://git.codelinaro.org/clo/la/platform/vendor/qcom/opensource/graphics-kernel/-/commit/9f382f0cbb0c69b0ddc90e298ca5226b4ecd80a9"
+      ]
+    },
+    {
+      "cve": "CVE-2026-57554",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-11-01",
+      "section": "Qualcomm components",
+      "severity": "High",
+      "component": "Security",
+      "status": "not-applicable",
+      "evidence": "drivers/char/adsprpc.c",
+      "reason": "Async invoke/async perf collector implementation absent; no fastrpc_wait_on_async_queue/isasyncinvoke.",
+      "upstream": [
+        "https://git.codelinaro.org/clo/la/platform/vendor/qcom/opensource/dsp-kernel/-/commit/f6ddd79f650d61c7406faf52530d1a4716a5613a",
+        "https://git.codelinaro.org/clo/la/kernel/msm-5.15/-/commit/099b47ce9f7d0104ef131b1e7b407367c756bf72",
+        "https://git.codelinaro.org/clo/la/kernel/msm-5.10/-/commit/a065d4bacdae2cea6678a7528df8008d16452a63"
+      ]
+    },
+    {
+      "cve": "CVE-2026-66113",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-11-01",
+      "section": "Qualcomm components",
+      "severity": "High",
+      "component": "Security",
+      "status": "outside-kernel",
+      "evidence": "Qualcomm display-core/snapalloc",
+      "reason": "Userspace C++ allocator change, not kernel code in this repository.",
+      "upstream": [
+        "https://git.codelinaro.org/clo/la/platform/vendor/opensource/display-core/-/commit/1d51d6c52ccc5e9ac759aded27a4ec62a7ccf702"
+      ]
+    },
+    {
+      "cve": "CVE-2026-66114",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-11-01",
+      "section": "Qualcomm components",
+      "severity": "High",
+      "component": "Security",
+      "status": "outside-kernel",
+      "evidence": "Qualcomm display-core/sdmclient/sdm_layers.cpp",
+      "reason": "Userspace display HDR metadata length validation; affected C++ code is not in this kernel repository.",
+      "upstream": [
+        "https://git.codelinaro.org/clo/la/platform/vendor/opensource/display-core/-/commit/0a615ffd20a5677ca18acb53e9b4b1292b836078"
+      ]
+    },
+    {
+      "cve": "CVE-2026-25285",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-11-01",
+      "section": "Qualcomm closed-source components",
+      "severity": "Critical",
+      "component": "Closed-source component",
+      "status": "outside-kernel",
+      "evidence": "Qualcomm proprietary components",
+      "reason": "No fixable source in this kernel repository. Requires applicable device/vendor firmware or ROM updates; not claimed remediated.",
+      "upstream": [
+        "#asterisk"
+      ]
+    },
+    {
+      "cve": "CVE-2026-6726",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-11-01",
+      "section": "Qualcomm closed-source components",
+      "severity": "High",
+      "component": "Closed-source component",
+      "status": "outside-kernel",
+      "evidence": "Qualcomm proprietary components",
+      "reason": "No fixable source in this kernel repository. Requires applicable device/vendor firmware or ROM updates; not claimed remediated.",
+      "upstream": [
+        "#asterisk"
+      ]
+    },
+    {
+      "cve": "CVE-2026-25286",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-11-01",
+      "section": "Qualcomm closed-source components",
+      "severity": "High",
+      "component": "Closed-source component",
+      "status": "outside-kernel",
+      "evidence": "Qualcomm proprietary components",
+      "reason": "No fixable source in this kernel repository. Requires applicable device/vendor firmware or ROM updates; not claimed remediated.",
+      "upstream": [
+        "#asterisk"
+      ]
+    },
+    {
+      "cve": "CVE-2026-25287",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-11-01",
+      "section": "Qualcomm closed-source components",
+      "severity": "High",
+      "component": "Closed-source component",
+      "status": "outside-kernel",
+      "evidence": "Qualcomm proprietary components",
+      "reason": "No fixable source in this kernel repository. Requires applicable device/vendor firmware or ROM updates; not claimed remediated.",
+      "upstream": [
+        "#asterisk"
+      ]
+    },
+    {
+      "cve": "CVE-2026-25302",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-11-01",
+      "section": "Qualcomm closed-source components",
+      "severity": "High",
+      "component": "Closed-source component",
+      "status": "outside-kernel",
+      "evidence": "Qualcomm proprietary components",
+      "reason": "No fixable source in this kernel repository. Requires applicable device/vendor firmware or ROM updates; not claimed remediated.",
+      "upstream": [
+        "#asterisk"
+      ]
+    },
+    {
+      "cve": "CVE-2026-57546",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-11-01",
+      "section": "Qualcomm closed-source components",
+      "severity": "High",
+      "component": "Closed-source component",
+      "status": "outside-kernel",
+      "evidence": "Qualcomm proprietary components",
+      "reason": "No fixable source in this kernel repository. Requires applicable device/vendor firmware or ROM updates; not claimed remediated.",
+      "upstream": [
+        "#asterisk"
+      ]
+    },
+    {
+      "cve": "CVE-2026-57547",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-11-01",
+      "section": "Qualcomm closed-source components",
+      "severity": "High",
+      "component": "Closed-source component",
+      "status": "outside-kernel",
+      "evidence": "Qualcomm proprietary components",
+      "reason": "No fixable source in this kernel repository. Requires applicable device/vendor firmware or ROM updates; not claimed remediated.",
+      "upstream": [
+        "#asterisk"
+      ]
+    },
+    {
+      "cve": "CVE-2026-65076",
+      "bulletin": "https://source.android.com/docs/security/bulletin/2026/2026-11-01",
+      "section": "Qualcomm closed-source components",
+      "severity": "High",
+      "component": "Closed-source component",
+      "status": "outside-kernel",
+      "evidence": "Qualcomm proprietary components",
+      "reason": "No fixable source in this kernel repository. Requires applicable device/vendor firmware or ROM updates; not claimed remediated.",
+      "upstream": [
+        "#asterisk"
+      ]
+    }
+  ]
+}

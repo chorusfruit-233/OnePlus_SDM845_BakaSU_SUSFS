@@ -23,6 +23,7 @@
 #include <sys/syscall.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <sys/un.h>
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
@@ -225,6 +226,35 @@ static void peer_groups(void)
 
 static void test_peergroups(void) { child_case(peer_groups); }
 
+static void peer_groups_race(void)
+{
+    int fd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
+    struct sockaddr_un addr = {.sun_family = AF_UNIX};
+    gid_t original = 123, groups[2];
+    CHECK(setgroups(1, &original) == 0 && fd >= 0);
+    snprintf(addr.sun_path + 1, sizeof(addr.sun_path) - 1, "peer-race-%d", getpid());
+    CHECK(bind(fd, (void *)&addr, sizeof(addr)) == 0 && listen(fd, 1) == 0);
+    pid_t child = fork(); CHECK(child >= 0);
+    if (!child) {
+        for (int i = 0; i < 10000; i++) {
+            gid_t next = (i & 1) ? 456 : 123;
+            CHECK(setgroups(1, &next) == 0 && listen(fd, 1) == 0);
+        }
+        _exit(0);
+    }
+    volatile uintptr_t bad_address = 1;
+    for (int i = 0; i < 10000; i++) {
+        socklen_t size = sizeof(groups);
+        CHECK(getsockopt(fd, SOL_SOCKET, SO_PEERGROUPS, groups, &size) == 0);
+        CHECK(size == sizeof(gid_t) && (groups[0] == 123 || groups[0] == 456));
+        size = sizeof(groups);
+        EXPECT_ERROR(getsockopt(fd, SOL_SOCKET, SO_PEERGROUPS, (void *)bad_address, &size), EFAULT);
+    }
+    int status; CHECK(waitpid(child, &status, 0) == child && WIFEXITED(status) && !WEXITSTATUS(status));
+    CHECK(close(fd) == 0);
+}
+static void test_peergroups_race(void) { child_case(peer_groups_race); }
+
 static void test_nsfs(void)
 {
     int mnt = open("/proc/self/ns/mnt", O_RDONLY | O_CLOEXEC);
@@ -334,7 +364,7 @@ int main(void)
         {"pidfd", test_pidfd}, {"statx", test_statx}, {"utimensat", test_utimensat},
         {"faccessat2", test_faccessat2}, {"close_range", test_close_range},
         {"bindtoifindex", test_bindtoifindex}, {"peergroups", test_peergroups},
-        {"nsfs", test_nsfs}, {"ptypeer", test_ptypeer},
+        {"peergroups_race", test_peergroups_race}, {"nsfs", test_nsfs}, {"ptypeer", test_ptypeer},
         {"ptypeer_error", test_ptypeer_error}, {"nexthop", test_nexthop},
     };
     for (size_t i = 0; i < sizeof(tests) / sizeof(tests[0]); i++) {

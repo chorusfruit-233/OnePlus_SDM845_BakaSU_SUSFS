@@ -1,0 +1,25 @@
+Subject: [4.9 backport] SUSFS readlink truncation
+
+Match VFS short-buffer semantics, including exact-length buffers; do not append a NUL.
+
+diff --git a/fs/susfs.c b/fs/susfs.c
+index 97fab85b8..0007686a2 100644
+--- a/fs/susfs.c
++++ b/fs/susfs.c
+@@ -1340,11 +1340,13 @@ int susfs_open_redirect_spoof_vfs_readlink(struct inode *inode, char __user *buf
+ 			SUSFS_LOGI("spoof path '%s' to '%s'\n",
+ 					entry->info.target_pathname, entry->info.redirected_pathname);
+ 			len = strlen(entry->info.redirected_pathname);
+-			if (len >= buflen) {
+-				SUSFS_LOGE("buflen not big enough\n");
++			/* readlink truncates to the caller's buffer and adds no NUL. */
++			if (buflen <= 0) {
+ 				srcu_read_unlock(&susfs_srcu_open_redirect, srcu_idx);
+-				return -ENAMETOOLONG;
++				return -EINVAL;
+ 			}
++			if (len > buflen)
++				len = buflen;
+ 			if (copy_to_user(buffer, entry->info.redirected_pathname, len)) {
+ 				SUSFS_LOGE("copy_to_user() failed\n");
+ 				srcu_read_unlock(&susfs_srcu_open_redirect, srcu_idx);

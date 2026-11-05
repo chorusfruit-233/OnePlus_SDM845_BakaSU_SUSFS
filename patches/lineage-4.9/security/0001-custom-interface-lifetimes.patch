@@ -1,0 +1,437 @@
+Subject: [4.9 backport] Custom interfaces: credential pinning, ReKernel validation/init/parser/netns, Hybrid Mount request snapshots
+
+Local audit; preserve existing Netlink text and hm1 wire formats.
+
+diff --git a/drivers/rekernel/rekernel.c b/drivers/rekernel/rekernel.c
+index d37841e02..5150c4d14 100644
+--- a/drivers/rekernel/rekernel.c
++++ b/drivers/rekernel/rekernel.c
+@@ -1,5 +1,7 @@
+ #include <linux/init.h>
+ #include <linux/types.h>
++#include <linux/mutex.h>
++#include <net/net_namespace.h>
+ 
+ #include <net/sock.h>
+ #include <net/ip.h>
+@@ -36,16 +38,12 @@ static const char* binder_type[] = {
+ 	"transaction",
+ 	"free_buffer_full",
+ };
+-static const char* rpc_type[] = {
+-	"SYNC_BINDER_REPLY",
+-	"SYNC_BINDER",
+-	"FREE_BUFFER_FULL",
+-};
+ static struct sock* netlink_socket;
+-extern struct net init_net;
+-static unsigned long netlink_unit = 0;
++static unsigned int netlink_unit;
++static bool rekernel_ready;
+ #ifdef CONFIG_PROC_FS
+-static struct proc_dir_entry* rekernel_dir, * rekernel_unit_entry;
++static struct proc_dir_entry *rekernel_dir;
++static DEFINE_MUTEX(rekernel_proc_lock);
+ #endif /* CONFIG_PROC_FS */
+ 
+ static int sendMessage(char* packet_buffer, uint16_t len) {
+@@ -68,80 +66,93 @@ static int sendMessage(char* packet_buffer, uint16_t len) {
+ 	memcpy(nlmsg_data(netlink_hdr), packet_buffer, len);
+ 	return netlink_unicast(netlink_socket, socket_buffer, USER_PORT, MSG_DONTWAIT);
+ }
+-static void netlink_rcv_msg(struct sk_buff* socket_buffer) {
+-	struct nlmsghdr* nlhdr = NULL;
+-	char* umsg = NULL;
+-
+-	if (socket_buffer->len >= nlmsg_total_size(0)) {
+-		nlhdr = nlmsg_hdr(socket_buffer);
+-		umsg = nlmsg_data(nlhdr);
+-		if (umsg) {
++static void netlink_rcv_msg(struct sk_buff *skb)
++{
+ #ifdef CONFIG_PROC_FS
+-			if (!memcmp(umsg, "#proc_remove", nlmsg_len(nlhdr))) {
+-				if (rekernel_dir) {
+-					proc_remove(rekernel_dir);
+-				}
+-			}
+-#endif /* CONFIG_PROC_FS */
+-		}
++	static const char command[] = "#proc_remove";
++	struct nlmsghdr *hdr;
++	unsigned int len;
++
++	if (!smp_load_acquire(&rekernel_ready) ||
++	    !netlink_capable(skb, CAP_SYS_ADMIN) ||
++	    skb->len < NLMSG_HDRLEN)
++		return;
++	hdr = nlmsg_hdr(skb);
++	if (!nlmsg_ok(hdr, skb->len))
++		return;
++	len = nlmsg_len(hdr);
++	/* Accept the existing text protocol, with or without its final NUL. */
++	if (len != sizeof(command) - 1 && len != sizeof(command))
++		return;
++	if (memcmp(nlmsg_data(hdr), command, len))
++		return;
++
++	mutex_lock(&rekernel_proc_lock);
++	if (rekernel_dir) {
++		proc_remove(rekernel_dir);
++		rekernel_dir = NULL;
+ 	}
++	mutex_unlock(&rekernel_proc_lock);
++#endif
+ }
+ #ifdef CONFIG_REKERNEL_NETWORK
+-static unsigned int rekernel_pkg_ipv4_ipv6_in(void* priv, struct sk_buff* socket_buffer,
+-	const struct nf_hook_state* state) {
+-	struct sock* sk;
+-	unsigned int thoff = 0;
+-	unsigned short frag_off = 0;
++/* Read into local headers: pulling a nonlinear skb may replace its head,
++ * invalidating pointers retained by the old implementation. */
++static unsigned int rekernel_pkg_ipv4_ipv6_in(void *priv, struct sk_buff *skb,
++	const struct nf_hook_state *state)
++{
++	struct tcphdr tcp;
++	struct sock *sk;
++	int nhoff, thoff, end, data_len, version;
+ 	uid_t uid;
+-	uint hook;
+-	struct net_device* dev = NULL;
+-	struct tcphdr *th;
+-	int data_len = 0;
+ 
+-	if (!socket_buffer || !socket_buffer->len || !state)
++	if (!skb || !state || state->hook != NF_INET_LOCAL_IN || !state->in)
+ 		return NF_ACCEPT;
+-
+-	hook = state->hook;
+-	if (NF_INET_LOCAL_IN == hook)
+-		dev = state->in;
+-
+-	if (NULL == dev)
++	nhoff = skb_network_offset(skb);
++	if (nhoff < 0 || nhoff > skb->len)
+ 		return NF_ACCEPT;
+ 
+-	if (ip_hdr(socket_buffer)->version == 4) {
+-		struct iphdr *iph4 = ip_hdr(socket_buffer);
+-		if (iph4->protocol != IPPROTO_TCP)
+-			return NF_ACCEPT;
+-		if (!pskb_may_pull(socket_buffer, (iph4->ihl << 2) + sizeof(struct tcphdr)))
++	if (state->pf == NFPROTO_IPV4) {
++		struct iphdr ip;
++
++		if (skb_copy_bits(skb, nhoff, &ip, sizeof(ip)) ||
++		    ip.version != 4 || ip.ihl < 5 || ip.protocol != IPPROTO_TCP ||
++		    (ntohs(ip.frag_off) & IP_OFFSET))
+ 			return NF_ACCEPT;
+-		th = (struct tcphdr *)((unsigned char *)iph4 + (iph4->ihl << 2));
+-		data_len = ntohs(iph4->tot_len) - (iph4->ihl << 2) - (th->doff << 2);
++		thoff = nhoff + ip.ihl * 4;
++		end = nhoff + ntohs(ip.tot_len);
++		version = 4;
+ #if IS_ENABLED(CONFIG_IPV6)
+-	} else if (ip_hdr(socket_buffer)->version == 6) {
+-		struct ipv6hdr *iph6 = ipv6_hdr(socket_buffer);
+-		if (ipv6_find_hdr(socket_buffer, &thoff, -1, &frag_off, NULL) != IPPROTO_TCP)
++	} else if (state->pf == NFPROTO_IPV6) {
++		struct ipv6hdr ip6;
++		__be16 frag_off;
++		u8 next;
++
++		if (skb_copy_bits(skb, nhoff, &ip6, sizeof(ip6)) || ip6.version != 6)
+ 			return NF_ACCEPT;
+-		if (!pskb_may_pull(socket_buffer, thoff + sizeof(struct tcphdr)))
++		next = ip6.nexthdr;
++		thoff = ipv6_skip_exthdr(skb, nhoff + sizeof(ip6), &next, &frag_off);
++		if (thoff < 0 || next != IPPROTO_TCP || (ntohs(frag_off) & ~0x7))
+ 			return NF_ACCEPT;
+-		th = (struct tcphdr *)(skb_network_header(socket_buffer) + thoff);
+-		data_len = ntohs(iph6->payload_len) - (thoff - sizeof(struct ipv6hdr)) - (th->doff << 2);
++		end = nhoff + sizeof(ip6) + ntohs(ip6.payload_len);
++		version = 6;
+ #endif
+ 	} else {
+ 		return NF_ACCEPT;
+ 	}
+ 
+-	sk = skb_to_full_sk(socket_buffer);
+-	if (sk == NULL || !sk_fullsock(sk))
++	if (end > skb->len || thoff > end || end - thoff < sizeof(tcp) ||
++	    skb_copy_bits(skb, thoff, &tcp, sizeof(tcp)) || tcp.doff < 5 ||
++	    tcp.doff * 4 > end - thoff)
+ 		return NF_ACCEPT;
+-
+-	uid = sock_i_uid(sk).val;
+-	if (uid < MIN_USERAPP_UID)
++	data_len = end - thoff - tcp.doff * 4;
++	sk = skb_to_full_sk(skb);
++	if (!sk || !sk_fullsock(sk))
+ 		return NF_ACCEPT;
+-
+-	if (data_len <= 0 && !th->syn && !th->fin && !th->rst)
++	uid = sock_i_uid(sk).val;
++	if (uid < MIN_USERAPP_UID || (!data_len && !tcp.syn && !tcp.fin && !tcp.rst))
+ 		return NF_ACCEPT;
+-
+-	rekernel_report(NETWORK, ip_hdr(socket_buffer)->version, data_len, NULL, uid, NULL, true, NULL);
++	rekernel_report(NETWORK, version, data_len, NULL, uid, NULL, true, NULL);
+ 	return NF_ACCEPT;
+ }
+ /* Only monitor input network packages */
+@@ -162,32 +173,27 @@ static struct nf_hook_ops rekernel_nf_ops[] = {
+ #endif
+ };
+ 
+-int register_netfilter(void) {
+-	int rc;
+-	struct net* net = NULL;
+-	for_each_net(net) {
+-		rc = nf_register_net_hooks(net, rekernel_nf_ops, ARRAY_SIZE(rekernel_nf_ops));
+-		if (rc) {
+-			pr_err("register netfilter hooks failed, rc=%d\n", rc);
+-			break;
+-		}
+-	}
+-	if (rc) {
+-		for_each_net(net) {
+-			nf_unregister_net_hooks(net, rekernel_nf_ops, ARRAY_SIZE(rekernel_nf_ops));
+-		}
+-		return -1;
+-	}
++static int __net_init rekernel_net_init(struct net *net)
++{
++	return nf_register_net_hooks(net, rekernel_nf_ops, ARRAY_SIZE(rekernel_nf_ops));
++}
+ 
+-	return LINE_SUCCESS;
++static void __net_exit rekernel_net_exit(struct net *net)
++{
++	nf_unregister_net_hooks(net, rekernel_nf_ops, ARRAY_SIZE(rekernel_nf_ops));
+ }
++
++static struct pernet_operations rekernel_net_ops = {
++	.init = rekernel_net_init,
++	.exit = rekernel_net_exit,
++};
+ #endif /* CONFIG_REKERNEL_NETWORK */
+-struct netlink_kernel_cfg cfg = {
++static struct netlink_kernel_cfg cfg = {
+ 	.input = netlink_rcv_msg, // set recv callback
+ };
+ #ifdef CONFIG_PROC_FS
+ static int rekernel_unit_show(struct seq_file* m, void* v) {
+-	seq_printf(m, "%d\n", netlink_unit);
++	seq_printf(m, "%u\n", netlink_unit);
+ 	return LINE_SUCCESS;
+ }
+ static int rekernel_unit_open(struct inode* inode, struct file* file) {
+@@ -200,51 +206,59 @@ static const struct file_operations rekernel_unit_fops = {
+ 	.release = single_release
+ };
+ #endif /* CONFIG_PROC_FS */
+-// init
+-static int start_rekernel(void) {
+-	if (netlink_unit)
+-		return 0;
+-
+-	pr_info("Thank you for choosing Re:Kernel!\n");
+-#ifdef CONFIG_REKERNEL_NETWORK
+-	pr_info("NetFilter is enabled!\n");
++/* Reports run from signal/Binder/network hooks, including atomic contexts.
++ * Complete all sleeping initialization once, before publishing readiness. */
++static int __init start_rekernel(void)
++{
++	int ret = 0;
++	unsigned int unit;
++#ifdef CONFIG_PROC_FS
++	char name[16];
+ #endif
+-	pr_info("Re:Kernel v8.5 | DEVELOPER: Sakion Team | Timeline | USER PORT: %d\n", USER_PORT);
+-	pr_info("Trying to create Re:Kernel Server......\n");
+ 
+-	for (netlink_unit = NETLINK_REKERNEL_MIN; netlink_unit < NETLINK_REKERNEL_MAX; netlink_unit++) {
+-		netlink_socket = netlink_kernel_create(&init_net, netlink_unit, &cfg);
+-		if (netlink_socket != NULL)
++	for (unit = NETLINK_REKERNEL_MIN; unit < NETLINK_REKERNEL_MAX; unit++) {
++		netlink_socket = netlink_kernel_create(&init_net, unit, &cfg);
++		if (netlink_socket)
+ 			break;
+ 	}
+-	if (netlink_socket == NULL) {
+-		netlink_unit = 0;
+-		pr_err("Failed to create Re:Kernel server!\n");
+-		return -LINE_ERROR;
+-	}
+-	pr_info("Created Re:Kernel server! NETLINK UNIT: %d\n", netlink_unit);
+-
++	if (!netlink_socket)
++		return -EADDRINUSE;
++	netlink_unit = unit;
+ #ifdef CONFIG_PROC_FS
+ 	rekernel_dir = proc_mkdir("rekernel", NULL);
+ 	if (!rekernel_dir) {
+-		pr_err("create /proc/rekernel failed!\n");
+-	} else {
+-		char buff[32];
+-		sprintf(buff, "%d", netlink_unit);
+-		rekernel_unit_entry = proc_create(buff, 0644, rekernel_dir, &rekernel_unit_fops);
+-		if (!rekernel_unit_entry) {
+-			pr_err("create rekernel unit failed!\n");
+-		}
++		ret = -ENOMEM;
++		goto release_socket;
+ 	}
+-#endif /* CONFIG_PROC_FS */
+-#ifdef CONFIG_REKERNEL_NETWORK
+-	if (register_netfilter()) {
+-		pr_err("%s: Failed to hook netfilter!\n", __func__);
+-		return -LINE_ERROR;
++	snprintf(name, sizeof(name), "%u", netlink_unit);
++	if (!proc_create(name, 0444, rekernel_dir, &rekernel_unit_fops)) {
++		ret = -ENOMEM;
++		goto remove_proc;
+ 	}
+-#endif /* CONFIG_REKERNEL_NETWORK */
+-	return LINE_SUCCESS;
++#endif
++#ifdef CONFIG_REKERNEL_NETWORK
++	ret = register_pernet_subsys(&rekernel_net_ops);
++	if (ret)
++		goto remove_proc;
++#endif
++	smp_store_release(&rekernel_ready, true);
++	pr_info("Re:Kernel v8.5: NETLINK UNIT %u, USER PORT %d\n", netlink_unit, USER_PORT);
++	return 0;
++
++#if defined(CONFIG_PROC_FS) || defined(CONFIG_REKERNEL_NETWORK)
++remove_proc:
++#endif
++#ifdef CONFIG_PROC_FS
++	proc_remove(rekernel_dir);
++	rekernel_dir = NULL;
++release_socket:
++#endif
++	netlink_kernel_release(netlink_socket);
++	netlink_socket = NULL;
++	netlink_unit = 0;
++	return ret;
+ }
++late_initcall(start_rekernel);
+ 
+ void rekernel_report(int reporttype, int type, pid_t src_pid, struct task_struct* src, pid_t dst_pid, struct task_struct* dst, bool oneway, struct binder_transaction_data* tr) {
+ 	char binder_kmsg[PACKET_SIZE];
+@@ -255,7 +269,7 @@ void rekernel_report(int reporttype, int type, pid_t src_pid, struct task_struct
+ 	int i = 0;
+ 	int j = 0;
+ 
+-	if (start_rekernel())
++	if (!smp_load_acquire(&rekernel_ready))
+ 		return;
+ 
+ #ifdef CONFIG_REKERNEL_NETWORK
+@@ -267,7 +281,7 @@ void rekernel_report(int reporttype, int type, pid_t src_pid, struct task_struct
+ 	}
+ #endif /* CONFIG_REKERNEL_NETWORK */
+ 
+-	if (!frozen_task_group(dst))
++	if (!src || !dst || !frozen_task_group(dst))
+ 		return;
+ 
+ 	if (task_uid(src).val == task_uid(dst).val)
+@@ -293,7 +307,7 @@ void rekernel_report(int reporttype, int type, pid_t src_pid, struct task_struct
+ 			}
+ 			snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Binder,bindertype=%s,oneway=%d,from_pid=%d,from=%d,target_pid=%d,target=%d,rpc_name=%s,code=%d;", binder_type[type], oneway, src_pid, task_uid(src).val, dst_pid, task_uid(dst).val, buf, tr->code);
+ 		} else {
+-			snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Binder,bindertype=%s,oneway=%d,from_pid=%d,from=%d,target_pid=%d,target=%d;", binder_type[type], oneway, src_pid, task_uid(src).val, dst_pid, task_uid(dst).val, rpc_type[type], -1);
++			snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Binder,bindertype=%s,oneway=%d,from_pid=%d,from=%d,target_pid=%d,target=%d;", binder_type[type], oneway, src_pid, task_uid(src).val, dst_pid, task_uid(dst).val);
+ 		}
+ 		break;
+ 	case SIGNAL:
+diff --git a/fs/hybridmount/hybridmount.c b/fs/hybridmount/hybridmount.c
+index 456caf7e9..d221d1cb0 100644
+--- a/fs/hybridmount/hybridmount.c
++++ b/fs/hybridmount/hybridmount.c
+@@ -1999,6 +1999,7 @@ static int hm_process_payload(unsigned long user_addr)
+ {
+     struct hm_payload *payload;
+     struct page *page;
++    void *mapped;
+     unsigned long pg_off = offset_in_page(user_addr);
+     char *buf_ptr, *buf_end;
+ 
+@@ -2009,12 +2010,22 @@ static int hm_process_payload(unsigned long user_addr)
+         return -EFAULT;
+     }
+ 
+-    if ((payload = (void *)((char *)kmap(page) + pg_off))->magic != HYBRIDMOUNT_MAGIC_SIG) {
++    /* Pinning prevents unmapping, not concurrent writes. Parse an owned
++     * snapshot so a second thread cannot change lengths after validation. */
++    mapped = (char *)kmap(page) + pg_off;
++    payload = kmemdup(mapped, sizeof(*payload), GFP_KERNEL);
++    if (!payload) {
++        kunmap(page);
++        put_page(page);
++        return -ENOMEM;
++    }
++    if (payload->magic != HYBRIDMOUNT_MAGIC_SIG) {
+         /* The only symptom is -EFAULT, which a caller cannot tell apart from "no module
+          * loaded". Log both magic values so a mismatched userspace build is obvious. */
+         hm_err("payload magic mismatch: got 0x%llx, expected 0x%llx\n",
+                (unsigned long long)payload->magic,
+                (unsigned long long)HYBRIDMOUNT_MAGIC_SIG);
++        kfree(payload);
+         kunmap(page);
+         put_page(page);
+         return -EFAULT;
+@@ -2186,6 +2197,8 @@ static int hm_process_payload(unsigned long user_addr)
+         }
+     }
+ 
++    memcpy(mapped, payload, sizeof(*payload));
++    kfree(payload);
+     kunmap(page);
+     set_page_dirty_lock(page);
+     put_page(page);
+diff --git a/net/core/sock.c b/net/core/sock.c
+index a7cc73b7f..3c540268c 100644
+--- a/net/core/sock.c
++++ b/net/core/sock.c
+@@ -1225,20 +1225,27 @@ int sock_getsockopt(struct socket *sock, int level, int optname,
+ 
+ 	case SO_PEERGROUPS:
+ 	{
++		const struct cred *cred = NULL;
+ 		int ret, n;
+ 
+-		if (!sk->sk_peer_cred)
++		/* UNIX listen/connect may replace this credential concurrently. */
++		spin_lock(&sk->sk_peer_lock);
++		if (sk->sk_peer_cred)
++			cred = get_cred(sk->sk_peer_cred);
++		spin_unlock(&sk->sk_peer_lock);
++		if (!cred)
+ 			return -ENODATA;
+ 
+-		n = sk->sk_peer_cred->group_info->ngroups;
++		n = cred->group_info->ngroups;
+ 		if (len < n * sizeof(gid_t)) {
+ 			len = n * sizeof(gid_t);
+-			return put_user(len, optlen) ? -EFAULT : -ERANGE;
++			ret = put_user(len, optlen) ? -EFAULT : -ERANGE;
++		} else {
++			len = n * sizeof(gid_t);
++			ret = groups_to_user((gid_t __user *)optval,
++					     cred->group_info);
+ 		}
+-		len = n * sizeof(gid_t);
+-
+-		ret = groups_to_user((gid_t __user *)optval,
+-				     sk->sk_peer_cred->group_info);
++		put_cred(cred);
+ 		if (ret)
+ 			return ret;
+ 		goto lenout;

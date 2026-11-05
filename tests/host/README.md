@@ -132,3 +132,14 @@ device validation.
 
 This 4.9 ext4 uses the generic file-handle encoder. The custom export encoder
 guard is checked separately by the production-function hook fixtures.
+
+Security audit regressions (2026-11-05): `test-security-source.py --source kernel`
+executes the prepared SO_PEERGROUPS, ReKernel, SUSFS, Hybrid Mount and BBR functions
+with forced credential replacement, malformed messages, inode hash collisions,
+shared-page mutation and failure cleanup. BBR allocation failure must use TCP's
+complete Reno recovery/pacing path. See `docs/security-audit-20261105.md`.
+`build-security-qemu.sh kernel out-bpf-qemu` temporarily links `security-kernel.c`
+into the guest Image to test real HID/skbuff functions, restoring source files
+on exit. Run after building the phone image. Component QEMU now requires these
+kernel completion markers and also exercises real ReKernel controls/netns.
+Droidspaces includes concurrent peer-credential replacement on both ABIs.

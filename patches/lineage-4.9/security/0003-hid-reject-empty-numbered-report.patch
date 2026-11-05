@@ -1,0 +1,21 @@
+Subject: [4.9 backport] HID numbered report bounds
+
+4.9 has no separate bufsize parameter; reject zero size in exported raw-event entry point.
+Advisories: CVE-2026-80604
+Upstream: https://android.googlesource.com/kernel/common/+/e684fde80e17d695cd52aaefb735fa2c76b0866e
+
+diff --git a/drivers/hid/hid-core.c b/drivers/hid/hid-core.c
+index 0d10b3d8a..e9f3cd41e 100644
+--- a/drivers/hid/hid-core.c
++++ b/drivers/hid/hid-core.c
+@@ -1553,6 +1553,10 @@ int hid_report_raw_event(struct hid_device *hid, int type, u8 *data, u32 size,
+ 	u8 *cdata = data;
+ 	int ret = 0;
+ 
++	/* Numbered reports read data[0] before any field-size validation. */
++	if (report_enum->numbered && !size)
++		return -EINVAL;
++
+ 	report = hid_get_report(report_enum, data);
+ 	if (!report)
+ 		goto out;

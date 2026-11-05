@@ -13,7 +13,7 @@ import tempfile
 
 cpio_entry = runpy.run_path(str(Path(__file__).with_name("run-binder-freezer-qemu.py")))["cpio_entry"]
 TESTS = ("uart_ioctl", "pidfd", "statx", "utimensat", "faccessat2", "close_range", "bindtoifindex",
-         "peergroups", "nsfs", "ptypeer", "ptypeer_error", "nexthop")
+         "peergroups", "peergroups_race", "nsfs", "ptypeer", "ptypeer_error", "nexthop")
 INIT = b"""#!/bin/sh
 export PATH=/bin
 fail() { echo DROIDSPACES_QEMU_FAIL; /control --shutdown; exit 1; }

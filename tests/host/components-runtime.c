@@ -9,6 +9,8 @@
 #include <limits.h>
 #include <net/if.h>
 #include <stdbool.h>
+#include <sched.h>
+#include <sys/wait.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -275,13 +277,88 @@ static void test_cake(void)
     puts("PASS components_cake_packet_delivery_and_statistics");
 }
 
+static void rekernel_send(int fd, unsigned int declared, unsigned int payload)
+{
+    struct { struct nlmsghdr h; char data[32]; } msg = {0};
+    struct sockaddr_nl kernel = {.nl_family = AF_NETLINK};
+    msg.h.nlmsg_len = declared;
+    memcpy(msg.data, "#proc_remove", 13);
+    CHECK(sendto(fd, &msg, NLMSG_HDRLEN + payload, 0, (void *)&kernel,
+                 sizeof(kernel)) == (ssize_t)(NLMSG_HDRLEN + payload));
+}
+
+static void test_rekernel(void)
+{
+    DIR *dir = opendir("/proc/rekernel"); CHECK(dir);
+    int unit = 0; struct dirent *entry;
+    while ((entry = readdir(dir))) {
+        int number = atoi(entry->d_name);
+        if (number >= 22 && number < 26) unit = number;
+    }
+    CHECK(closedir(dir) == 0 && unit);
+    int nl = socket(AF_NETLINK, SOCK_RAW | SOCK_CLOEXEC, unit); CHECK(nl >= 0);
+    unsigned int lengths[] = {0, 1, NLMSG_HDRLEN - 1, NLMSG_HDRLEN, 17, 27, 30, UINT32_MAX};
+    for (unsigned int i = 0; i < sizeof(lengths) / sizeof(*lengths); i++) {
+        rekernel_send(nl, lengths[i], 12);
+        CHECK(access("/proc/rekernel", F_OK) == 0);
+    }
+    pid_t child = fork(); CHECK(child >= 0);
+    if (!child) {
+        CHECK(setgid(10001) == 0 && setuid(10001) == 0);
+        int unpriv = socket(AF_NETLINK, SOCK_RAW | SOCK_CLOEXEC, unit); CHECK(unpriv >= 0);
+        rekernel_send(unpriv, NLMSG_LENGTH(12), 12);
+        CHECK(close(unpriv) == 0);
+        _exit(0);
+    }
+    int status;
+    CHECK(waitpid(child, &status, 0) == child && WIFEXITED(status) && !WEXITSTATUS(status));
+    CHECK(access("/proc/rekernel", F_OK) == 0);
+    // Concurrent authorized requests must remove the proc tree exactly once.
+    child = fork(); CHECK(child >= 0);
+    for (int i = 0; i < 32; i++) rekernel_send(nl, NLMSG_LENGTH(13), 13);
+    if (!child) _exit(0);
+    CHECK(waitpid(child, &status, 0) == child && WIFEXITED(status) && !WEXITSTATUS(status));
+    errno = 0; CHECK(access("/proc/rekernel", F_OK) == -1 && errno == ENOENT);
+    CHECK(close(nl) == 0);
+    puts("PASS components_rekernel_control_validation");
+
+    // Repeated namespace setup/teardown exercises per-net hook registration.
+    child = fork(); CHECK(child >= 0);
+    if (!child) {
+        for (int i = 0; i < 12; i++) {
+            CHECK(unshare(CLONE_NEWNET) == 0);
+            int control = socket(AF_INET, SOCK_DGRAM, 0); CHECK(control >= 0);
+            struct ifreq link = {.ifr_name = "lo"};
+            CHECK(ioctl(control, SIOCGIFFLAGS, &link) == 0);
+            link.ifr_flags |= IFF_UP; CHECK(ioctl(control, SIOCSIFFLAGS, &link) == 0);
+            CHECK(close(control) == 0);
+            CHECK(setfsuid(10001) == 0);
+            int listener = socket(AF_INET, SOCK_STREAM, 0), client = socket(AF_INET, SOCK_STREAM, 0);
+            CHECK(listener >= 0 && client >= 0);
+            CHECK(setfsuid(0) == 10001);
+            struct sockaddr_in addr = {.sin_family = AF_INET, .sin_addr.s_addr = htonl(INADDR_LOOPBACK)};
+            CHECK(bind(listener, (void *)&addr, sizeof(addr)) == 0 && listen(listener, 1) == 0);
+            socklen_t len = sizeof(addr); CHECK(getsockname(listener, (void *)&addr, &len) == 0);
+            CHECK(connect(client, (void *)&addr, len) == 0);
+            int server = accept(listener, NULL, NULL); CHECK(server >= 0);
+            char byte;
+            CHECK(write(client, "x", 1) == 1 && read(server, &byte, 1) == 1 && byte == 'x');
+            CHECK(close(server) == 0 && close(client) == 0 && close(listener) == 0);
+        }
+        _exit(0);
+    }
+    CHECK(waitpid(child, &status, 0) == child && WIFEXITED(status) && !WEXITSTATUS(status));
+    puts("PASS components_rekernel_network_namespaces");
+}
+
 int main(void)
 {
     setbuf(stdout, NULL); umask(0);
     CHECK(access("/tmp/memcg/memory.memsw.usage_in_bytes", R_OK) == 0);
     CHECK(access("/tmp/memcg/memory.memsw.limit_in_bytes", R_OK) == 0);
     puts("PASS components_memcg_swap_enabled_by_default");
-    test_hybridmount(); test_cake();
+    test_hybridmount();
+    test_rekernel(); test_cake();
     puts("COMPONENTS_RUNTIME_PASS");
     return 0;
 }
