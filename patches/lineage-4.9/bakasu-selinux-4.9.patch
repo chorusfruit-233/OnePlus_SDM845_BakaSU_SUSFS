@@ -631,7 +631,7 @@ index 904bad1..4ff0593 100644
 +    test "$(CONFIG_KSU)" = "y" && \
 +    test "$(CONFIG_KALLSYMS_ALL)" = "y" && \
 +    grep -qx 'lineage-4.9-auto-v1' $(KSU_SRC)/.susfs-4.9-auto-reviewed 2>/dev/null && \
-+    grep -qx '\#define SUSFS_VERSION "v2.3.0"' $(srctree)/include/linux/susfs.h && \
++    grep -qx '\#define SUSFS_VERSION "v2.4.0"' $(srctree)/include/linux/susfs.h && \
 +    ! grep -Eq 'ksu_selinux_hide_running|ksu_hide_setprocattr|fake_state' \
 +        $(srctree)/security/selinux/hooks.c $(srctree)/security/selinux/selinuxfs.c && echo y)
 +

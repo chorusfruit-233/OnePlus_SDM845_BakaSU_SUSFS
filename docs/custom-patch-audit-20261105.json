@@ -50,7 +50,7 @@
     },
     {
       "file": "patches/lineage-4.9/bakasu-selinux-4.9.patch",
-      "sha256": "b48b4445841a7d0f69576a79011460ae288db1b62f4cf29b3aa32d1101c8ba95",
+      "sha256": "57190eac8a493237a3074d607a98f5cd867221d18445da7d025e3817f53d40f9",
       "group": "BakaSU SELinux",
       "review": "Legacy policy layouts, hook installation rollback, persistence failure propagation and priority-filter configuration guards.",
       "result": "no-new-finding",
@@ -58,7 +58,8 @@
       "touched_files": [
         "kernel/feature/selinux_hide.c",
         "kernel/tools/susfs_compat.mk"
-      ]
+      ],
+      "followup_review": "2026-11-16: update the strict automatic-hook source version guard to the reviewed SUSFS v2.4.0 port; all architecture, symbol and manual-hook exclusion checks remain required."
     },
     {
       "file": "patches/lineage-4.9/bakasu-susfs-sync-4.9.patch",
