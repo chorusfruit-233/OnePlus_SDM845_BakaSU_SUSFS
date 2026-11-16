@@ -617,7 +617,7 @@ jobs:
             echo "binder_freezer_patch=$(sha256sum patches/lineage-4.9/binder-freezer-4.9.patch | cut -c1-12)"
             echo "binder_freezer_source=$(jq -r .commit configs/binder-freezer.json)"
             echo "binder_freeze_notifications=not-backported"
-            echo "susfs=v2.3.0-vendored ($(sha256sum patches/lineage-4.9/susfs-4.9.patch | cut -c1-12))"
+            echo "susfs=$(jq -r .susfs.version configs/vendored-upstreams.json)-vendored ($(sha256sum patches/lineage-4.9/susfs-4.9.patch | cut -c1-12))"
             echo "hybridmount=$(jq -r .hybridmount.version configs/vendored-upstreams.json)@$(jq -r .hybridmount.commit configs/vendored-upstreams.json) ($(sha256sum patches/lineage-4.9/hybridmount-4.9.patch | cut -c1-12))"
             echo "susfs_upstream=$(jq -r .susfs.commit configs/vendored-upstreams.json)"
             echo "susfs_port=$(jq -r .susfs.port_commit configs/vendored-upstreams.json)"
