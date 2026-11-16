@@ -1,6 +1,6 @@
-Hybrid Mount VFS built-in snapshot @ e5120adea50d917aa21fd5ab11a7823e48c937f0
+Hybrid Mount VFS built-in snapshot @ f5db43f0ea54498440c2a2522bc0bd0941e9146d
 
-Source: https://github.com/Hybrid-Mount/meta-hybrid_mount/tree/e5120adea50d917aa21fd5ab11a7823e48c937f0/module/vfs/src
+Source: https://github.com/Hybrid-Mount/meta-hybrid_mount/tree/f5db43f0ea54498440c2a2522bc0bd0941e9146d/module/vfs/src
 Protocol: hm1; key type/module identity: hybridmount.
 4.9 adaptations: backported statx/getattr ABI, legacy C-string name snapshots,
 explicit slab.h and KEYS dependency. Includes upstream inode/UID/lifetime and
@@ -28,7 +28,6 @@ index 5b4103c..2fc0602 100644
 +obj-$(CONFIG_HYBRIDMOUNT) += hybridmount/
 diff --git a/fs/hybridmount/Kconfig b/fs/hybridmount/Kconfig
 new file mode 100644
-index 0000000..ef621c1
 --- /dev/null
 +++ b/fs/hybridmount/Kconfig
 @@ -0,0 +1,13 @@
@@ -47,7 +46,6 @@ index 0000000..ef621c1
 +	  metamodule or its tooling.
 diff --git a/fs/hybridmount/LICENSE b/fs/hybridmount/LICENSE
 new file mode 100644
-index 0000000..d159169
 --- /dev/null
 +++ b/fs/hybridmount/LICENSE
 @@ -0,0 +1,339 @@
@@ -392,7 +390,6 @@ index 0000000..d159169
 +Public License instead of this License.
 diff --git a/fs/hybridmount/LOCAL_ADAPTATIONS.md b/fs/hybridmount/LOCAL_ADAPTATIONS.md
 new file mode 100644
-index 0000000..2327822
 --- /dev/null
 +++ b/fs/hybridmount/LOCAL_ADAPTATIONS.md
 @@ -0,0 +1,11 @@
@@ -409,23 +406,22 @@ index 0000000..2327822
 +- Reconstruct qstr from the pinned legacy name_snapshot string during reference revalidation; retain parent/name sequence retry and reference release.
 diff --git a/fs/hybridmount/Makefile b/fs/hybridmount/Makefile
 new file mode 100644
-index 0000000..773ecc8
 --- /dev/null
 +++ b/fs/hybridmount/Makefile
-@@ -0,0 +1,7 @@
+@@ -0,0 +1,8 @@
 +# SPDX-License-Identifier: GPL-2.0-only
 +obj-$(CONFIG_HYBRIDMOUNT) += hybridmount.o
 +ccflags-y += -std=gnu11 -Wno-declaration-after-statement
 +# LineageOS SDM845 4.9 carries the statx/getattr ABI backport.
 +ccflags-y += -DHYBRIDMOUNT_HAS_STATX
-+# 4.9 name_snapshot stores a pinned C string, not a qstr.
-+ccflags-y += -DHYBRIDMOUNT_LEGACY_NAME_SNAPSHOT
++# Probe backported APIs by declaration, as the upstream external build does.
++ccflags-y += $(shell grep -qs 'static inline void vm_flags_clear' "$(srctree)/include/linux/mm.h" && echo -DHM_HAVE_VM_FLAGS_CLEAR)
++ccflags-y += $(shell test -r "$(srctree)/include/linux/xattr.h" && tr '\n' ' ' < "$(srctree)/include/linux/xattr.h" | grep -qE '\([[:space:]]*\*[[:space:]]*__get[[:space:]]*\)' && echo -DHM_HAVE_XATTR__GET)
 diff --git a/fs/hybridmount/PROVENANCE b/fs/hybridmount/PROVENANCE
 new file mode 100644
-index 0000000..3359655
 --- /dev/null
 +++ b/fs/hybridmount/PROVENANCE
-@@ -0,0 +1,182 @@
+@@ -0,0 +1,210 @@
 +# Fork provenance
 +
 +This directory is a fork of NoMount's kernel sources.
@@ -507,6 +503,34 @@ index 0000000..3359655
 +and command numbering are still the upstream ones.
 +
 +## Syncing with upstream
++
++Selective compatibility port from NoMount v2.3.0-720:
++- 5237cb10 and the later backing-file cache fixes: cache eligible read-only
++  backing opens on ext4 and F2FS using exact credential identity. Each proxy
++  file has its own reference and offset. SEEK_DATA/SEEK_HOLE use an uncached
++  backing handle so filesystem llseek cannot change the shared file position.
++- e515f117 / 76e436a6: dispatch xattr writes and removals through the backing
++  VFS permission and LSM checks, with a read-only superblock check.
++- 7fce5e2c / 936539fd: guard native unlink, rename and rmdir callbacks from
++  fabricated inodes. Rule removal remains an explicit control operation.
++- 0b64d82a: add Android 17 / 6.18 to the external DDK build matrix and loader.
++  In-tree Kbuild continues to build the same source. The hm1 wire ABI and the
++  existing rule index and directory generation ownership are retained.
++
++Selective compatibility port on 2026-11-05:
++- NoMount 1ecef88d598d/e07896de51a3 motivated the held-directory isolation
++  comparison. Local opaque proxies need a separately owned native target path;
++  module backing paths are never treated as native targets. Rule snapshots,
++  retained inode generations and preserved parent rules each own their pin.
++  Native directory iteration uses iterate_dir with the native file position,
++  and nested opaque rules capture their native counterpart before publication.
++  No wire ABI change. Host harness and compilation do not replace device tests.
++- NoMount f0478cad4081: detect xattr_handler->__get from the kernel header,
++  including multiline declarations, rather than a kernel-version interval.
++  External Kbuild and setup.sh's generated in-tree Kbuild use the same probe;
++  the semantics harness covers each kernel version with and without the member.
++  The imported baseline and hm1 protocol are unchanged. Rebuild prebuilts before
++  distributing this source change (sources.txt must match).
 +
 +Selective fixes reviewed on 2026-10-07 (the imported baseline is unchanged):
 +
@@ -610,7 +634,6 @@ index 0000000..3359655
 +4. Update this file (commit, date, digests) in the same commit as the sync.
 diff --git a/fs/hybridmount/UPSTREAM_README.md b/fs/hybridmount/UPSTREAM_README.md
 new file mode 100644
-index 0000000..0643a64
 --- /dev/null
 +++ b/fs/hybridmount/UPSTREAM_README.md
 @@ -0,0 +1,74 @@
@@ -690,10 +713,9 @@ index 0000000..0643a64
 +
 diff --git a/fs/hybridmount/hybridmount.c b/fs/hybridmount/hybridmount.c
 new file mode 100644
-index 0000000..456caf7
 --- /dev/null
 +++ b/fs/hybridmount/hybridmount.c
-@@ -0,0 +1,2259 @@
+@@ -0,0 +1,2639 @@
 +// SPDX-License-Identifier: GPL-2.0-only
 +//
 +// Hybrid Mount VFS path redirection subsystem, forked from NoMount
@@ -707,6 +729,8 @@ index 0000000..456caf7
 +#include <linux/cred.h>
 +#include <linux/xattr.h>
 +#include <linux/module.h>
++#include <linux/magic.h>
++#include <linux/mount.h>
 +#include <linux/preempt.h>
 +#include <linux/slab.h>
 +#include "hybridmount.h"
@@ -804,6 +828,9 @@ index 0000000..456caf7
 +    if (likely(rule_info)) {
 +        rule_info->backing_path = (found_rule->flags & HM_FLAG_VIRTUAL_DIR) ?
 +            (struct path){0} : found_rule->r_path;
++        rule_info->native_identity = found_rule->native_path;
++        rule_info->native_path = get_path ? found_rule->native_path : (struct path){0};
++        if (rule_info->native_path.dentry) path_get(&rule_info->native_path);
 +        rule_info->flags = found_rule->flags;
 +        rule_info->v_ino = found_rule->v_ino;
 +        rule_info->this_dir = found_rule->this_dir;
@@ -861,7 +888,9 @@ index 0000000..456caf7
 +    /* The proxy borrows the backing inode's mapping; eviction must only touch
 +     * this inode's own pages, and the backing path can now be released. */
 +    inode->i_mapping = &inode->i_data;
++    if (info->read_file) fput(info->read_file);
 +    if (info->r_path.dentry) path_put(&info->r_path);
++    if (info->native_path.dentry) path_put(&info->native_path);
 +
 +    if (info->dir_node) {
 +        rcu_read_lock();
@@ -991,6 +1020,9 @@ index 0000000..456caf7
 +{
 +    struct inode *r_inode = NULL;
 +    info->flags = rule_info->flags;
++    info->read_file = NULL;
++    info->backing_child = false;
++    info->native_path = rule_info->native_path;
 +    info->dir_node = rule_info->this_dir;
 +    if (info->dir_node) atomic_inc(&info->dir_node->inode_users);
 +    if (rule_info->flags & HM_FLAG_VIRTUAL_DIR) {
@@ -1002,7 +1034,8 @@ index 0000000..456caf7
 +
 +    inode->i_ino = rule_info->v_ino;
 +    inode->i_private = info;
-+    inode->i_mode   = r_inode ? r_inode->i_mode    : (S_IFDIR | 0755);
++    /* Exec must never grant credentials from a cached proxy inode. */
++    inode->i_mode   = r_inode ? r_inode->i_mode & ~(S_ISUID | S_ISGID) : (S_IFDIR | 0755);
 +    inode->i_size   = r_inode ? i_size_read(r_inode) : 4096;
 +    inode->i_blocks = r_inode ? r_inode->i_blocks  : 8;
 +    inode->i_uid    = r_inode ? r_inode->i_uid     : GLOBAL_ROOT_UID;
@@ -1027,6 +1060,8 @@ index 0000000..456caf7
 +{
 +    return info && info->flags == rule->flags &&
 +           info->dir_node == rule->this_dir &&
++           info->native_path.dentry == rule->native_identity.dentry &&
++           info->native_path.mnt == rule->native_identity.mnt &&
 +           info->r_path.dentry == rule->backing_path.dentry &&
 +           info->r_path.mnt == rule->backing_path.mnt;
 +}
@@ -1092,6 +1127,7 @@ index 0000000..456caf7
 +         * its spare inode and path, but must not clear the winner's dir node. */
 +        hybridmount_init_prealloc_inode(prealloc_inode, prealloc_info, &rule_info);
 +        rule_info.r_path.dentry = NULL;
++        rule_info.native_path.dentry = NULL;
 +        if (rule_info.this_dir) {
 +            struct hm_inode_info *cached;
 +            struct inode *previous = NULL;
@@ -1128,8 +1164,9 @@ index 0000000..456caf7
 +
 +        rcu_read_unlock();
 +do_splice:
-+        if (!IS_ERR((res = d_splice_alias(splice_inode, dentry))))
-+            hybridmount_hijack_dentry_ops(dir, res ? res : dentry, true);
++        /* Parallel lookup can use the alias as soon as splice publishes it. */
++        hybridmount_hijack_dentry_ops(dir, dentry, true);
++        res = d_splice_alias(splice_inode, dentry);
 +            
 +        goto cleanup_out;
 +    }
@@ -1140,6 +1177,8 @@ index 0000000..456caf7
 +    hm_dir_put(target_node);
 +    if (rule_info.r_path.dentry) 
 +        path_put(&rule_info.r_path);
++    if (rule_info.native_path.dentry)
++        path_put(&rule_info.native_path);
 +
 +    if (prealloc_inode) {
 +        kfree(prealloc_info);
@@ -1263,10 +1302,43 @@ index 0000000..456caf7
 +
 +/*** file / inode / superblock operations ***/
 +
++static bool hm_backing_noexec(const struct hm_inode_info *info)
++{
++    return info && info->r_path.mnt &&
++           ((info->r_path.mnt->mnt_flags & MNT_NOEXEC) ||
++            (info->r_path.mnt->mnt_sb->s_iflags & SB_I_NOEXEC));
++}
++
++static int hm_permission(IDMAP_ARG struct inode *inode, int mask)
++{
++    struct hm_inode_info *info;
++
++    /* An RCU walk does not pin the backing path across proxy eviction. */
++    if (mask & MAY_NOT_BLOCK) return -ECHILD;
++    info = READ_ONCE(inode->i_private);
++    if (unlikely(!info)) return -EACCES;
++    /* Native rename may dispatch through the other parent. A fabricated
++     * directory must never be used as a writable native parent. */
++    if ((mask & MAY_WRITE) && S_ISDIR(inode->i_mode)) return -EACCES;
++    if (S_ISDIR(inode->i_mode) && hybridmount_is_uid_blocked(current_fsuid().val)) {
++        if (!info->native_path.dentry) return -ENOENT;
++        return inode_permission(IDMAP_PATH(info->native_path) d_inode(info->native_path.dentry), mask);
++    }
++    if (info->flags & HM_FLAG_VIRTUAL_DIR)
++        return generic_permission(IDMAP_CALL inode, mask);
++    if (unlikely(!info->r_path.dentry)) return -EACCES;
++    if ((mask & MAY_EXEC) && S_ISREG(inode->i_mode) && hm_backing_noexec(info))
++        return -EACCES;
++
++    return inode_permission(IDMAP_PATH(info->r_path) d_inode(info->r_path.dentry), mask);
++}
++
 +static int hm_open(struct inode *inode, struct file *file)
 +{
 +    struct hm_inode_info *info = inode->i_private;
 +    struct file *real_file;
++    bool cacheable;
++    umode_t mode;
 +
 +    if (unlikely(!info)) return -ENODEV;
 +    if (unlikely(info->flags & HM_FLAG_VIRTUAL_DIR)) {
@@ -1275,9 +1347,29 @@ index 0000000..456caf7
 +    }
 +    if (unlikely(!info->r_path.dentry)) return -ENODEV;
 +
++    mode = d_inode(info->r_path.dentry)->i_mode;
++    if ((S_ISCHR(mode) || S_ISBLK(mode)) &&
++        ((info->r_path.mnt->mnt_flags & MNT_NODEV) ||
++         (info->r_path.mnt->mnt_sb->s_iflags & SB_I_NODEV)))
++        return -EACCES;
++
++    cacheable = S_ISREG(mode) &&
++        (file->f_flags & ~(O_LARGEFILE | O_CLOEXEC)) == O_RDONLY &&
++        (info->r_path.dentry->d_sb->s_magic == EXT4_SUPER_MAGIC ||
++         info->r_path.dentry->d_sb->s_magic == F2FS_SUPER_MAGIC);
++    real_file = cacheable ? smp_load_acquire(&info->read_file) : NULL;
++    if (real_file && real_file->f_cred == file->f_cred) {
++        file->private_data = get_file(real_file);
++        return 0;
++    }
++
 +    real_file = dentry_open(&info->r_path, (file->f_flags & ~(O_CREAT | O_EXCL | O_NOCTTY)), file->f_cred);
 +    if (IS_ERR(real_file)) return PTR_ERR(real_file);
 +
++    if (cacheable && !READ_ONCE(info->read_file)) {
++        get_file(real_file);
++        if (cmpxchg(&info->read_file, NULL, real_file)) fput(real_file);
++    }
 +    file->private_data = real_file;
 +    return 0;
 +}
@@ -1291,9 +1383,27 @@ index 0000000..456caf7
 +
 +static loff_t hm_llseek(struct file *file, loff_t offset, int whence)
 +{
++    struct hm_inode_info *info = file_inode(file)->i_private;
 +    struct file *real_file = file->private_data;
 +    loff_t res;
 +    if (!real_file) return -EINVAL;
++
++    if (real_file == READ_ONCE(info->read_file)) {
++        loff_t maxbytes = file_inode(real_file)->i_sb->s_maxbytes;
++
++        /* Each proxy file has its own offset. Shared backing files must never
++         * copy their f_pos into or out of another proxy's stream. */
++        if (whence == SEEK_SET || whence == SEEK_CUR || whence == SEEK_END)
++            return generic_file_llseek_size(file, offset, whence,
++                maxbytes, i_size_read(file_inode(real_file)));
++        if (whence != SEEK_DATA && whence != SEEK_HOLE) return -EINVAL;
++        /* The backing llseek may update f_pos and f_version. */
++        real_file = dentry_open(&info->r_path, O_RDONLY | O_LARGEFILE, file->f_cred);
++        if (IS_ERR(real_file)) return PTR_ERR(real_file);
++        res = vfs_llseek(real_file, offset, whence);
++        fput(real_file);
++        return res < 0 ? res : vfs_setpos(file, res, maxbytes);
++    }
 +
 +    real_file->f_pos = file->f_pos;
 +    res = vfs_llseek(real_file, offset, whence);
@@ -1332,6 +1442,14 @@ index 0000000..456caf7
 +
 +static int hm_mmap(struct file *file, struct vm_area_struct *vma)
 +{
++    if (hm_backing_noexec(file_inode(file)->i_private)) {
++        if (vma->vm_flags & VM_EXEC) return -EPERM;
++#if defined(HM_HAVE_VM_FLAGS_CLEAR) || LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)
++        vm_flags_clear(vma, VM_MAYEXEC);
++#else
++        vma->vm_flags &= ~VM_MAYEXEC;
++#endif
++    }
 +    int ret = generic_file_mmap(file, vma);
 +    return ret ? ret : (file_inode(file)->i_flags &= ~S_PRIVATE, 0);
 +}
@@ -1339,6 +1457,10 @@ index 0000000..456caf7
 +#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 16, 0)
 +static int hm_mmap_prepare(struct vm_area_desc *desc)
 +{
++    if (hm_backing_noexec(file_inode(desc->file)->i_private)) {
++        if (desc->vm_flags & VM_EXEC) return -EPERM;
++        desc->vm_flags &= ~VM_MAYEXEC;
++    }
 +    int ret = generic_file_mmap_prepare(desc);
 +    return ret ? ret : (file_inode(desc->file)->i_flags &= ~S_PRIVATE, 0);
 +}
@@ -1427,6 +1549,7 @@ index 0000000..456caf7
 +    if (likely(res == 0)) {
 +        stat->ino = v_inode->i_ino;
 +        stat->dev = v_inode->i_sb->s_dev;
++        stat->mode &= ~(S_ISUID | S_ISGID);
 +    }
 +    
 +    return res;
@@ -1444,12 +1567,12 @@ index 0000000..456caf7
 +
 +    r_inode = d_backing_inode(info->r_path.dentry);
 +    inode_lock(r_inode);
-+    err = notify_change(IDMAP_CALL info->r_path.dentry, attr, NULL);
++    err = notify_change(IDMAP_PATH(info->r_path) info->r_path.dentry, attr, NULL);
 +    inode_unlock(r_inode);
 +
 +    if (likely(!err)) {
 +        if (attr->ia_valid & ATTR_SIZE) i_size_write(v_inode, i_size_read(r_inode));
-+        if (attr->ia_valid & ATTR_MODE) v_inode->i_mode = r_inode->i_mode;
++        if (attr->ia_valid & ATTR_MODE) v_inode->i_mode = r_inode->i_mode & ~(S_ISUID | S_ISGID);
 +        if (attr->ia_valid & ATTR_UID)  v_inode->i_uid = r_inode->i_uid;
 +        if (attr->ia_valid & ATTR_GID)  v_inode->i_gid = r_inode->i_gid;
 +        hm_sync_inode_times(v_inode, r_inode);
@@ -1459,18 +1582,16 @@ index 0000000..456caf7
 +
 +static const char *hm_get_link(struct dentry *dentry, struct inode *inode, struct delayed_call *done)
 +{
-+    struct hm_inode_info *info = inode->i_private;
-+    struct inode *real_inode;
-+    struct dentry *target_dentry;
-+    if (unlikely(!info || !info->r_path.dentry)) return ERR_PTR(-ECHILD);
++    struct hm_inode_info *info;
 +
-+    real_inode = d_backing_inode(info->r_path.dentry);
-+    target_dentry = dentry ? info->r_path.dentry : NULL;
-+    if (real_inode && real_inode->i_op && real_inode->i_op->get_link) {
-+        return real_inode->i_op->get_link(target_dentry, real_inode, done);
-+    }
-+
-+    return ERR_PTR(-EINVAL);
++    if (!dentry) return ERR_PTR(-ECHILD);
++    info = inode->i_private;
++    if (!info || !info->r_path.dentry) return ERR_PTR(-EINVAL);
++#ifdef MNT_NOSYMFOLLOW
++    if (info->r_path.mnt->mnt_flags & MNT_NOSYMFOLLOW)
++        return ERR_PTR(-ELOOP);
++#endif
++    return vfs_get_link(info->r_path.dentry, done);
 +}
 +
 +static int hm_dir_iterate_dir(struct file *file, struct dir_context *ctx)
@@ -1480,6 +1601,19 @@ index 0000000..456caf7
 +    struct file *real_file = file->private_data;
 +    uid_t fsuid = current_fsuid().val;
 +    int res = 0;
++    /* An already-open proxy directory may outlive a UID isolation change.
++     * Its module file is not a native fallback. Open the pinned native target
++     * with current credentials, and never emit injected children on this path. */
++    if (hybridmount_is_uid_blocked(fsuid)) {
++        struct file *native;
++        if (!info || !info->native_path.dentry) return -ENOENT;
++        native = dentry_open(&info->native_path, O_RDONLY | O_DIRECTORY, current_cred());
++        if (IS_ERR(native)) return PTR_ERR(native);
++        native->f_pos = hm_is_virtual_pos(ctx->pos) ? 0 : ctx->pos;
++        res = iterate_dir(native, ctx);
++        fput(native);
++        return res;
++    }
 +    if (unlikely(hm_is_virtual_pos(ctx->pos))) goto emit_virtual;
 +
 +    if (real_file) {
@@ -1487,7 +1621,9 @@ index 0000000..456caf7
 +            .ctx.actor = hybridmount_actor_proxy, .ctx.pos = ctx->pos, .orig_ctx = ctx,
 +            .dir_node = dir_node, .emitted = false, .uid_blocked = hybridmount_is_uid_blocked(fsuid), .fsuid = fsuid
 +        };
-+        res = hm_call_iterate(real_file, &proxy_ctx.ctx, real_file->f_op);
++        /* The outer VFS call locks the proxy inode, not this backing inode. */
++        real_file->f_pos = ctx->pos;
++        res = iterate_dir(real_file, &proxy_ctx.ctx);
 +        ctx->pos = proxy_ctx.ctx.pos;
 +        if (res < 0 || proxy_ctx.emitted) return res;
 +        ctx->pos = hm_pack_pos(0);
@@ -1503,30 +1639,100 @@ index 0000000..456caf7
 +    return res;
 +}
 +
++static struct dentry *hm_lookup_backing_child(const struct path *parent, const struct qstr *name)
++{
++    struct inode *dir;
++    struct dentry *child;
++
++    if (!parent->dentry) return ERR_PTR(-EOPNOTSUPP);
++    dir = d_inode(parent->dentry);
++    if (dir->i_op == &hm_dir_iops)
++        return ERR_PTR(-EOPNOTSUPP);
++
++    /* Rename can hold both the proxy and the native parent locked before
++     * looking up a child. Never wait on the native directory from here. */
++    if (!inode_trylock(dir)) return ERR_PTR(-EAGAIN);
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 16, 0)
++    struct qstr component = *name;
++    child = lookup_one(IDMAP_PATH(*parent) &component, parent->dentry);
++#elif LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 0)
++    child = lookup_one(IDMAP_PATH(*parent) name->name, parent->dentry, name->len);
++#else
++    child = lookup_one_len(name->name, parent->dentry, name->len);
++#endif
++    inode_unlock(dir);
++    return child;
++}
++
 +static struct dentry *hm_dir_lookup(struct inode *dir, struct dentry *dentry, unsigned int flags)
 +{
 +    struct hm_inode_info *info = dir->i_private; 
++    struct hm_rule_info child = {};
++    struct hm_inode_info *child_info;
++    struct dentry *backing;
++    struct inode *inode;
 +    struct dentry *res;
++    bool blocked = hybridmount_is_uid_blocked(current_fsuid().val);
++    const struct path *parent = blocked ? &info->native_path : &info->r_path;
 +
-+    if (info->dir_node) {
++    if (!blocked && info->dir_node) {
 +        u32 v_hash = full_name_hash((const void *)(unsigned long)HYBRIDMOUNT_MAGIC_SIG, dentry->d_name.name, dentry->d_name.len);
 +        if (READ_ONCE(info->dir_node->bloom_mask) & (1ULL << (v_hash & 63)) &&
 +            (res = hybridmount_resolve_rule_dentry(dir, dentry, info->dir_node, v_hash)) != ERR_PTR(-ENODATA))
 +                return res;
 +    }
 +
-+    if (info->flags & HM_FLAG_VIRTUAL_DIR)
++    if ((blocked && !parent->dentry) || (!blocked && (info->flags & HM_FLAG_VIRTUAL_DIR)))
 +        goto negative_dentry;
 +
-+    if (info->r_path.dentry) {
-+        struct inode *r_dir = d_backing_inode(info->r_path.dentry);
-+        if (r_dir->i_op->lookup) {
-+            res = r_dir->i_op->lookup(r_dir, dentry, flags);
-+            if (!IS_ERR(res ? res : dentry)) hybridmount_hijack_dentry_ops(dir, res ? res : dentry, false);
-+            return res;
-+        }
++    /* Look up a real child of the backing directory. Native lookup must
++     * never see a dentry allocated by the destination filesystem. */
++    backing = hm_lookup_backing_child(parent, &dentry->d_name);
++    if (IS_ERR(backing)) return backing;
++    if (d_is_negative(backing)) {
++        dput(backing);
++        goto negative_dentry;
 +    }
-+    return ERR_PTR(-EOPNOTSUPP);
++    if (d_inode(backing)->i_op == &hm_file_iops || d_inode(backing)->i_op == &hm_dir_iops) {
++        dput(backing);
++        return ERR_PTR(-ELOOP);
++    }
++
++    inode = new_inode(dir->i_sb);
++    if (!inode) {
++        dput(backing);
++        return ERR_PTR(-ENOMEM);
++    }
++    child_info = kmalloc(sizeof(*child_info), GFP_NOFS);
++    if (!child_info) {
++        iput(inode);
++        dput(backing);
++        return ERR_PTR(-ENOMEM);
++    }
++    child.r_path.dentry = backing;
++    child.r_path.mnt = mntget(parent->mnt);
++    if (blocked) {
++        child.native_path = child.r_path;
++        path_get(&child.native_path);
++    } else if (info->native_path.dentry) {
++        struct dentry *native = hm_lookup_backing_child(&info->native_path, &dentry->d_name);
++        if (IS_ERR(native)) {
++            path_put(&child.r_path);
++            kfree(child_info);
++            iput(inode);
++            return native;
++        }
++        if (d_is_positive(native) && d_inode(native)->i_op != &hm_dir_iops &&
++            d_inode(native)->i_op != &hm_file_iops) {
++            child.native_path.dentry = native;
++            child.native_path.mnt = mntget(info->native_path.mnt);
++        } else dput(native);
++    }
++    child.v_ino = d_inode(backing)->i_ino;
++    hybridmount_init_prealloc_inode(inode, child_info, &child);
++    child_info->backing_child = true;
++    hybridmount_hijack_dentry_ops(dir, dentry, true);
++    return d_splice_alias(inode, dentry);
 +
 +negative_dentry:
 +    hybridmount_hijack_dentry_ops(dir, dentry, true);
@@ -1544,23 +1750,27 @@ index 0000000..456caf7
 +    struct hm_xattr_proxy *proxy = container_of(handler, struct hm_xattr_proxy, fake);
 +    if (inode->i_op == &hm_file_iops || inode->i_op == &hm_dir_iops) {
 +        struct hm_inode_info *info = inode->i_private;
++        const char *full_name = xattr_full_name(handler, name);
 +        if (unlikely(!info || !info->r_path.dentry)) return -ENODATA;
-+        return __vfs_getxattr(info->r_path.dentry, d_inode(info->r_path.dentry), xattr_full_name(handler, name), buffer, size FLAGS_VAL);
++        if (!strcmp(full_name, XATTR_NAME_CAPS)) return -ENODATA;
++        return __vfs_getxattr(info->r_path.dentry, d_inode(info->r_path.dentry), full_name, buffer, size FLAGS_VAL);
 +    }
 +
 +    return proxy->orig->get(proxy->orig, dentry, inode, name, buffer, size FLAGS_VAL);
 +}
 +
-+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0) && LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
++#ifdef HM_HAVE_XATTR__GET
 +static int hm_xattr__get(const struct xattr_handler *handler, struct dentry *dentry,
 +                        struct inode *inode, const char *name, void *buffer, size_t size)
 +{
 +    struct hm_xattr_proxy *proxy = container_of(handler, struct hm_xattr_proxy, fake);
 +    if (inode->i_op == &hm_file_iops || inode->i_op == &hm_dir_iops) {
 +        struct hm_inode_info *info = READ_ONCE(inode->i_private);
++        const char *full_name = xattr_full_name(handler, name);
 +        if (unlikely(!info || !info->r_path.dentry)) return -ENODATA;
++        if (!strcmp(full_name, XATTR_NAME_CAPS)) return -ENODATA;
 +        return __vfs_getxattr(info->r_path.dentry, d_inode(info->r_path.dentry),
-+                              xattr_full_name(handler, name), buffer, size);
++                              full_name, buffer, size);
 +    }
 +    if (proxy->orig->__get)
 +        return proxy->orig->__get(proxy->orig, dentry, inode, name, buffer, size);
@@ -1573,8 +1783,13 @@ index 0000000..456caf7
 +    struct hm_xattr_proxy *proxy = container_of(handler, struct hm_xattr_proxy, fake);
 +    if (inode->i_op == &hm_file_iops || inode->i_op == &hm_dir_iops) {
 +        struct hm_inode_info *info = inode->i_private;
++        const char *full_name;
 +        if (unlikely(!info || !info->r_path.dentry)) return -ENODATA;
-+        return __vfs_setxattr(IDMAP_PATH(info->r_path) info->r_path.dentry, d_inode(info->r_path.dentry), xattr_full_name(handler, name), buffer, size, flags);
++        if (sb_rdonly(d_backing_inode(info->r_path.dentry)->i_sb)) return -EROFS;
++        full_name = xattr_full_name(handler, name);
++        if (buffer)
++            return vfs_setxattr(IDMAP_PATH(info->r_path) info->r_path.dentry, full_name, buffer, size, flags);
++        return vfs_removexattr(IDMAP_PATH(info->r_path) info->r_path.dentry, full_name);
 +    }
 +    return proxy->orig->set(proxy->orig, IDMAP_CALL dentry, inode, name, buffer, size, flags);
 +}
@@ -1603,6 +1818,27 @@ index 0000000..456caf7
 + * injected" paths of hm_d_revalidate_common().
 + */
 +static const struct dentry_operations hm_dops;
++static const struct dentry_operations *hm_native_dops(struct dentry *dentry);
++
++static int hm_revalidate_backing_child(struct inode *parent, const struct qstr *name,
++                                       const struct hm_inode_info *info)
++{
++    const struct hm_inode_info *parent_info = parent->i_private;
++    struct dentry *backing;
++    bool valid;
++    const struct path *path;
++
++    if (!parent_info) return 0;
++    path = hybridmount_is_uid_blocked(current_fsuid().val) ?
++        &parent_info->native_path : &parent_info->r_path;
++    if (!path->dentry || path->mnt != info->r_path.mnt)
++        return 0;
++    backing = hm_lookup_backing_child(path, name);
++    if (IS_ERR(backing)) return PTR_ERR(backing);
++    valid = backing == info->r_path.dentry && d_is_positive(backing);
++    dput(backing);
++    return valid;
++}
 +
 +static int hm_d_revalidate_common(struct inode *parent_inode, const struct qstr *name,
 +                                  struct dentry *dentry, unsigned int flags, bool weak)
@@ -1644,7 +1880,19 @@ index 0000000..456caf7
 +    }
 +
 +    if (hybridmount_is_uid_blocked(current_fsuid().val)) {
-+        if (owned) goto drop_it;
++        if (owned) {
++            if (parent_inode->i_op == &hm_dir_iops && inode &&
++                (inode->i_op == &hm_file_iops || inode->i_op == &hm_dir_iops)) {
++                const struct hm_inode_info *info = READ_ONCE(inode->i_private);
++                if (info && info->backing_child && info->native_path.dentry == info->r_path.dentry &&
++                    info->native_path.mnt == info->r_path.mnt) {
++                    rcu_read_unlock();
++                    if (flags & LOOKUP_RCU) return -ECHILD;
++                    return hm_revalidate_backing_child(parent_inode, name, info);
++                }
++            }
++            goto drop_it;
++        }
 +        goto orig_dops;
 +    }
 +
@@ -1659,6 +1907,17 @@ index 0000000..456caf7
 +        goto drop_it;
 +    }
 +
++    if (owned && parent_inode->i_op == &hm_dir_iops && inode &&
++        (inode->i_op == &hm_dir_iops || inode->i_op == &hm_file_iops)) {
++        const struct hm_inode_info *info = READ_ONCE(inode->i_private);
++
++        if (info && info->backing_child) {
++            rcu_read_unlock();
++            if (flags & LOOKUP_RCU) return -ECHILD;
++            return hm_revalidate_backing_child(parent_inode, name, info);
++        }
++    }
++
 +    if (owned)
 +        goto drop_it;
 +
@@ -1671,7 +1930,7 @@ index 0000000..456caf7
 +     * latter under a parent with orig_dops; those are not this dentry's ops,
 +     * and a weak check must not invoke that parent's strong revalidation. */
 +    if (weak) goto out;
-+    if ((orig_dops = hm_get_orig_dops(iop)) && orig_dops->d_revalidate) {
++    if ((orig_dops = hm_native_dops(dentry)) && orig_dops->d_revalidate) {
 +        rcu_read_unlock();
 +#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 14, 0)
 +        return orig_dops->d_revalidate(parent_inode, name, dentry, flags);
@@ -1712,15 +1971,9 @@ index 0000000..456caf7
 +        cond_resched();
 +    }
 +
-+#ifdef HYBRIDMOUNT_LEGACY_NAME_SNAPSHOT
-+    /* 4.9 pins a NUL-terminated name, rather than a complete qstr. */
-+    {
-+        struct qstr snapshot_name = {
-+            .name = name.name,
-+            .len = strlen(name.name),
-+        };
-+        ret = hm_d_revalidate_common(d_inode(parent), &snapshot_name, dentry, flags, weak);
-+    }
++#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 2, 0)
++    struct qstr component = QSTR_INIT(name.name, strlen(name.name));
++    ret = hm_d_revalidate_common(d_inode(parent), &component, dentry, flags, weak);
 +#else
 +    ret = hm_d_revalidate_common(d_inode(parent), &name.name, dentry, flags, weak);
 +#endif
@@ -1749,9 +2002,61 @@ index 0000000..456caf7
 +}
 +#endif
 +
++struct hm_dop {
++    struct dentry_operations ops;
++    const struct dentry_operations *original;
++    struct list_head list;
++};
++
++static LIST_HEAD(hm_native_dop_list);
++static DEFINE_SPINLOCK(hm_native_dop_lock);
++
++static const struct dentry_operations *hm_native_dops(struct dentry *dentry)
++{
++    const struct dentry_operations *ops = READ_ONCE(dentry->d_op);
++
++    if (!ops || ops == &hm_dops || ops == &hm_owned_dops ||
++        ops->d_revalidate != hm_d_revalidate)
++        return NULL;
++    return container_of(ops, struct hm_dop, ops)->original;
++}
++
++static const struct dentry_operations *hm_wrap_native_dops(const struct dentry_operations *original)
++{
++    struct hm_dop *wrapper;
++
++    /* A renamed dentry can outlive its original parent. The hooked
++     * superblock and this module pin both operation tables. */
++    spin_lock(&hm_native_dop_lock);
++    list_for_each_entry(wrapper, &hm_native_dop_list, list) {
++        if (wrapper->original == original)
++            goto out;
++    }
++    wrapper = kmalloc(sizeof(*wrapper), GFP_ATOMIC);
++    if (wrapper) {
++        wrapper->original = original;
++        wrapper->ops = *original;
++        wrapper->ops.d_revalidate = hm_d_revalidate;
++        list_add_tail(&wrapper->list, &hm_native_dop_list);
++    }
++out:
++    spin_unlock(&hm_native_dop_lock);
++    return wrapper ? &wrapper->ops : NULL;
++}
++
++static void hm_owned_release(struct dentry *dentry)
++{
++    const struct dentry_operations *ops = dentry->d_sb->s_d_op;
++
++    /* d_alloc may have initialized native dentry state before our lookup. */
++    if (ops && ops->d_init && ops->d_release)
++        ops->d_release(dentry);
++}
++
 +static const struct dentry_operations hm_owned_dops = {
 +    .d_revalidate = hm_d_revalidate,
 +    .d_weak_revalidate = hm_d_weak_revalidate,
++    .d_release = hm_owned_release,
 +};
 +
 +static const struct dentry_operations hm_dops = {
@@ -1796,6 +2101,7 @@ index 0000000..456caf7
 +};
 +
 +static const struct inode_operations hm_file_iops = {
++    .permission = hm_permission,
 +    .getattr = hm_getattr,
 +    .setattr = hm_setattr,
 +    .listxattr = hm_listxattr,
@@ -1815,6 +2121,7 @@ index 0000000..456caf7
 +};
 +
 +static const struct inode_operations hm_dir_iops = {
++    .permission = hm_permission,
 +    .lookup = hm_dir_lookup,
 +    .getattr = hm_getattr,
 +    .setattr = hm_setattr,
@@ -1886,7 +2193,7 @@ index 0000000..456caf7
 +            proxies[i].orig = sb->s_xattr[i];
 +            proxies[i].fake = *sb->s_xattr[i];
 +            if (proxies[i].fake.get) proxies[i].fake.get = hm_xattr_get;
-+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0) && LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
++#ifdef HM_HAVE_XATTR__GET
 +            if (proxies[i].fake.__get) proxies[i].fake.__get = hm_xattr__get;
 +#endif
 +            if (proxies[i].fake.set) proxies[i].fake.set = hm_xattr_set;
@@ -1896,10 +2203,9 @@ index 0000000..456caf7
 +        hm_sop->fake_xattr = new_array;
 +    }
 +
-+    /* VFS caches s_export_op outside RCU, even across sleeping decode calls.
-+     * Keep this module and its installed tables resident until reboot rather
-+     * than freeing a table which a native caller may still be using. */
-+    if (hm_sop->orig_eop && hm_sop->orig_eop->encode_fh && !try_module_get(THIS_MODULE)) {
++    /* Dentries and VFS callers can retain operation tables after the last
++     * rule is removed. Keep their callbacks resident until reboot. */
++    if (!try_module_get(THIS_MODULE)) {
 +        kfree(hm_sop->fake_xattr);
 +        kfree(hm_sop);
 +        return -ENODEV;
@@ -1916,6 +2222,52 @@ index 0000000..456caf7
 +        smp_store_release(&sb->s_export_op, &hm_sop->fake_eop);
 +    hm_debug("Superblock successfully hijacked for dev: 0x%x\n", sb->s_dev);
 +    return 0;
++}
++
++static bool hm_is_virtual_dentry(struct dentry *dentry)
++{
++    struct inode *inode = d_inode(dentry);
++    return inode && (inode->i_op == &hm_file_iops || inode->i_op == &hm_dir_iops);
++}
++
++static int hm_hijacked_unlink(struct inode *dir, struct dentry *dentry)
++{
++    struct hm_iop *hook;
++    int (*unlink)(struct inode *, struct dentry *);
++
++    if (hm_is_virtual_dentry(dentry)) return -EPERM;
++    rcu_read_lock();
++    hook = hm_get_hm_iop(smp_load_acquire(&dir->i_op));
++    unlink = hook ? hook->orig_iop->unlink : NULL;
++    rcu_read_unlock();
++    return unlink ? unlink(dir, dentry) : -EPERM;
++}
++
++static int hm_hijacked_rmdir(struct inode *dir, struct dentry *dentry)
++{
++    struct hm_iop *hook;
++    int (*rmdir)(struct inode *, struct dentry *);
++
++    if (hm_is_virtual_dentry(dentry)) return -EPERM;
++    rcu_read_lock();
++    hook = hm_get_hm_iop(smp_load_acquire(&dir->i_op));
++    rmdir = hook ? hook->orig_iop->rmdir : NULL;
++    rcu_read_unlock();
++    return rmdir ? rmdir(dir, dentry) : -EPERM;
++}
++
++static int hm_hijacked_rename(IDMAP_ARG struct inode *old_dir, struct dentry *old_dentry,
++                             struct inode *new_dir, struct dentry *new_dentry, unsigned int flags)
++{
++    struct hm_iop *hook;
++    int (*rename)(IDMAP_ARG struct inode *, struct dentry *, struct inode *, struct dentry *, unsigned int);
++
++    if (hm_is_virtual_dentry(old_dentry) || hm_is_virtual_dentry(new_dentry)) return -EPERM;
++    rcu_read_lock();
++    hook = hm_get_hm_iop(smp_load_acquire(&old_dir->i_op));
++    rename = hook ? hook->orig_iop->rename : NULL;
++    rcu_read_unlock();
++    return rename ? rename(IDMAP_CALL old_dir, old_dentry, new_dir, new_dentry, flags) : -EPERM;
 +}
 +
 +static inline int hybridmount_hijack_dir_ops(struct hybridmount_dir_node *dir_node, struct inode *inode)
@@ -1941,8 +2293,10 @@ index 0000000..456caf7
 +    hm_iop->fake_iop = *inode->i_op;
 +    hm_iop->orig_iop = inode->i_op;
 +    hm_iop->dir_node = dir_node;
-+    hm_iop->orig_dops = NULL;
 +    hm_iop->fake_iop.lookup = hybridmount_hijacked_lookup;
++    if (hm_iop->fake_iop.unlink) hm_iop->fake_iop.unlink = hm_hijacked_unlink;
++    if (hm_iop->fake_iop.rmdir) hm_iop->fake_iop.rmdir = hm_hijacked_rmdir;
++    if (hm_iop->fake_iop.rename) hm_iop->fake_iop.rename = hm_hijacked_rename;
 +    hm_fop->fake_fop = *inode->i_fop;
 +    hm_fop->orig_fop = inode->i_fop;
 +    hm_fop->dir_node = dir_node;
@@ -1973,18 +2327,14 @@ index 0000000..456caf7
 +
 +static void hybridmount_hijack_dentry_ops(struct inode *dir, struct dentry *dentry, bool injected)
 +{
-+    const struct dentry_operations *orig, *current_orig;
-+    struct hm_iop *iop;
++    const struct dentry_operations *orig, *wrapped;
++    bool drop = false;
 +
 +    if (!dentry || !dir) return;
-+    rcu_read_lock();
-+    iop = hm_get_hm_iop(smp_load_acquire(&dir->i_op));
-+    if ((orig = READ_ONCE(dentry->d_op)) == &hm_owned_dops || orig == &hm_dops ||
-+        (iop && orig == &iop->fake_dops)) goto out;
-+
 +    spin_lock(&dentry->d_lock);
-+    if ((orig = dentry->d_op) == &hm_owned_dops || orig == &hm_dops ||
-+        (iop && orig == &iop->fake_dops)) { spin_unlock(&dentry->d_lock); goto out; }
++    orig = dentry->d_op;
++    if (orig == &hm_owned_dops || orig == &hm_dops || hm_native_dops(dentry))
++        goto out;
 +
 +    if (injected) {
 +        /*
@@ -1998,22 +2348,16 @@ index 0000000..456caf7
 +        dentry->d_flags &= ~(DCACHE_OP_HASH | DCACHE_OP_COMPARE | DCACHE_OP_DELETE |
 +                             DCACHE_OP_PRUNE | DCACHE_OP_REAL);
 +        dentry->d_flags |= (DCACHE_OP_REVALIDATE | DCACHE_OP_WEAK_REVALIDATE | DCACHE_DONTCACHE);
-+    } else if (orig && iop) {
-+        if (unlikely((current_orig = smp_load_acquire(&iop->orig_dops)) != orig)) {
-+            if (current_orig == NULL) {
-+                if (cmpxchg(&iop->orig_dops, NULL, HM_DOP_INITIALIZING) == NULL) {
-+                    iop->fake_dops = *orig;
-+                    iop->fake_dops.d_revalidate = hm_d_revalidate;
-+                    smp_store_release(&iop->orig_dops, orig);
-+                } else {
-+                    while (smp_load_acquire(&iop->orig_dops) == HM_DOP_INITIALIZING) cpu_relax();
-+                }
-+            } else if (current_orig == HM_DOP_INITIALIZING) {
-+                while (smp_load_acquire(&iop->orig_dops) == HM_DOP_INITIALIZING) cpu_relax();
-+            }
++    } else if (orig) {
++        wrapped = hm_wrap_native_dops(orig);
++        if (wrapped) {
++            WRITE_ONCE(dentry->d_op, wrapped);
++            smp_wmb();
++            dentry->d_flags |= DCACHE_OP_REVALIDATE;
++        } else {
++            drop = true;
 +        }
-+        dentry->d_op = &iop->fake_dops;
-+    } else if (!orig) {
++    } else {
 +        /*
 +         * Adopted from a real ->lookup() on a filesystem which installs no
 +         * dentry_operations, so there is nothing of its own to preserve.
@@ -2023,17 +2367,10 @@ index 0000000..456caf7
 +                             DCACHE_OP_PRUNE | DCACHE_OP_REAL);
 +        dentry->d_flags |= (DCACHE_OP_REVALIDATE | DCACHE_OP_WEAK_REVALIDATE);
 +    }
-+    /*
-+     * Otherwise the dentry was adopted from a real ->lookup() of a filesystem
-+     * which has its own dentry_operations, and there is no hm_iop to cache a
-+     * copy in.  Leave its table and flags untouched: replacing the table would
-+     * drop the d_release/d_real/d_hash callbacks that its DCACHE_OP_* flags
-+     * still select.
-+     */
-+
-+    spin_unlock(&dentry->d_lock);
 +out:
-+    rcu_read_unlock();
++    spin_unlock(&dentry->d_lock);
++    if (drop)
++        d_drop(dentry);
 +}
 +
 +static void hybridmount_restore_superblocks(void)
@@ -2265,6 +2602,53 @@ index 0000000..456caf7
 +    }
 +}
 +
++/* Capture before publication: opaque lookup cannot discover these native
++ * descendants through kern_path. Each rule/inode retains an independent pin. */
++static int hm_capture_native_descendants(struct hybridmount_rule *target,
++                                         struct list_head *generated,
++                                         const struct path *anchor, int parent_len)
++{
++    struct path parent = *anchor;
++    const char *path = hm_get_vpath(target);
++    int start = parent_len == 1 ? 1 : parent_len + 1;
++    int end, err = 0;
++    if (!parent.dentry) return 0;
++    path_get(&parent);
++    while (start < target->v_len) {
++        struct dentry *child;
++        struct hybridmount_rule *rule;
++        struct qstr name;
++        for (end = start; end < target->v_len && path[end] != '/'; end++) {}
++        name = (struct qstr)QSTR_INIT(path + start, end - start);
++        child = hm_lookup_backing_child(&parent, &name);
++        if (IS_ERR(child)) { err = PTR_ERR(child); break; }
++        if (!d_is_positive(child) || !S_ISDIR(d_inode(child)->i_mode)) {
++            dput(child);
++            break;
++        }
++        if (d_inode(child)->i_op == &hm_dir_iops) {
++            dput(child);
++            err = -ELOOP;
++            break;
++        }
++        dput(parent.dentry);
++        parent.dentry = child;
++        if (end == target->v_len && !target->native_path.dentry) {
++            target->native_path = parent;
++            path_get(&target->native_path);
++        }
++        list_for_each_entry(rule, generated, topology_node) {
++            if (rule->v_len == end && !rule->native_path.dentry) {
++                rule->native_path = parent;
++                path_get(&rule->native_path);
++            }
++        }
++        start = end + 1;
++    }
++    path_put(&parent);
++    return err;
++}
++
 +static int hybridmount_generate_virtual_topology(struct hybridmount_rule *target_rule,
 +                                                 struct list_head *generated_rules,
 +                                                 struct list_head *victims)
@@ -2291,6 +2675,8 @@ index 0000000..456caf7
 +        if (ex) {
 +            if (!(ex->flags & HM_FLAG_IS_DIR)) { err = -ENOTDIR; break; }
 +            if (unlikely(!(dir_node = ex->this_dir))) { err = -ENOMEM; break; }
++            err = hm_capture_native_descendants(target_rule, generated_rules, &ex->native_path, parent_len);
++            if (err) break;
 +            err = __hybridmount_inject_child_locked(dir_node, current_rule, child_name, child_len);
 +            break;
 +        }
@@ -2311,6 +2697,8 @@ index 0000000..456caf7
 +                    path_put(&p_path);
 +                    break;
 +                }
++                err = hm_capture_native_descendants(target_rule, generated_rules, &info->native_path, parent_len);
++                if (err) { path_put(&p_path); break; }
 +            } else {
 +                struct hm_iop *iop = hm_get_hm_iop(smp_load_acquire(&v_inode->i_op));
 +                struct hm_fop *fop = hm_get_hm_fop(smp_load_acquire(&v_inode->i_fop));
@@ -2468,6 +2856,15 @@ index 0000000..456caf7
 +        struct dentry *target_dentry = v_path_struct.dentry;
 +        struct inode *target_inode = d_backing_inode(target_dentry);
 +        rule->v_ino = target_inode ? target_inode->i_ino : (unsigned long)rule->v_hash;
++        if ((rule->flags & HM_FLAG_IS_DIR) && target_inode && S_ISDIR(target_inode->i_mode)) {
++            if (target_inode->i_op == &hm_dir_iops) {
++                const struct hm_inode_info *info = target_inode->i_private;
++                if (info) rule->native_path = info->native_path;
++            } else {
++                rule->native_path = v_path_struct;
++            }
++            if (rule->native_path.dentry) path_get(&rule->native_path);
++        }
 +        d_drop(target_dentry);
 +        path_put(&v_path_struct);
 +    } else {
@@ -2481,6 +2878,7 @@ index 0000000..456caf7
 +        if (unlikely(!rule->this_dir)) {
 +            /* VIRTUAL_DIR (opaque) rules carry no real path, as in hm_free_rule. */
 +            if (!(rule->flags & HM_FLAG_VIRTUAL_DIR) && rule->r_path.dentry) path_put(&rule->r_path);
++            if (rule->native_path.dentry) path_put(&rule->native_path);
 +            kfree(rule);
 +            return ERR_PTR(-ENOMEM);
 +        }
@@ -2508,6 +2906,8 @@ index 0000000..456caf7
 +    }
 +    if (!(rule->flags & HM_FLAG_VIRTUAL_DIR) && rule->r_path.dentry)
 +        path_put(&rule->r_path);
++    if (rule->native_path.dentry)
++        path_put(&rule->native_path);
 +    /* Callers have drained rule readers before freeing retired rules. Generated
 +     * virtual rules can also pin a real parent, independently of r_path. */
 +    if (rule->parent_path.dentry)
@@ -2593,6 +2993,7 @@ index 0000000..456caf7
 +    memcpy(hm_get_vpath(parent), hm_get_vpath(rule), rule->v_len + 1);
 +    hm_get_rpath(parent)[0] = '\0';
 +    if (parent->parent_path.dentry) path_get(&parent->parent_path);
++    if (parent->native_path.dentry) path_get(&parent->native_path);
 +
 +    err = hm_tree_insert(parent);
 +    if (!err && parent->parent_dir)
@@ -2602,6 +3003,7 @@ index 0000000..456caf7
 +        hm_art_remove_leaf(&hybridmount_art_root, parent);
 +        list_del_init(&parent->list_node);
 +        if (parent->parent_path.dentry) path_put(&parent->parent_path);
++        if (parent->native_path.dentry) path_put(&parent->native_path);
 +        kfree(parent);
 +        return err;
 +    }
@@ -2955,10 +3357,9 @@ index 0000000..456caf7
 +module_exit(hybridmount_exit);
 diff --git a/fs/hybridmount/hybridmount.h b/fs/hybridmount/hybridmount.h
 new file mode 100644
-index 0000000..e6aba36
 --- /dev/null
 +++ b/fs/hybridmount/hybridmount.h
-@@ -0,0 +1,775 @@
+@@ -0,0 +1,770 @@
 +// SPDX-License-Identifier: GPL-2.0-only
 +//
 +// Hybrid Mount VFS path redirection subsystem, forked from NoMount
@@ -3033,10 +3434,6 @@ index 0000000..e6aba36
 +    const struct inode_operations *orig_iop;
 +    struct hybridmount_dir_node *dir_node;
 +    struct rcu_head rcu;
-+
-+    /* Dentry Operations Hijacking */
-+    struct dentry_operations fake_dops;
-+    const struct dentry_operations *orig_dops;
 +};
 +
 +struct hm_fop {
@@ -3062,8 +3459,12 @@ index 0000000..e6aba36
 +
 +struct hm_inode_info {
 +    struct path r_path;
++    struct file *read_file;
++    /* Original target, independent of the module's backing directory. */
++    struct path native_path;
 +    struct hybridmount_dir_node *dir_node;
 +    u8 flags;
++    bool backing_child;
 +    struct rcu_head rcu;
 +};
 +
@@ -3095,6 +3496,7 @@ index 0000000..e6aba36
 +
 +struct hybridmount_rule {
 +    struct path r_path;
++    struct path native_path;
 +    /* Keep the real parent with hijacked VFS operations alive while registered. */
 +    struct path parent_path;
 +    struct hybridmount_dir_node *this_dir;
@@ -3116,9 +3518,11 @@ index 0000000..e6aba36
 +struct hm_rule_info {
 +    /* Borrowed identity only; compare under RCU, never path_put this snapshot. */
 +    struct path backing_path;
++    struct path native_identity;
 +    u16 flags;
 +    unsigned long v_ino;
 +    struct path r_path;
++    struct path native_path;
 +    struct hybridmount_dir_node *this_dir;
 +};
 +
@@ -3724,13 +4128,5 @@ index 0000000..e6aba36
 +    return NULL;
 +}
 +
-+#define HM_DOP_INITIALIZING ((const struct dentry_operations *)1L)
-+static inline const struct dentry_operations *hm_get_orig_dops(struct hm_iop *iop)
-+{
-+    const struct dentry_operations *dops;
-+    if (!iop) return NULL;
-+    dops = smp_load_acquire(&iop->orig_dops);
-+    return (dops == HM_DOP_INITIALIZING) ? NULL : dops;
-+}
 +
 +#endif /* _LINUX_HYBRIDMOUNT_H */

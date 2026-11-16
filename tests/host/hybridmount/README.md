@@ -1,7 +1,7 @@
 # Hybrid Mount regression fixtures
 
-Imported from [Hybrid-Mount/meta-hybrid_mount](https://github.com/Hybrid-Mount/meta-hybrid_mount/tree/e5120adea50d917aa21fd5ab11a7823e48c937f0/tests/kernel)
-at `e5120adea50d917aa21fd5ab11a7823e48c937f0`. Each file retains its upstream
+Imported from [Hybrid-Mount/meta-hybrid_mount](https://github.com/Hybrid-Mount/meta-hybrid_mount/tree/f5db43f0ea54498440c2a2522bc0bd0941e9146d/tests/kernel)
+at `f5db43f0ea54498440c2a2522bc0bd0941e9146d`. Each file retains its upstream
 license. Python paths are adapted for this repository and the prepared 4.9 source;
 the C fixtures are unchanged.
 

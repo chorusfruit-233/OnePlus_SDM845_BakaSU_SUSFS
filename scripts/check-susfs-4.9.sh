@@ -41,9 +41,15 @@ git -C "$ksu_root" apply --reverse --check \
     "$builder_root/patches/lineage-4.9/bakasu-susfs-sync-4.9.patch" ||
     fail 'BakaSU priority UID filter dispatch/package refresh adaptation is incomplete.'
 
-require '^#define SUSFS_VERSION "v2\.3\.0"$' "$kernel_root/include/linux/susfs.h"
+require '^#define SUSFS_VERSION "v2\.4\.0"$' "$kernel_root/include/linux/susfs.h"
 require '^#define CMD_SUSFS_SET_PRIORITY_UID_FILTER 0x60030$' "$kernel_root/include/linux/susfs_def.h"
 require 'case CMD_SUSFS_SET_PRIORITY_UID_FILTER:' "$ksu_root/kernel/supercall/dispatch.c"
+require '^#define CMD_SUSFS_SET_SUS_PATH_UID_FILTER 0x55554$' "$kernel_root/include/linux/susfs_def.h"
+require 'case CMD_SUSFS_SET_SUS_PATH_UID_FILTER:' "$ksu_root/kernel/supercall/dispatch.c"
+require 'susfs_parse_sus_path_app_strings\(\);' "$ksu_root/kernel/manager/throne_tracker.c"
+if grep -q 'susfs_get_data_path' "$kernel_root/fs/readdir.c"; then
+    fail 'Directory filtering must use the native superblock with SUSFS v2.4.'
+fi
 require 'susfs_parse_priority_app_strings\(\);' "$ksu_root/kernel/manager/throne_tracker.c"
 for file in kernel/sys.c block/ioprio.c; do
     [[ $(grep -c 'susfs_is_priority_uid_filtered(uid.val)' "$kernel_root/$file") == 2 ]] ||

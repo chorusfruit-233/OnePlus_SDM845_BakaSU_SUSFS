@@ -33,7 +33,14 @@ functions = [
     "hm_destroy_virtual_inode",
     "hm_cached_inode_matches",
     "hybridmount_resolve_rule_dentry",
+    "hm_permission",
+    "hm_open",
+    "hm_release",
+    "hm_llseek",
+    "hm_lookup_backing_child",
+    "hm_dir_lookup",
     "hybridmount_hijacked_evict_inode",
+    "hm_capture_native_descendants",
     "hybridmount_generate_virtual_topology",
     "hm_free_rule",
 ]
@@ -57,7 +64,7 @@ with tempfile.TemporaryDirectory(prefix="hm-inode-test-") as temporary:
         subprocess.run([os.environ.get("HM_TEST_LINK", "link"), "/nologo",
                         f"/out:{executable}", str(output), "libcmt.lib", "oldnames.lib"], check=True)
     failures = []
-    for mode in ["new", "existing", "race", "dying", "race-dying", "retired",
+    for mode in ["file-cache", "native-opaque-child", "blocked-held-native-dir", "blocked-held-synthetic-dir", "unblocked-opaque-dir", "permissions", "backing-lookup", "new", "existing", "race", "dying", "race-dying", "retired",
                  "whiteout", "opaque", "deleted", "allocation", "evict",
                  "retired-republish", "orphan", "retire-eviction", "topology",
                  "real-parent", "parent-uid", "hook-failure", "child-allocation", "uids", "info-rcu", "cached-old-flags", "cached-old-path", "cached-uid-directory"]:

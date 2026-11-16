@@ -57,6 +57,8 @@ V2 freezer 属于 cgroup 核心接口，无需在 `cgroup.subtree_control` 中�
 `CONFIG_CGROUPS=y` 提供 V2；原来的 `CONFIG_CGROUP_FREEZER=y` 继续提供 V1。
 该功能不依赖 CFS CPU 配额，WALT 保持启用。
 
+当前测试用例来源已更新到 Linux 5.10.274（`3a323bc22b881`）；所用五个测试文件与 5.10.272 相同。实现回移来源仍如下所记。
+
 ## 回移来源及适配
 
 - 实现来源：[Linux 5.10.272](https://github.com/gregkh/linux/tree/aca95a35f1bcc0626c4fa4d1252bf2d4c990a1a2)，
@@ -121,7 +123,7 @@ freezer 测试，上传 `freezer-runtime-tests`。V2 初版 CI #125 生成
 本地复现：
 
 ```sh
-bash tests/host/build-freezer-tests.sh /path/to/linux-5.10.272 artifacts/freezer-tests
+bash tests/host/build-freezer-tests.sh /path/to/linux-5.10.274 artifacts/freezer-tests
 python3 tests/host/run-freezer-qemu.py \
   --kernel kernel/out-bpf-qemu/arch/arm64/boot/Image \
   --busybox anykernel3/tools/busybox \

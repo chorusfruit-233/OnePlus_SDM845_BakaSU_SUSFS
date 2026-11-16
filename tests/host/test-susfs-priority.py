@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fault-inject the actual SUSFS priority UID filter on the 4.9 port.
+"""Fault-inject both actual SUSFS UID filters on the 4.9 port.
 
 Credentials, VFS and RCU are mocked; this does not test Android SELinux or the
 syscall ABI. The test exercises validation, publication, rollback and refresh.
@@ -35,10 +35,10 @@ typedef uint64_t u64;
 #define __GFP_NOWARN 2
 #define LOOKUP_FOLLOW 1
 #define STATX_BASIC_STATS 0x7ff
-#define SUSFS_PRIORITY_UID_FILTER_MIN_UID 10000
-#define SUSFS_PRIORITY_UID_FILTER_MAX_UID 19999
-#define SUSFS_PRIORITY_UID_FILTER_UID_NUM 10000
-#define SUSFS_PRIORITY_UID_FILTER_BITMAP_LEN ((10000 + 63) / 64)
+#define SUSFS_UID_FILTER_MIN_UID 10000
+#define SUSFS_UID_FILTER_MAX_UID 19999
+#define SUSFS_UID_FILTER_UID_NUM 10000
+#define SUSFS_UID_FILTER_BITMAP_LEN ((10000 + 63) / 64)
 #define SUSFS_APP_STR_BUF_SIZE 65535
 #define SUSFS_LOGE(...) ((void)0)
 #define SUSFS_LOGI(...) ((void)0)
@@ -251,19 +251,74 @@ def main():
     parser.add_argument("--source", type=Path, required=True)
     args = parser.parse_args()
     source = (args.source / "fs/susfs.c").read_text()
-    helpers = ("#ifdef CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER\n" + source[
-        source.index("static void *susfs_kvzalloc"):source.index("/* sus_path */")])
+    helpers = source[source.index("#if defined(CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER)"):
+                     source.index("/* sus_path */")]
     priority = source[source.index("/* priority uid filter */"):source.index("/* susfs avc log spoofing */")]
     extract = runpy.run_path(str(Path(__file__).with_name("test-selinux-cleanup.py")))["extract_function"]
     dispatch = extract((args.source / "KernelSU/kernel/supercall/dispatch.c").read_text(),
                        "ksu_handle_susfs_cmd")
     definitions = (args.source / "include/linux/susfs_def.h").read_text()
     commands = "\n".join(re.findall(r"^#define CMD_SUSFS_\w+ 0x[0-9a-fA-F]+", definitions, re.M))
-    with tempfile.TemporaryDirectory(prefix="susfs-priority-") as directory:
+    for kind in ("priority", "sus_path"):
+        prefix, suffix, body = PREFIX, SUFFIX, priority
+        if kind == "sus_path":
+            prefix = PREFIX.replace("priority", "sus_path").replace(
+                "CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER", "CONFIG_KSU_SUSFS_SUS_PATH")
+            suffix = SUFFIX.replace("priority", "sus_path").replace(
+                "CMD_SUSFS_SET_PRIORITY_UID_FILTER", "CMD_SUSFS_SET_SUS_PATH_UID_FILTER")
+            suffix = suffix.replace("susfs_is_sus_path_uid_filtered(uid)",
+                                    "susfs_is_uid_allowed_for_sus_path(uid % 100000)")
+            suffix = suffix.replace("assert(!filtered(10001));", """assert(!filtered(10001));
+    assert(filtered(90000) && filtered(99000) && filtered(199999));
+    assert(!filtered(89999) && !filtered(100000));""")
+            prefix += """
+static void susfs_add_sus_path(void **p) { assert(0); }
+static void susfs_add_sus_path_loop(void **p) { assert(0); }
+#define unlikely(x) (x)
+#define AS_FLAGS_SUS_PATH 20
+#define FUSE_SUPER_MAGIC 0x65735546
+struct super_block { unsigned long s_magic; };
+struct inode { void *i_mapping; struct super_block *i_sb; unsigned long i_state; };
+struct fuse_inode { struct inode inode; };
+static struct fuse_inode fuse;
+static struct fuse_inode *get_fuse_inode(struct inode *i) { return &fuse; }
+static uid_t caller_uid;
+struct mock_uid { uid_t val; };
+static struct mock_uid current_uid(void) { return (struct mock_uid){caller_uid}; }
+
+"""
+            body = source[source.index("struct susfs_sus_path_uid_filter_bitmap {"):
+                          source.index("#endif // #ifdef CONFIG_KSU_SUSFS_SUS_PATH",
+                                       source.index("struct susfs_sus_path_uid_filter_bitmap {"))]
+            body += extract(source.replace("__attribute__((hot)) ", ""), "susfs_is_inode_sus_path")
+            suffix = suffix.replace('int main(void) {', '''int main(void) {
+    struct super_block sb={0};
+    struct inode inode={.i_mapping=&sb,.i_sb=&sb,.i_state=1UL<<AS_FLAGS_SUS_PATH};
+    caller_uid=1000;assert(!susfs_is_inode_sus_path(&inode));
+    caller_uid=10001;assert(susfs_is_inode_sus_path(&inode));
+    caller_uid=110001;assert(susfs_is_inode_sus_path(&inode));
+    caller_uid=99000;assert(!susfs_is_inode_sus_path(&inode));
+    caller_uid=10001;inode.i_state=0;assert(!susfs_is_inode_sus_path(&inode));
+    inode.i_state=1UL<<AS_FLAGS_SUS_PATH;
+''')
+            suffix = suffix.replace('puts("PASS: app ID boundaries', '''caller_uid=110001;assert(!susfs_is_inode_sus_path(&inode));
+    caller_uid=10002;assert(susfs_is_inode_sus_path(&inode));
+    sb.s_magic=FUSE_SUPER_MAGIC;fuse.inode=inode;
+    caller_uid=110001;assert(!susfs_is_inode_sus_path(&inode));
+    caller_uid=10002;assert(susfs_is_inode_sus_path(&inode));
+    fuse.inode.i_state=0;assert(!susfs_is_inode_sus_path(&inode));
+    puts("PASS: marked native/FUSE inode visibility follows caller app ID and allowlist");
+    puts("PASS: app ID boundaries''')
+        print(f"SUSFS {kind} UID filter", flush=True)
+        compile_and_run(prefix + commands + "\n" + helpers + body +
+                        suffix.replace("/* DISPATCH */", dispatch))
+
+
+def compile_and_run(source):
+    with tempfile.TemporaryDirectory(prefix="susfs-uid-") as directory:
         program = Path(directory) / "priority.c"
         executable = Path(directory) / "priority"
-        program.write_text(PREFIX + commands + "\n" + helpers + priority +
-                           SUFFIX.replace("/* DISPATCH */", dispatch))
+        program.write_text(source)
         subprocess.run(shlex.split(os.environ.get("CC", "cc")) + [
             "-std=gnu11", "-Wall", "-Wextra", "-Werror", "-Wno-unused-parameter",
             "-Wno-unused-variable", "-Wno-sign-compare", "-Wno-misleading-indentation",

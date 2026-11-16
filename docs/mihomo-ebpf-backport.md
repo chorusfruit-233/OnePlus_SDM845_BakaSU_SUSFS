@@ -80,7 +80,7 @@ ARM64 LSE atomics 配置沿用手机原值。Qualcomm audio 的 Kbuild 增加平
 ## 可重复验证
 
 测试对象固定为 [liuran001/mihomo](https://github.com/liuran001/mihomo)
-`02581ff38100494f1d700612850b7611bdf2099e`，版本信息在
+`574c6db4a5dbbb16a262ce382c78fce7d5c5a780`，版本信息在
 `configs/mihomo-ebpf-test.json`。测试直接编译并执行该提交的上游集成用例，
 不修改 Mihomo 程序来绕过校验器。测试包使用相同版本的 Cilium eBPF 库。
 构建脚本通过 Go overlay 加入本仓库 `tests/host/mihomo-cgroup-runtime_test.go`

@@ -22,7 +22,7 @@
     },
     {
       "file": "patches/lineage-4.9/bakasu-compat-4.9.patch",
-      "sha256": "e7bb8eaf4f8f0bfe453a2fe8869bc6f1e186289bbb134286ed2526e2d346282b",
+      "sha256": "efbe56ed2313d7a83c5299fa0d146808a8f56d78c8f40e5acaa5d6af52d7bc42",
       "group": "BakaSU compatibility",
       "review": "Preinit filename/FD ownership and retry paths, blacklist symbol collision, host code generation ABI.",
       "result": "no-new-finding",
@@ -33,7 +33,8 @@
         "kernel/preinit/preinit.h",
         "kernel/tools/code_generation/preinit_runner/preinit_runner.mk",
         "kernel/tools/kernel_compat.mk"
-      ]
+      ],
+      "followup_review": "2026-11-16: upstream preinit -f Makefile fix replaces local KBUILD_SRC override; retain hard failure when required UAPI headers are absent."
     },
     {
       "file": "patches/lineage-4.9/bakasu-preinit-module-4.9.patch",
@@ -61,7 +62,7 @@
     },
     {
       "file": "patches/lineage-4.9/bakasu-susfs-sync-4.9.patch",
-      "sha256": "f0f1e070cd7fa41e35b9837e5cd3bdd4153ad62ce23b987951b7e6fef5786e65",
+      "sha256": "228455754590e6565d204d537c20cf3ce2280574820d033bf5629b43dc511461",
       "group": "BakaSU SUSFS sync",
       "review": "Feature dependencies, manager/tracker wrapper and compatibility dispatch; main remains tracked.",
       "result": "no-new-finding",
@@ -70,7 +71,8 @@
         "kernel/Kconfig",
         "kernel/manager/throne_tracker.c",
         "kernel/supercall/dispatch.c"
-      ]
+      ],
+      "followup_review": "2026-11-16: upstream refresh; see docs/upstream-update-20261116.md for retained hardening and compatibility boundaries."
     },
     {
       "file": "patches/lineage-4.9/bbg-slot-allow.patch",
@@ -373,7 +375,7 @@
     },
     {
       "file": "patches/lineage-4.9/hybridmount-4.9.patch",
-      "sha256": "68652041723eaadbe0f1b1bf96b2117042095265f1f83e2fc7229a9a4632f6b2",
+      "sha256": "85788886e8fe9a3a6a01872d3cdf03deaaf949e2ae9865f9821228b279738b78",
       "group": "Hybrid Mount",
       "review": "Shared user-page parser, RCU/SRCU reader ownership, inode eviction, rule replacement, virtual directory topology, keyring privilege boundary.",
       "result": "fixed",
@@ -389,7 +391,8 @@
         "fs/hybridmount/UPSTREAM_README.md",
         "fs/hybridmount/hybridmount.c",
         "fs/hybridmount/hybridmount.h"
-      ]
+      ],
+      "followup_review": "2026-11-16: upstream refresh; see docs/upstream-update-20261116.md for retained hardening and compatibility boundaries."
     },
     {
       "file": "patches/lineage-4.9/kernel-4.9-adaptation.patch",
@@ -670,7 +673,7 @@
     },
     {
       "file": "patches/lineage-4.9/susfs-4.9.patch",
-      "sha256": "d03e35a2c3b8fd3334b3531ba7842c330b132d65980deaceccf52e6211d814a1",
+      "sha256": "f5eec37371a0750460a71a835d1aae6eefe534082217aff32b0baec0b25be45d",
       "group": "SUSFS",
       "review": "Inode hash collisions, string boundaries, first allocation, reverse-rule replacement, readlink ABI and priority-filter publication/fault cleanup.",
       "result": "fixed",
@@ -697,7 +700,8 @@
         "kernel/sys.c",
         "mm/memory.c",
         "security/selinux/avc.c"
-      ]
+      ],
+      "followup_review": "2026-11-16: upstream refresh; see docs/upstream-update-20261116.md for retained hardening and compatibility boundaries."
     },
     {
       "file": "patches/tests/freezer-selftest-fortify.patch",
@@ -729,7 +733,8 @@
     },
     {
       "file": "scripts/prepare-sources.sh",
-      "sha256": "edbb8ac6e0eb0c627d295f94db19de927e4759210c916bc8923b0cd3d2eb03ca"
+      "sha256": "03d8f7fac2823ec755c8d7d6bff1df07d3433e0a50690e518d7bb273ab84696e",
+      "followup_review": "2026-11-16: upstream refresh; see docs/upstream-update-20261116.md for retained hardening and compatibility boundaries."
     },
     {
       "file": "scripts/source_revisions.py",
@@ -748,8 +753,8 @@
     "drivers/android/binder.c": "637a4b9c59a9974b1e371dd49ddfcc1e0fd2fb4a5e8aa8d35b0ab12514102771",
     "drivers/hid/hid-core.c": "547cab3499d08e7cc195f01c4f8ef48b1c80ec6686acc0d2e5ad1617354f8d08",
     "drivers/rekernel/rekernel.c": "a938df7f5e95c3402ccbe40a971d0606306c5daee08a6ce80fee98a2c3e4109a",
-    "fs/hybridmount/hybridmount.c": "991799b3e4bef9ae565b368808a4e1c8a034aeae8b5dc8a3ee9068364f140be9",
-    "fs/susfs.c": "7c7243c35df53ceac878deaa0cbc9bbe85b2c11507f1e971b54b334aedecd578",
+    "fs/hybridmount/hybridmount.c": "5d4a1e768ee4564f9d5a06ef1b89b6c4a4f9f41c000c0d6d0a79f82d027008be",
+    "fs/susfs.c": "a27e4a0a054c67f6a8015ceabd2dd791dc4aedd3e7ab46e9e73b1f05c49a01bb",
     "net/bluetooth/rfcomm/sock.c": "147b146d8125c88853101de01344d7f1699758fafb6e1e89fa00223fb2f22abe",
     "net/bluetooth/sco.c": "302f842d00336f871420578524c32bfdbcae6a8b11aabfc2ebed1ce6be4186cf",
     "net/core/skbuff.c": "f7a07639124a6aacd689b8d00909f10732c95d8cee90b9ec3fdaf38969057368",
@@ -757,5 +762,6 @@
     "net/ipv4/tcp_bbr3.c": "7b53d92e98d967b6876b94a7abb79c9ea9ad0280b2a992aca5d245d61f283656",
     "net/nfc/llcp_core.c": "0195108ac864fd583f539cdb80d68b15ec6939808675edd51b8bc64eba7cc7d9",
     "net/nfc/llcp_sock.c": "c4002101bd2332fabd3287f4f7ea426f05eeb777c9fc7a03670f16aee47983ab"
-  }
+  },
+  "upstream_refresh_date": "2026-11-16"
 }

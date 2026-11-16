@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-2.0-only
 import os
+import argparse
 from pathlib import Path
 import re
 import shlex
@@ -8,13 +9,17 @@ import subprocess
 import tempfile
 
 ROOT = Path(__file__).resolve().parent
-source = (Path(os.environ["HYBRIDMOUNT_SOURCE"])).read_text()
+parser = argparse.ArgumentParser()
+parser.add_argument('--source', type=Path, default=Path(os.environ["HYBRIDMOUNT_SOURCE"]))
+source = parser.parse_args().source.read_text()
 functions = []
 for name in [
     "hm_dir_get", "hm_dir_put", "__hybridmount_get_rule_info",
     "hybridmount_get_rule_info_uid", "hybridmount_get_rule_info",
     "hybridmount_actor_proxy", "hm_cached_inode_matches", "hybridmount_hijacked_lookup",
     "hybridmount_hijacked_iterate_dir", "hm_d_revalidate_common",
+    "hm_native_dops",
+    "hm_dir_iterate_dir",
 ]:
     match = re.search(rf"^static[^;\n]*\b{name}\([^;]*?\)\s*\{{", source, re.MULTILINE)
     end, depth = match.end(), 1
@@ -33,7 +38,7 @@ with tempfile.TemporaryDirectory(prefix="hm-readers-") as temporary:
         str(ROOT / "reader_lifetime.c"), "-o", str(executable),
     ], check=True)
     failures = []
-    for mode in ["lookup", "iterate", "revalidate"]:
+    for mode in ["lookup", "iterate", "revalidate", "held-iterate", "proxy-iterate", "proxy-iterate-error"]:
         result = subprocess.run([str(executable), mode], timeout=30)
         if result.returncode:
             failures.append(mode)

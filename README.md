@@ -7,7 +7,7 @@
 [![Build AK3](https://github.com/chorusfruit-233/OnePlus_SDM845_ReSukiSU_SUSFS/actions/workflows/build-ak3.yml/badge.svg)](https://github.com/chorusfruit-233/OnePlus_SDM845_ReSukiSU_SUSFS/actions/workflows/build-ak3.yml)
 [![Kernel](https://img.shields.io/badge/kernel-4.9.337-informational)](https://github.com/LineageOS/android_kernel_oneplus_sdm845)
 [![BakaSU](https://img.shields.io/badge/BakaSU-integrated-success)](https://github.com/Baka-SU/BakaSU)
-[![SUSFS](https://img.shields.io/badge/SUSFS-v2.3.0_inline_hook-orange)](https://github.com/JackA1ltman/NonGKI_Kernel_Build_2nd)
+[![SUSFS](https://img.shields.io/badge/SUSFS-v2.4.0_inline_hook-orange)](https://github.com/JackA1ltman/NonGKI_Kernel_Build_2nd)
 [![Devices](https://img.shields.io/badge/devices-OnePlus_6%20%7C%206T-blue)](#兼容性)
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue)](#许可证)
 
@@ -66,23 +66,25 @@ ramdisk、内核模块或 vendor 接口差异而不兼容。不要在未备份�
   路径检测及私有符号重名处理；CI 实际运行手机内核中嵌入的 preinit ELF，
   验证模块动作、失败/超时处理及返回 init。范围与真机测试见
   [最新 BakaSU 适配记录](docs/bakasu-main-20261024.md)；
-- 已审查 `main @ 516d3e87` 新增的 SELinux inode/BTF 层：4.9 内建模式沿用
+- 已对齐 `main @ 5d6d1843`，采用官方 preinit 头文件构建修复，删除重复兼容补丁。
+  保留此前 `516d3e87` 新增的 SELinux inode/BTF 层：4.9 内建模式沿用
   旧 inode 安全上下文接口，不启用依赖新内核 BTF 的模块路径；审阅检查覆盖新增文件，
   镜像检查确认 `ksu_selinux_inode` 已链接。继续跟踪 `main`；
 - 使用 BakaSU 管理器；当前上游在 `CONFIG_KSU_MULTI_MANAGER_SUPPORT=y` 时还支持
   官方 KernelSU 与 KOWSU 管理器，已移除 MKSU、RKSU 和 SukiSU-Ultra 的签名支持；
 - BakaSU 用户空间向模块脚本提供 `BAKASU=true`，取代旧的 `KSU_SUKISU=true`；
   依赖旧变量判断分支的模块需同步更新；
-- SUSFS **v2.3.0** 以自包含补丁形式 vendored（`patches/lineage-4.9/susfs-4.9.patch`，
+- SUSFS **v2.4.0** 以自包含补丁形式 vendored（`patches/lineage-4.9/susfs-4.9.patch`，
   基于 [JackA1ltman/NonGKI_Kernel_Build_2nd](https://github.com/JackA1ltman/NonGKI_Kernel_Build_2nd)
   的 `susfs_patch_to_4.9.patch` 移植，并同步官方
-  `gki-android14-6.1 @ a0ac906915c8`），构建不再依赖 GitLab 上游。
-  同步新的应用 UID 优先级过滤、四个 priority/ioprio 系统调用钩子，以及
-  `clone_mnt()` 的 unshared mount ID 标记修复；版本号仍为官方 v2.3.0。
+  `gki-android14-6.1 @ f76b81f2a6bf`），构建不再依赖 GitLab 上游。
+  新增路径 UID 允许列表，并保留应用 UID 优先级过滤、四个 priority/ioprio 系统调用钩子，以及
+  `clone_mnt()` 的 unshared mount ID 标记修复；版本号仍为官方 v2.4.0。
   BakaSU 已补齐控制命令与安装/卸载应用后的 UID 刷新，4.9 使用私有分配兼容层、
   释放旧位图前的空指针检查，并阻止过期后台刷新覆盖新配置。
-  使用新功能需更新官方 SUSFS 用户态工具。
-  同步 `732feefc` 的 4.9 移植：UID 查询改读 `packages.list` 并使用 `O_NOATIME`，
+  路径过滤不再依赖旧的卸载标记和文件所有者豁免；配置的应用 UID 可见标记路径。
+  使用新功能需更新支持 v2.4.0 的官方 SUSFS 用户态工具。
+  同步 `bbe032eb` 的 4.9 移植：UID 查询改读 `packages.list` 并使用 `O_NOATIME`，
   适配旧 `kernel_read`、短读与大小上限；保留错误回滚、刷新代次和空指针保护。
   `CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER=y` 默认启用，关闭时调用端也同步禁用。
   官方 GKI 手动 SELinux hooks 在本树由以下 NonGKI 自动接入替代；
@@ -112,7 +114,7 @@ ramdisk、内核模块或 vendor 接口差异而不兼容。不要在未备份�
 再应用补丁并运行 `scripts/check-susfs-4.9.sh`，核对固定内核、完整补丁、
 四参数 `setprocattr` ABI 和 inline hooks。与这些实现无关的 `main` 更新可以继续
 构建；相关实现变更时明确报错，需要重新适配和验证，而不是按整个提交 SHA 阻止更新。
-构建放行仍仅限 Linux 4.9 / ARM64 / KALLSYMS_ALL / SUSFS v2.3.0 自动接入。
+构建放行仍仅限 Linux 4.9 / ARM64 / KALLSYMS_ALL / SUSFS v2.4.0 自动接入。
 
 CI 在编译前执行 `tests/host/test-selinux-cleanup.py`，从已准备的 BakaSU 源码
 提取真实清理/切换函数，注入回调恢复失败，检查原回调、备份资源、错误状态和重试。
@@ -125,11 +127,13 @@ CI 在编译前执行 `tests/host/test-selinux-cleanup.py`，从已准备的 Bak
 [`tests/device/README.md`](tests/device/README.md)。测试不修改 SELinux 策略，也不
 将未覆盖的接口或统计结果自动宣称为修复成功。
 
+本次全部上游核对结果及适配边界见 [2026-11-16 更新记录](docs/upstream-update-20261116.md)。
+
 ### Hybrid Mount VFS（内建）
 
 - [Hybrid-Mount/meta-hybrid_mount](https://github.com/Hybrid-Mount/meta-hybrid_mount)
-  的 VFS 驱动更新到 `dev @ 2af55f105b27`，以自包含补丁
-  `patches/lineage-4.9/hybridmount-4.9.patch` vendored；本次上游只改工作流，VFS 源码树未变；
+  的 VFS 驱动更新到 `dev @ f5db43f0ea54`，以自包含补丁
+  `patches/lineage-4.9/hybridmount-4.9.patch` vendored；同步 backing 权限、noexec/nodev、只读句柄缓存和原生目录隔离；
 - 同步 inode/RCU 引用、规则替换缓存、按 UID 区分的同名子项、父目录转换、
   seqcount 写侧与分配失败回滚修复；内建 ext4 export encoder 防护覆盖
   fabricated inode 的 inotify fdinfo 路径。协议仍为 `hm1`；
@@ -211,7 +215,7 @@ CI 在编译前执行 `tests/host/test-selinux-cleanup.py`，从已准备的 Bak
 - CAKE 更新到 `dtaht/sch_cake @ 53ff94d4b580`，同步现代 netlink 参数/统计
   接口及旧内核兼容层，包含 TCP options 解析越界修复；保留 FQ、FQ_CODEL 与 PIE；
 - TTL/HL target、IPSet、IPv6 NAT；
-- 对照 Droidspaces **v7.0.0** 和主线要求（`847ecdd2c943`）启用
+- 对照 Droidspaces **v7.2.0** 和主线要求（`cdadb9eb5d0f8`）启用
   namespaces、cgroups、seccomp、veth、bridge、IPv4/IPv6 NAT、macvlan、
   overlayfs、TMPFS XATTR/POSIX ACL、CPU 使用统计、内存和进程数限额；
 - 补齐 macvlan 与 UFW/Fail2Ban 使用的 `xt_recent`；4.9 的 netfilter 旧配置名
@@ -328,8 +332,8 @@ SUSFS 补丁的哈希）和所有上游 commit 共同组成 build key：
 | --- | --- | --- |
 | Kernel | [LineageOS/android_kernel_oneplus_sdm845](https://github.com/LineageOS/android_kernel_oneplus_sdm845) | 固定基线 commit |
 | BakaSU | [Baka-SU/BakaSU](https://github.com/Baka-SU/BakaSU) | 默认跟踪 `main`，校验配套实现 |
-| SUSFS v2.3.0 | 自包含补丁（源自 [JackA1ltman/NonGKI_Kernel_Build_2nd](https://github.com/JackA1ltman/NonGKI_Kernel_Build_2nd)） | vendored，随仓库版本变化 |
-| Hybrid Mount VFS | [Hybrid-Mount/meta-hybrid_mount](https://github.com/Hybrid-Mount/meta-hybrid_mount)（dev 分支） | vendored，固定 `2af55f105b27`，内建 hm1 provider |
+| SUSFS v2.4.0 | 自包含补丁（源自 [JackA1ltman/NonGKI_Kernel_Build_2nd](https://github.com/JackA1ltman/NonGKI_Kernel_Build_2nd)） | vendored，随仓库版本变化 |
+| Hybrid Mount VFS | [Hybrid-Mount/meta-hybrid_mount](https://github.com/Hybrid-Mount/meta-hybrid_mount)（dev 分支） | vendored，固定 `f5db43f0ea54`，内建 hm1 provider |
 | RTL8812AU/8821AU/8814AU | [aircrack-ng/rtl8812au](https://github.com/aircrack-ng/rtl8812au) | 默认跟踪 `v5.6.4.2`（构建时克隆 + 适配补丁） |
 | CAKE | [dtaht/sch_cake](https://github.com/dtaht/sch_cake) | 固定最新 `53ff94d4b580`，同步 4.9 兼容层和 UAPI |
 | BBRv3 patches | [WildKernels/kernel_patches](https://github.com/WildKernels/kernel_patches) | 稀疏拉取 `common/bbrv3` |
@@ -382,7 +386,7 @@ stat、fstat、statx、普通 fdinfo 和 inotify fdinfo 中的一致性。完整
 - 编译成功不等于所有 ROM 上均已完成启动、基带、网络和容器稳定性验证；
 - `kernel_base` 变化后必须重新生成并验证 `kernel-4.9-adaptation.patch` 和
   `susfs-4.9.patch`，不能只修改配置中的 commit 绕过基线检查；
-- `susfs-4.9.patch` 内嵌 SUSFS v2.3.0 源码；升级 SUSFS 版本时需要重新移植
+- `susfs-4.9.patch` 内嵌 SUSFS v2.4.0 源码；升级 SUSFS 版本时需要重新移植
   `fs/susfs.c`、`include/linux/susfs.h`、`include/linux/susfs_def.h` 及内核钩子，
   并同步更新 `scripts/susfs-inline-hook.sh` 的版本说明；
 - `hybridmount-4.9.patch` 内嵌 Hybrid Mount VFS `dev` 分支快照；元模块需要从

@@ -51,7 +51,7 @@ ln -sfn ../KernelSU/kernel "$kernel_root/drivers/kernelsu"
 git -C "$kernel_root" apply --check "$patch_root/droidspaces-4.9.patch"
 git -C "$kernel_root" apply --whitespace=nowarn "$patch_root/droidspaces-4.9.patch"
 
-# SUSFS v2.3.0 is vendored as a self-contained 4.9 patch (based on
+# SUSFS v2.4.0 is vendored as a self-contained 4.9 patch (based on
 # JackA1ltman/NonGKI_Kernel_Build_2nd), so no upstream git fetch is needed.
 git -C "$kernel_root" apply --whitespace=nowarn \
     "$patch_root/susfs-4.9.patch"
@@ -148,7 +148,7 @@ test -f "$kernel_root/drivers/rekernel/rekernel.c"
 grep -q 'rekernel_binder_transaction' "$kernel_root/drivers/android/binder.c"
 grep -q 'rekernel_report(SIGNAL' "$kernel_root/kernel/signal.c"
 grep -q 'KSTAT_SPOOF_CTIME_TV_SEC (1 << 8)' "$kernel_root/include/linux/susfs.h"
-grep -q 'SUSFS_VERSION "v2.3.0"' "$kernel_root/include/linux/susfs.h"
+grep -q 'SUSFS_VERSION "v2.4.0"' "$kernel_root/include/linux/susfs.h"
 grep -q 'ksu_handle_execveat_sucompat' "$kernel_root/fs/exec.c"
 grep -q '^[[:space:]]*(void)ksu_handle_post_execveat_sucompat' "$kernel_root/fs/exec.c"
 grep -q 'susfs_sus_kstat_spoof_inotify_fdinfo' "$kernel_root/fs/notify/fdinfo.c"

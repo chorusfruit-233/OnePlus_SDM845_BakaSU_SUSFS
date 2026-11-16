@@ -1,7 +1,7 @@
 {
   "repository": "https://github.com/gregkh/linux.git",
-  "commit": "aca95a35f1bcc0626c4fa4d1252bf2d4c990a1a2",
-  "version": "5.10.272",
+  "commit": "3a323bc22b881a5bdc1646080f93f5ecb22850bf",
+  "version": "5.10.274",
   "files": [
     "tools/testing/selftests/cgroup/test_freezer.c",
     "tools/testing/selftests/cgroup/cgroup_util.c",

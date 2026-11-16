@@ -1,13 +1,13 @@
 {
   "susfs": {
-    "version": "v2.3.0",
+    "version": "v2.4.0",
     "repo": "https://gitlab.com/simonpunk/susfs4ksu.git",
     "ref": "gki-android14-6.1",
-    "commit": "a0ac906915c8a8d50d474dfb3cae478ef32edc1a",
+    "commit": "f76b81f2a6bf98e4029cc0c823c054edbec29803",
     "port_repo": "https://github.com/JackA1ltman/NonGKI_Kernel_Build_2nd.git",
     "port_ref": "mainline",
-    "port_commit": "732feefc0d4132bc313d39d7a511b9b7bbe51ddb",
-    "core_commit": "a0ac906915c8a8d50d474dfb3cae478ef32edc1a",
+    "port_commit": "bbe032eb06c50d24a9207bf2ece5e25cf2460bd0",
+    "core_commit": "f76b81f2a6bf98e4029cc0c823c054edbec29803",
     "selinux_integration": "BakaSU NonGKI automatic hooks; LineageOS 4.9 adaptation",
     "bakasu_patch_base": "c0c96a4087285ff82d71003d4186629de1c46b3c",
     "bakasu_reviewed_files": {
@@ -31,8 +31,8 @@
       "kernel/tools/code_generation/syscall_no/syscall_no.mk": "5d65354bc6cc01fdb4c288ef69b5365e1b98cfe7619a8c942cbde99a3253b894",
       "kernel/Makefile": "0f3e28f59311db0c8383600f0294cec5b8e4d6cc0fb229b5723b9ff539e08992",
       "kernel/feature/shell_su_adb_only.c": "3bfe6ee40b17d1e84cc199b35e6363cb65430fd5f85331fda908e4a6d4afd5df",
-      "kernel/tools/code_generation/preinit_runner/preinit_runner.mk": "3461eaa72bd7ca96933fae3797b7f6e828c127ea042118dbc43d902361dd5c65",
-      "kernel/preinit/preinit.h": "2bbf8086b664038278ef4e1d2ee1c352792e602935e38879eda204133bbd4c5d",
+      "kernel/tools/code_generation/preinit_runner/preinit_runner.mk": "39c3781b4ad2186ad2c11425e5c67a27f484808131f3a941f5572f49a78931eb",
+      "kernel/preinit/preinit.h": "01dc5c5c174b6b47c07af76c2aa258f797678e353a259678291c8ac740a16e78",
       "uapi/feature.h": "173db5f7255ea4d4718499c47136909211db18fffaf5a59ede2d8329c25dd109",
       "kernel/feature/module_blacklist.c": "2a7dbf99630b305bd4134a740581b2aa14b87076058b3ae83f0b99f79b39c48f",
       "kernel/preinit/blob.S": "5d6728571f07ebbc60f6ab82f54d59a6c0833229fe21e7f827f7fbfca0dea23c",
@@ -50,24 +50,27 @@
       "kernel/infra/file_wrapper.c": "81dfdf4ff567d3ba6127846ab2519f7d65cbaa0f1ea2fac8ddd70d99e9759426",
       "kernel/selinux/inode.c": "aef8e935b89222f7d2ebb71b830c56d658a08f423c06a1e0a11b37b6163e890f",
       "kernel/selinux/selinux.h": "1aff9acf8e3cda760a086ea2f054e963825652403abf97c0711997385d3bbca2",
-      "kernel/Kconfig": "2f10a71bc72dbb082fb9beaaaa59a292c5875b0c18f0f914d5489030a77f342d"
+      "kernel/Kconfig": "2f10a71bc72dbb082fb9beaaaa59a292c5875b0c18f0f914d5489030a77f342d",
+      "kernel/tools/inline_hook_check.mk": "cdcde49e342030da0a9dd628ff6c4450da05bbc1e05e7cbc8d96ca1e9b5d0f40"
     },
-    "bakasu_reviewed_commit": "516d3e87fbc986ccefdde2c2765f1700612441a9",
+    "bakasu_reviewed_commit": "5d6d1843c8937f5ff2a145dc89a0cf46030ae6f8",
     "local_adaptations": [
       "Linux 4.9 offset-based kernel_read and bounded short-read handling for packages.list",
       "Keep configuration-generation checks, transactional errors and NULL-safe RCU retirement",
       "Preserve legacy VFS/readlink/statfs helpers and fsnotify filename ABI",
-      "Expose the upstream priority-filter option and guard callers when disabled"
+      "Expose the upstream priority-filter option and guard callers when disabled",
+      "Apply the hardened transactional UID resolver to the new path allowlist, independently of priority filtering",
+      "Use the native FUSE superblock for directory filtering; keep BakaSU automatic SELinux hooks rather than GKI policy-state hooks"
     ]
   },
   "hybridmount": {
     "version": "hm1",
     "repo": "https://github.com/Hybrid-Mount/meta-hybrid_mount.git",
     "ref": "dev",
-    "commit": "2af55f105b27ea5715c6d885961ceccd5a7dde21",
+    "commit": "f5db43f0ea54498440c2a2522bc0bd0941e9146d",
     "source_path": "module/vfs/src",
     "license": "GPL-2.0-only",
-    "source_tree": "001e206a5f6dcb781ae724f4d07fda4eaf94d14b"
+    "source_tree": "fd67a6cd064979096b82ff2dc61c14493a516410"
   },
   "rekernel": {
     "repo": "https://github.com/Sakion-Team/Re-Kernel.git",

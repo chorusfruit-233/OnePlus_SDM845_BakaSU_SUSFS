@@ -6,7 +6,7 @@ import shlex
 import subprocess
 import tempfile
 
-source = Path(os.environ["HYBRIDMOUNT_SOURCE"]).read_text()
+source = (Path(os.environ["HYBRIDMOUNT_SOURCE"])).read_text()
 body = source.split("case HM_CMD_GET_UIDS: {", 1)[1].split("\n        }", 1)[0]
 body = body.rsplit("break;", 1)[0]
 program = r"""

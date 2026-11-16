@@ -1,14 +1,15 @@
-SUSFS priority UID filter integration for BakaSU main / Linux 4.9
+SUSFS v2.4 UID filters for BakaSU main / Linux 4.9
 
-Upstream: simonpunk/susfs4ksu @ a0ac906915c8a8d50d474dfb3cae478ef32edc1a
-BakaSU reviewed: 516d3e87fbc986ccefdde2c2765f1700612441a9
-Route the root-only command and refresh mappings after package scans.
-Expose the upstream priority-filter option and guard every optional caller.
+Upstream: simonpunk/susfs4ksu @ f76b81f2a6bf98e4029cc0c823c054edbec29803
+BakaSU reviewed: 5d6d1843c8937f5ff2a145dc89a0cf46030ae6f8
+Route both root-only commands and refresh mappings after package scans.
+Keep independent feature guards for path and priority filtering.
 ---
 diff --git a/kernel/Kconfig b/kernel/Kconfig
+index 79bc79ee..f5797ec2 100644
 --- a/kernel/Kconfig
 +++ b/kernel/Kconfig
-@@ -233,6 +233,13 @@
+@@ -233,6 +233,13 @@ config KSU_SUSFS_OPEN_REDIRECT
          - Please be reminded that process with open access to the target and redirected path can be detected.
          - Effective only on processes with uid < 2000.
  
@@ -23,6 +24,7 @@ diff --git a/kernel/Kconfig b/kernel/Kconfig
      bool "Enable hiding some mmapped real files from different proc maps interfaces"
      depends on KSU_SUSFS
 diff --git a/kernel/manager/throne_tracker.c b/kernel/manager/throne_tracker.c
+index d487fc8d..c945ddf3 100644
 --- a/kernel/manager/throne_tracker.c
 +++ b/kernel/manager/throne_tracker.c
 @@ -17,6 +17,9 @@
@@ -35,7 +37,7 @@ diff --git a/kernel/manager/throne_tracker.c b/kernel/manager/throne_tracker.c
  #include "compat/kernel_compat.h"
  #include "feature/dynamic_manager.h"
  
-@@ -360,6 +363,10 @@
+@@ -360,6 +363,13 @@ out:
          kfree(np);
      }
      revert_creds(old_cred);
@@ -43,19 +45,29 @@ diff --git a/kernel/manager/throne_tracker.c b/kernel/manager/throne_tracker.c
 +    /* Both legacy rename hooks and modern fsnotify scans converge here. */
 +    susfs_parse_priority_app_strings();
 +#endif
++#ifdef CONFIG_KSU_SUSFS_SUS_PATH
++    susfs_parse_sus_path_app_strings();
++#endif
  }
  
  void track_throne(unsigned int flags)
 diff --git a/kernel/supercall/dispatch.c b/kernel/supercall/dispatch.c
+index c23a7cb4..5e936c6c 100644
 --- a/kernel/supercall/dispatch.c
 +++ b/kernel/supercall/dispatch.c
-@@ -1168,6 +1168,12 @@
+@@ -1168,6 +1168,18 @@ int ksu_handle_susfs_cmd(unsigned int cmd, void __user **arg)
          return 0;
      }
  #endif // #ifdef CONFIG_KSU_SUSFS_SUS_MAP
 +#ifdef CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER
 +    case CMD_SUSFS_SET_PRIORITY_UID_FILTER: {
 +        susfs_set_priority_uid_filter(arg);
++        return 0;
++    }
++#endif
++#ifdef CONFIG_KSU_SUSFS_SUS_PATH
++    case CMD_SUSFS_SET_SUS_PATH_UID_FILTER: {
++        susfs_set_sus_path_uid_filter(arg);
 +        return 0;
 +    }
 +#endif

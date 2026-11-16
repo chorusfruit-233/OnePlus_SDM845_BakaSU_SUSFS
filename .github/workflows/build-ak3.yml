@@ -327,7 +327,7 @@ jobs:
       - name: Test kernel-only boot image installation
         run: python3 tests/host/test-ak3-ramdisk.py --anykernel anykernel3
 
-      - name: Test SUSFS priority filter and Hybrid Mount source regressions
+      - name: Test SUSFS UID filters and Hybrid Mount source regressions
         run: |
           set -euo pipefail
           mkdir -p artifacts/component-tests
@@ -371,13 +371,13 @@ jobs:
           make O=out ARCH='${{ steps.config.outputs.arch }}' \
             headers_install INSTALL_HDR_PATH="$GITHUB_WORKSPACE/kernel/out/usr"
 
-      - name: Compile SUSFS priority filter disabled
+      - name: Compile SUSFS path filter with priority filter and logging disabled
         run: |
           set -euo pipefail
           mkdir -p kernel/out-priority-off
           cp kernel/out/.config kernel/out-priority-off/.config
           kernel/scripts/config --file kernel/out-priority-off/.config \
-            --disable KSU_SUSFS_PRIORITY_UID_FILTER
+            --disable KSU_SUSFS_PRIORITY_UID_FILTER --disable KSU_SUSFS_ENABLE_LOG
           make -C kernel O=out-priority-off ARCH=arm64 olddefconfig
           grep -qx '# CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER is not set' \
             kernel/out-priority-off/.config
@@ -583,9 +583,9 @@ jobs:
           scripts/package-ak3.sh anykernel3 \
             kernel/out/arch/arm64/boot/Image.gz-dtb \
             ak3/anykernel.sh "artifacts/$package"
-          (cd artifacts && sha256sum "$package" > SHA256SUMS)
           cp kernel/out/arch/arm64/boot/Image.gz-dtb artifacts/
           cp configs/droidspaces-backports.json configs/security-backports.json artifacts/
+          cp configs/vendored-upstreams.json docs/upstream-update-20261116.md artifacts/
           cp docs/security-advisories-20261105.json docs/custom-patch-audit-20261105.json artifacts/
           {
             echo "builder=$(git rev-parse HEAD)"
@@ -643,6 +643,10 @@ jobs:
             echo "anykernel3=$(git -C anykernel3 rev-parse HEAD)"
             echo "firmware_sha256=$(sha256sum kernel/firmware/htc_9271.fw kernel/firmware/rt2870.bin kernel/firmware/mt7601u.bin | tr '\n' ';')"
           } > artifacts/build-info.txt
+          (cd artifacts && sha256sum "$package" Image.gz-dtb build-info.txt \
+            source-revisions.json vendored-upstreams.json upstream-update-20261116.md \
+            droidspaces-backports.json security-backports.json \
+            security-advisories-20261105.json custom-patch-audit-20261105.json > SHA256SUMS)
 
       - name: Upload AK3 artifacts
         uses: actions/upload-artifact@v7
@@ -659,29 +663,28 @@ jobs:
         if: ${{ inputs.create_release == true }}
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -n "${{ inputs.release_tag }}" ]]; then
-            tag="${{ inputs.release_tag }}"
-          else
-            tag="v1.0.0-$(date +%Y%m%d-%H%M%S)"
-          fi
-
-          notes="## 构建信息
-
-          $(awk -F= '{printf "- **%s**: \`%s\`\n", $1, $2}' artifacts/build-info.txt)
-
-          ## 使用
-
-          1. 解压 action artifact 后，核对 \`SHA256SUMS\` 再刷入 \`*-AK3.zip\`；
-          2. 本 release 的资产即 artifact 内对应文件，校验值见 \`SHA256SUMS\`。"
-
+          tag="${RELEASE_TAG:-v1.0.0-$(date +%Y%m%d-%H%M%S)}"
+          git check-ref-format "refs/tags/$tag"
+          {
+            cat docs/upstream-update-20261116.md
+            printf '\n## 本次构建\n\n'
+            printf 'CI: %s/%s/actions/runs/%s\n\n' "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID"
+            printf '源码: `%s`\n\n' "$GITHUB_SHA"
+            printf '刷入 `*-AK3.zip` 前核对 `SHA256SUMS`；组件提交见 `build-info.txt` 和 `source-revisions.json`。\n'
+          } > artifacts/release-notes.md
           gh release create "$tag" \
             artifacts/*-AK3.zip artifacts/SHA256SUMS \
             artifacts/build-info.txt artifacts/source-revisions.json artifacts/Image.gz-dtb \
+            artifacts/vendored-upstreams.json artifacts/upstream-update-20261116.md \
+            artifacts/droidspaces-backports.json artifacts/security-backports.json \
+            artifacts/security-advisories-20261105.json artifacts/custom-patch-audit-20261105.json \
+            --target "$GITHUB_SHA" \
             --title "OnePlus 6/6T BakaSU + SUSFS $(date +%Y-%m-%d)" \
-            --notes "$notes"
+            --notes-file artifacts/release-notes.md
           echo "Created release: $tag"
 
       - name: Save compiler cache

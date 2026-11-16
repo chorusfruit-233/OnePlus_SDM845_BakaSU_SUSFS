@@ -5,7 +5,8 @@
   "runtime": {
     "repository": "https://github.com/ravindu644/Droidspaces-OSS",
     "required_commit": "3132cc9311c5e2582a9c47c40476925b3a9a2c57",
-    "requirement": "Newer than v7.1.0; includes new-mount-API fallback"
+    "requirement": "v7.2.0 includes the required new-mount-API fallback (minimum commit retained above)",
+    "tested_release": "v7.2.0"
   },
   "preserved": {
     "pidfd_base": "already present",

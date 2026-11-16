@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#define XATTR_NAME_CAPS "security.capability"
 
 #undef assert
 #define assert(x) do { if (!(x)) { fprintf(stderr, "FAIL %d: %s\n", __LINE__, #x); exit(1); } } while (0)
@@ -31,6 +32,7 @@ static bool in_compat_syscall(void) { return compat_mode; }
 #define ENODATA 61
 #endif
 #define EINVAL 22
+#define EROFS 30
 #define EOPNOTSUPP 95
 #define HYBRIDMOUNT_MAGIC_SIG 0
 #define likely(x) (x)
@@ -71,15 +73,15 @@ struct super_operations { int (*drop_inode)(struct inode *); void (*evict_inode)
 struct dentry;
 struct xattr_handler {
     int (*get)(const struct xattr_handler *, struct dentry *, struct inode *, const char *, void *, size_t);
-    void (*set)(void);
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5,4,0)
+    int (*set)(const struct xattr_handler *, struct dentry *, struct inode *, const char *, const void *, size_t, int);
+#ifdef HM_HAVE_XATTR__GET
     int (*__get)(const struct xattr_handler *, struct dentry *, struct inode *, const char *, void *, size_t);
 #endif
 };
 struct export_operations { int (*encode_fh)(struct inode *,u32 *,int *,struct inode *); };
-struct super_block { const struct super_operations *s_op; const struct export_operations *s_export_op; const struct xattr_handler **s_xattr; int s_active; };
+struct super_block { const struct super_operations *s_op; const struct export_operations *s_export_op; const struct xattr_handler **s_xattr; int s_active; bool readonly; };
 static void atomic_inc(int *value) { ++*value; }
-struct inode { const struct inode_operations *i_op; const struct file_operations *i_fop; unsigned long i_flags,i_ino; int i_mode; void *i_private; };
+struct inode { const struct inode_operations *i_op; const struct file_operations *i_fop; unsigned long i_flags,i_ino; int i_mode; void *i_private; struct super_block *i_sb; };
 struct dentry { struct inode *inode; };
 struct path { struct dentry *dentry; void *mnt; };
 struct list_head { int unused; };
@@ -92,7 +94,7 @@ struct hybridmount_dir_node {
     struct hybridmount_rule *owner; int rcu;
 };
 struct hybridmount_rule {
-    struct path r_path,parent_path; struct hybridmount_dir_node *this_dir,*parent_dir;
+    struct path r_path,parent_path,native_path; struct hybridmount_dir_node *this_dir,*parent_dir;
     unsigned long v_ino; u32 v_hash; unsigned int target_uid;
     u16 v_len,r_len,child_len,flags;
     struct list_head list_node,topology_node;
@@ -104,7 +106,7 @@ static struct hybridmount_rule *hybridmount_child_for_uid(struct hybridmount_chi
     const char *name,size_t len,u32 hash,uid_t uid,bool exact,int *index) { return NULL; }
 struct hm_iop { struct inode_operations fake_iop; const struct inode_operations *orig_iop; struct hybridmount_dir_node *dir_node; int rcu; };
 struct hm_fop { struct file_operations fake_fop; const struct file_operations *orig_fop; struct hybridmount_dir_node *dir_node; int rcu; };
-struct hm_inode_info { struct path r_path; };
+struct hm_inode_info { struct path r_path,native_path; };
 struct hm_sop { struct super_operations fake_sop; const struct super_operations *orig_sop; struct export_operations fake_eop; const struct export_operations *orig_eop; const struct xattr_handler **orig_xattr,**fake_xattr; struct super_block *sb; struct list_head list; };
 struct hm_xattr_proxy { struct xattr_handler fake; const struct xattr_handler *orig; };
 struct dir_context { loff_t pos; unsigned long ino; };
@@ -169,7 +171,18 @@ static bool dir_emit(struct dir_context *ctx,const char *name,int len,unsigned l
 static int native_get(const struct xattr_handler *h,struct dentry *d,struct inode *i,const char *n,void *b,size_t s) { assert(i && i->i_op==&native_iops); return 71; }
 static int __vfs_getxattr(struct dentry *d,struct inode *i,const char *n,void *b,size_t s) { return native_get(NULL,d,i,n,b,s); }
 static const char *xattr_full_name(const struct xattr_handler *h,const char *n) { return n; }
-static void hm_xattr_set(void) {}
+#define IDMAP_ARG
+#define IDMAP_CALL
+#define IDMAP_PATH(path)
+static bool sb_rdonly(const struct super_block *sb) { return sb->readonly; }
+static int vfs_setxattr(struct dentry *d, const char *name, const void *value, size_t size, int flags) {
+    assert(d->inode == &source_inode && !strcmp(name, "user.test") && value && size == 1 && flags == 2);
+    return -EOPNOTSUPP;
+}
+static int vfs_removexattr(struct dentry *d, const char *name) {
+    assert(d->inode == &source_inode && !strcmp(name, "user.test"));
+    return 0;
+}
 static int hybridmount_hijacked_drop_inode(struct inode *i) { return 0; }
 static void hybridmount_hijacked_evict_inode(struct inode *i) {}
 static struct hm_sop *hm_get_hm_sop(const struct super_operations *ops) { return NULL; }
@@ -246,9 +259,20 @@ int main(int argc,char **argv) {
         assert(iop_frees==1 && fop_frees==0 && retirements==1);
         assert(!fop.dir_node);
         assert(inode.i_op==&native_iops && inode.i_fop==&native_fops);
+    } else if(!strcmp(mode,"xattr-write")) {
+        struct super_block backing_sb = {0};
+        struct hm_xattr_proxy proxy = {0};
+        struct hm_inode_info info = {.r_path={&source_dentry,NULL}};
+        struct inode inode = {.i_op=&hm_file_iops,.i_private=&info};
+        struct dentry target = {&inode};
+        source_inode.i_sb = &backing_sb;
+        assert(hm_xattr_set(&proxy.fake,&target,&inode,"user.test","x",1,2) == -EOPNOTSUPP);
+        assert(hm_xattr_set(&proxy.fake,&target,&inode,"user.test",NULL,0,0) == 0);
+        backing_sb.readonly = true;
+        assert(hm_xattr_set(&proxy.fake,&target,&inode,"user.test",NULL,0,0) == -EROFS);
     } else {
         struct xattr_handler orig={.get=native_get};
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0) && LINUX_VERSION_CODE < KERNEL_VERSION(5,4,0)
+#ifdef HM_HAVE_XATTR__GET
         orig.__get=native_get;
 #endif
         const struct xattr_handler *handlers[]={&orig,NULL}; struct super_operations ops={0};
@@ -257,13 +281,15 @@ int main(int argc,char **argv) {
         struct inode inode={.i_op=&hm_file_iops,.i_private=&info}; struct dentry d={&inode};
         if(!strcmp(mode,"xattr-native")) inode.i_op=&native_iops;
         if(!strcmp(mode,"xattr-virtual")) info.r_path.dentry=NULL;
+        bool caps = !strcmp(mode,"xattr-capability");
+        const char *name = caps ? XATTR_NAME_CAPS : "security.selinux";
         int result;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0) && LINUX_VERSION_CODE < KERNEL_VERSION(5,4,0)
-        result=sb.s_xattr[0]->__get(sb.s_xattr[0],&d,&inode,"security.selinux",NULL,0);
+#ifdef HM_HAVE_XATTR__GET
+        result=sb.s_xattr[0]->__get(sb.s_xattr[0],&d,&inode,name,NULL,0);
 #else
-        result=sb.s_xattr[0]->get(sb.s_xattr[0],&d,&inode,"security.selinux",NULL,0);
+        result=sb.s_xattr[0]->get(sb.s_xattr[0],&d,&inode,name,NULL,0);
 #endif
-        assert(result==(!strcmp(mode,"xattr-virtual") ? -ENODATA : 71));
+        assert(result==((caps || !strcmp(mode,"xattr-virtual")) ? -ENODATA : 71));
         free((void *)sb.s_xattr); free(container_of(sb.s_op,struct hm_sop,fake_sop));
     }
     printf("PASS: VFS semantics %s\n",mode); return 0;
