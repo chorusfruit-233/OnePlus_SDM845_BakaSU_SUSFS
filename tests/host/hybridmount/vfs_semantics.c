@@ -175,6 +175,7 @@ static const char *xattr_full_name(const struct xattr_handler *h,const char *n) 
 #define IDMAP_CALL
 #define IDMAP_PATH(path)
 static bool sb_rdonly(const struct super_block *sb) { return sb->readonly; }
+#define IS_RDONLY(inode) sb_rdonly((inode)->i_sb)
 static int vfs_setxattr(struct dentry *d, const char *name, const void *value, size_t size, int flags) {
     assert(d->inode == &source_inode && !strcmp(name, "user.test") && value && size == 1 && flags == 2);
     return -EOPNOTSUPP;

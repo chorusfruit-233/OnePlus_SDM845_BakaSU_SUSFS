@@ -376,7 +376,7 @@
     },
     {
       "file": "patches/lineage-4.9/hybridmount-4.9.patch",
-      "sha256": "85788886e8fe9a3a6a01872d3cdf03deaaf949e2ae9865f9821228b279738b78",
+      "sha256": "371a3d3003892d216e6051505b59c7e6e4816c2fee4688394e6ff6adc013dba3",
       "group": "Hybrid Mount",
       "review": "Shared user-page parser, RCU/SRCU reader ownership, inode eviction, rule replacement, virtual directory topology, keyring privilege boundary.",
       "result": "fixed",
@@ -393,7 +393,7 @@
         "fs/hybridmount/hybridmount.c",
         "fs/hybridmount/hybridmount.h"
       ],
-      "followup_review": "2026-11-16: upstream refresh; see docs/upstream-update-20261116.md for retained hardening and compatibility boundaries."
+      "followup_review": "2026-11-16: retain shared-page snapshots while syncing upstream lifetime/permission fixes; use equivalent 4.9 IS_RDONLY(inode) for the backing-superblock xattr guard. See docs/upstream-update-20261116.md."
     },
     {
       "file": "patches/lineage-4.9/kernel-4.9-adaptation.patch",
@@ -754,7 +754,7 @@
     "drivers/android/binder.c": "637a4b9c59a9974b1e371dd49ddfcc1e0fd2fb4a5e8aa8d35b0ab12514102771",
     "drivers/hid/hid-core.c": "547cab3499d08e7cc195f01c4f8ef48b1c80ec6686acc0d2e5ad1617354f8d08",
     "drivers/rekernel/rekernel.c": "a938df7f5e95c3402ccbe40a971d0606306c5daee08a6ce80fee98a2c3e4109a",
-    "fs/hybridmount/hybridmount.c": "5d4a1e768ee4564f9d5a06ef1b89b6c4a4f9f41c000c0d6d0a79f82d027008be",
+    "fs/hybridmount/hybridmount.c": "423213d24c44bf783f8bfd1055f4257c26ad612af797a41885c3d7af2082e4cf",
     "fs/susfs.c": "a27e4a0a054c67f6a8015ceabd2dd791dc4aedd3e7ab46e9e73b1f05c49a01bb",
     "net/bluetooth/rfcomm/sock.c": "147b146d8125c88853101de01344d7f1699758fafb6e1e89fa00223fb2f22abe",
     "net/bluetooth/sco.c": "302f842d00336f871420578524c32bfdbcae6a8b11aabfc2ebed1ce6be4186cf",

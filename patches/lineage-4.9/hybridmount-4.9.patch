@@ -1785,7 +1785,7 @@ new file mode 100644
 +        struct hm_inode_info *info = inode->i_private;
 +        const char *full_name;
 +        if (unlikely(!info || !info->r_path.dentry)) return -ENODATA;
-+        if (sb_rdonly(d_backing_inode(info->r_path.dentry)->i_sb)) return -EROFS;
++        if (IS_RDONLY(d_backing_inode(info->r_path.dentry))) return -EROFS;
 +        full_name = xattr_full_name(handler, name);
 +        if (buffer)
 +            return vfs_setxattr(IDMAP_PATH(info->r_path) info->r_path.dentry, full_name, buffer, size, flags);

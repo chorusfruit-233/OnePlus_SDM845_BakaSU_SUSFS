@@ -30,7 +30,7 @@
 - SUSFS：接入 `0x55554` 路径 UID 允许列表命令，安装或卸载应用后重新解析 UID。路径过滤采用上游 v2.4 行为，不再依赖旧的卸载标记和文件所有者豁免；配置的应用 ID 可见已标记路径。使用新功能需要支持 v2.4.0 的 SUSFS 用户态工具。
 - SUSFS 4.9：保留 inode `i_state` 标志存储；两个 UID 列表都使用已加固的 `packages.list` 解析，保留短读、长度和整数检查、错误回滚、刷新代次保护、凭据恢复及 NULL 安全的 RCU 释放。目录过滤使用真实文件的 superblock，移除旧的 FUSE `/data` 映射。关闭 priority filter 或日志时仍能编译路径过滤。
 - SELinux：继续使用 BakaSU 的 NonGKI 自动 hooks 和本地 legacy policy 适配；官方 SUSFS 中面向 GKI `selinux_state` 的手动 setxattr/策略 hooks 不套用到这个后端。本次版本号更新不代表这些 GKI hooks 已在 4.9 上实现。
-- Hybrid Mount：同步 backing 权限检查、noexec/nodev、set-ID/capability 处理、原生目录隔离、只读 backing 文件缓存、独立文件位置、dentry 回调与生命周期修复。保留本树 statx ABI、KEYS 依赖及用户共享页请求快照，避免重新引入并发修改请求的问题。
+- Hybrid Mount：同步 backing 权限检查、noexec/nodev、set-ID/capability 处理、原生目录隔离、只读 backing 文件缓存、独立文件位置、dentry 回调与生命周期修复。使用 4.9 的 `IS_RDONLY(inode)` 保留只读 backing 文件系统的 xattr 写保护；保留本树 statx ABI、KEYS 依赖及用户共享页请求快照，避免重新引入并发修改请求的问题。
 - Droidspaces：v7.2.0 的 IPv4/IPv6 REJECT 配置已具备；仍使用真实 V2 freezer，跳过上游的固定 `frozen 0` 占位实现。新 mount API 的 systemd 回退由 Droidspaces 用户态提供；保留 WALT，因此仍不提供 CFS CPU 配额。
 
 ## 验证与产物

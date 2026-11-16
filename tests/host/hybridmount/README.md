@@ -3,7 +3,7 @@
 Imported from [Hybrid-Mount/meta-hybrid_mount](https://github.com/Hybrid-Mount/meta-hybrid_mount/tree/f5db43f0ea54498440c2a2522bc0bd0941e9146d/tests/kernel)
 at `f5db43f0ea54498440c2a2522bc0bd0941e9146d`. Each file retains its upstream
 license. Python paths are adapted for this repository and the prepared 4.9 source;
-the C fixtures are unchanged.
+the xattr fixture also models the equivalent 4.9 `IS_RDONLY(inode)` API.
 
 Run `python3 tests/host/run-hybridmount-tests.py --source kernel` from the builder.
 The fixtures extract production functions, inject allocation/ownership failures,
