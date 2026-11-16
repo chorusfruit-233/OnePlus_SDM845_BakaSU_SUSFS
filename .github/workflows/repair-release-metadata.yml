@@ -1,0 +1,108 @@
+name: Repair release metadata from a tested artifact
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_run:
+        description: Successful build run containing the original AK3 artifact
+        required: true
+        type: string
+      release_tag:
+        description: Existing release tag pointing to that tested builder commit
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: repair-release-metadata-${{ inputs.release_tag }}
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      SOURCE_RUN: ${{ inputs.source_run }}
+      RELEASE_TAG: ${{ inputs.release_tag }}
+    steps:
+      - name: Verify the tested commit and download original assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$SOURCE_RUN" =~ ^[0-9]+$ ]]
+          git check-ref-format "refs/tags/$RELEASE_TAG"
+          gh api "repos/$GH_REPO/actions/runs/$SOURCE_RUN" > run.json
+          jq -e '.status == "completed" and .conclusion == "success" and
+            .path == ".github/workflows/build-ak3.yml"' run.json
+          gh api "repos/$GH_REPO/git/ref/tags/$RELEASE_TAG" > tag.json
+          jq -e --arg sha "$(jq -r .head_sha run.json)" \
+            '.object.type == "commit" and .object.sha == $sha' tag.json
+          gh run download "$SOURCE_RUN" --name OnePlus6-6T-lineage-4.9-ak3 --dir artifacts
+          gh release download "$RELEASE_TAG" --pattern Image.gz-dtb \
+            --pattern '*-AK3.zip' --dir published
+
+      - name: Correct the version label and regenerate checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+          import re
+          import zipfile
+          import zlib
+
+          root = Path('artifacts')
+          info_path = root / 'build-info.txt'
+          text = info_path.read_text()
+          info = dict(line.split('=', 1) for line in text.splitlines())
+          run = json.loads(Path('run.json').read_text())
+          assert info['builder'] == run['head_sha']
+          sources = json.loads((root / 'source-revisions.json').read_text())['sources']
+          assert sources['kernel']['prepared'] == info['kernel']
+          assert sources['bakasu']['prepared'] == info['bakasu']
+          sums_path = root / 'SHA256SUMS'
+          sums = dict((name.strip(), digest) for digest, name in
+                      (line.split(maxsplit=1) for line in sums_path.read_text().splitlines()))
+          for name, digest in sums.items():
+              assert Path(name).name == name
+              assert hashlib.sha256((root / name).read_bytes()).hexdigest() == digest, name
+          version = json.loads((root / 'vendored-upstreams.json').read_text())['susfs']['version']
+          assert re.fullmatch(r'v[0-9]+\.[0-9]+\.[0-9]+', version)
+          image = (root / 'Image.gz-dtb').read_bytes()
+          raw = zlib.decompressobj(31).decompress(image)
+          assert ('susfs is initialized! version: ' + version).encode() in raw
+          zips = list(root.glob('*-AK3.zip'))
+          assert len(zips) == 1
+          with zipfile.ZipFile(zips[0]) as archive:
+              assert archive.testzip() is None
+              assert archive.read('Image.gz-dtb') == image
+          for name in ('Image.gz-dtb', zips[0].name):
+              assert hashlib.sha256((Path('published') / name).read_bytes()).hexdigest() == sums[name]
+          text, count = re.subn(r'^susfs=v[^\n]+?-vendored ',
+                                'susfs=' + version + '-vendored ', text, flags=re.M)
+          assert count == 1
+          info_path.write_text(text)
+          sums_path.write_text(''.join(
+              hashlib.sha256((root / name).read_bytes()).hexdigest() + '  ' + name + '\n'
+              for name in sums))
+          print('Verified original CI images; corrected SUSFS metadata to', version)
+          PY
+
+      - name: Publish and verify corrected metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release upload "$RELEASE_TAG" artifacts/build-info.txt artifacts/SHA256SUMS --clobber
+          gh release download "$RELEASE_TAG" --pattern build-info.txt \
+            --pattern SHA256SUMS --dir verified
+          cmp artifacts/build-info.txt verified/build-info.txt
+          cmp artifacts/SHA256SUMS verified/SHA256SUMS
+          printf 'Verified metadata repaired for `%s` using tested run `%s`.\n' \
+            "$RELEASE_TAG" "$SOURCE_RUN" >> "$GITHUB_STEP_SUMMARY"
