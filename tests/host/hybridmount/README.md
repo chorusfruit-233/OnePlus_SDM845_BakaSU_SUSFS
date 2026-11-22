@@ -1,7 +1,7 @@
 # Hybrid Mount regression fixtures
 
-Imported from [Hybrid-Mount/meta-hybrid_mount](https://github.com/Hybrid-Mount/meta-hybrid_mount/tree/f5db43f0ea54498440c2a2522bc0bd0941e9146d/tests/kernel)
-at `f5db43f0ea54498440c2a2522bc0bd0941e9146d`. Each file retains its upstream
+Imported from [Hybrid-Mount/meta-hybrid_mount](https://github.com/Hybrid-Mount/meta-hybrid_mount/tree/b0fa65581aff1d4a49a11d0f0e66c69ade7e6fca/tests/kernel)
+at `b0fa65581aff1d4a49a11d0f0e66c69ade7e6fca`. Each file retains its upstream
 license. Python paths are adapted for this repository and the prepared 4.9 source;
 the xattr fixture also models the equivalent 4.9 `IS_RDONLY(inode)` API.
 

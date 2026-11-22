@@ -117,18 +117,14 @@ git -C "$kernel_root" apply --whitespace=nowarn \
 
 # USB Wi-Fi firmware embedded via CONFIG_EXTRA_FIRMWARE (ath9k_htc,
 # rt2800usb and mt7601u). Sourced from the official linux-firmware tree.
-fetch_firmware() {
-    local url=$1 dest=$2 min_size=$3
-    mkdir -p "$(dirname "$dest")"
-    curl -fsSL --retry 3 -o "$dest" "$url"
-    test -s "$dest"
-    test "$(stat -c %s "$dest")" -ge "$min_size"
-    head -c 200 "$dest" | grep -q '<!DOCTYPE html>' && return 1 || true
-}
-FW_BASE=https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git/plain
-fetch_firmware "$FW_BASE/htc_9271.fw" "$kernel_root/firmware/htc_9271.fw" 40000
-fetch_firmware "$FW_BASE/rt2870.bin" "$kernel_root/firmware/rt2870.bin" 4000
-fetch_firmware "$FW_BASE/mediatek/mt7601u.bin" "$kernel_root/firmware/mt7601u.bin" 40000
+firmware_manifest="$script_dir/../configs/vendored-upstreams.json"
+firmware_url=$(jq -er .linux_firmware.repo "$firmware_manifest")
+firmware_commit=$(jq -er .linux_firmware.commit "$firmware_manifest")
+while IFS=$'\t' read -r name expected; do
+    dest="$kernel_root/firmware/${name##*/}"
+    curl -fsSL --retry 3 "$firmware_url/plain/$name?id=$firmware_commit" -o "$dest"
+    printf '%s  %s\n' "$expected" "$dest" | sha256sum --check --status
+done < <(jq -r '.linux_firmware.files | to_entries[] | [.key, .value] | @tsv' "$firmware_manifest")
 
 test -L "$kernel_root/drivers/kernelsu"
 test -f "$kernel_root/fs/susfs.c"

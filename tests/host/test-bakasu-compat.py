@@ -88,6 +88,10 @@ def main():
                               "#define is_compat_task() compat_task\n"
                               "static inline void *compat_ptr(compat_uptr_t p) "
                               "{ return (void *)(unsigned long)p; }\n",
+            # The host supplies the task state for the ARM64 compatibility wrapper.
+            "compat/kernel_compat.h": "#pragma once\n#ifdef CONFIG_COMPAT\n"
+                                      "#include <linux/compat.h>\n"
+                                      "#define ksu_is_compat_task() is_compat_task()\n#endif\n",
             "asm/unistd.h": "#define __NR_reboot 142\n#define __NR_execveat 281\n",
             "asm/syscall.h": "/* kernel syscall services are not used here */\n",
         }

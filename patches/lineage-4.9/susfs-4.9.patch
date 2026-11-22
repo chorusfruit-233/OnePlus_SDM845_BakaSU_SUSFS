@@ -1,9 +1,9 @@
-SUSFS v2.4.0 self-contained LineageOS 4.9 port, synchronized 2026-11-16
+SUSFS v2.4.0 self-contained LineageOS 4.9 port, synchronized 2026-11-22
 
 Official: https://gitlab.com/simonpunk/susfs4ksu.git gki-android14-6.1 @ f76b81f2a6bf98e4029cc0c823c054edbec29803
 Core update: f76b81f2a6bf98e4029cc0c823c054edbec29803 (path UID allowlist and priority UID filter).
-4.9 hooks: https://github.com/JackA1ltman/NonGKI_Kernel_Build_2nd.git mainline @ bbe032eb06c50d24a9207bf2ece5e25cf2460bd0
-BakaSU automatic SELinux integration: c0c96a4087285ff82d71003d4186629de1c46b3c,
+4.9 hooks: https://github.com/JackA1ltman/NonGKI_Kernel_Build_2nd.git mainline @ ec069a4e34f992d602a6b40d2e211df2516e2865
+BakaSU automatic SELinux integration: 2734e0bc155759955880f5fb99be640fc5b92156,
 adapted separately; GKI manual selinux_state hooks are not used on this 4.9 tree.
 
 Retains non-GKI inode i_state storage, fsnotify ABI, LineageOS proc layouts,

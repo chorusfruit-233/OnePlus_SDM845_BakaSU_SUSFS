@@ -1,5 +1,5 @@
 # BakaSU Linux 4.9 adaptation.
-# Base: c0c96a4087285ff82d71003d4186629de1c46b3c.
+# Base: 2734e0bc155759955880f5fb99be640fc5b92156.
 # Legacy module hooks, preinit ownership/failure handling and an unambiguous blacklist symbol.
 
 diff --git a/kernel/feature/module_blacklist.c b/kernel/feature/module_blacklist.c
@@ -148,7 +148,7 @@ index dd3ba606..eca78791 100644
  #error Unsupported hook type
  #endif
 diff --git a/kernel/preinit/preinit.h b/kernel/preinit/preinit.h
-index 9e49bcd8..62001f83 100644
+index 1ba59075..a583d4ef 100644
 --- a/kernel/preinit/preinit.h
 +++ b/kernel/preinit/preinit.h
 @@ -2,6 +2,7 @@
@@ -159,7 +159,7 @@ index 9e49bcd8..62001f83 100644
  #include <asm/ptrace.h>
  
  #ifndef KSU_NO_PREINIT
-@@ -52,7 +53,7 @@ static inline void ksu_preinit_handle_execve_manual(const char **filename, struc
+@@ -51,7 +52,7 @@ static inline void ksu_preinit_handle_execve_manual(const char **filename, struc
  #elif defined(CONFIG_KSU_SUSFS)
  static inline int ksu_setup_preinit_file(struct filename **filename_ptr, struct user_arg_ptr *argv_user)
  {
@@ -169,9 +169,10 @@ index 9e49bcd8..62001f83 100644
  static inline int ksu_preinit_handle_post_execveat(int *fd, struct filename **filename_ptr, void *argv_user,
                                                     void *envp_user, int *flags, int *retval, int *preinit_fd)
 diff --git a/kernel/tools/code_generation/preinit_runner/preinit_runner.mk b/kernel/tools/code_generation/preinit_runner/preinit_runner.mk
+index 4c6546b3..043e3233 100644
 --- a/kernel/tools/code_generation/preinit_runner/preinit_runner.mk
 +++ b/kernel/tools/code_generation/preinit_runner/preinit_runner.mk
-@@ -47,7 +47,6 @@ targets += preinit/runner.elf
+@@ -56,7 +56,6 @@ targets += preinit/runner.elf
  $(obj)/preinit/blob.o: $(KSU_RUNNER_TARGET)
  asflags-y += -DKSU_PREINIT_RUNNER_BIN=\"$(KSU_RUNNER_BIN)\"
  else
@@ -181,15 +182,15 @@ diff --git a/kernel/tools/code_generation/preinit_runner/preinit_runner.mk b/ker
  endif
  
 diff --git a/kernel/tools/kernel_compat.mk b/kernel/tools/kernel_compat.mk
-index 39e5ab9b..db858f38 100644
+index 45a386cd..21d43561 100644
 --- a/kernel/tools/kernel_compat.mk
 +++ b/kernel/tools/kernel_compat.mk
-@@ -359,12 +359,14 @@ $(info -- $(REPO_NAME)/compat: found KERNEL_PARAM_FL_NOARG)
+@@ -359,9 +359,11 @@ $(info -- $(REPO_NAME)/compat: found KERNEL_PARAM_FL_NOARG)
  ccflags-y += -DKSU_COMPAT_HAS_KERNEL_PARAM_FL_NOARG
  endif
  
 -ifeq ($(shell grep -q "ksu_handle_init_module" $(srctree)/kernel/module/main.c 2>/dev/null; echo $$?),0)
-+# Legacy kernels keep the two module syscalls in kernel/module.c.
++# Legacy kernels keep these two syscalls in kernel/module.c.
 +KSU_MODULE_SOURCE := $(firstword $(wildcard $(srctree)/kernel/module/main.c $(srctree)/kernel/module.c))
 +ifeq ($(shell grep -q "ksu_handle_init_module" $(KSU_MODULE_SOURCE) 2>/dev/null; echo $$?),0)
    $(info -- $(REPO_NAME)/compat: found ksu_handle_init_module)
@@ -198,8 +199,3 @@ index 39e5ab9b..db858f38 100644
      $(info -- $(REPO_NAME)/compat: found ksu_handle_finit_module)
      ccflags-y += -DKSU_COMPAT_HAS_INSMOD_HOOK
    else
-     $(error You must hook both init_module and finit_module if you want module blacklist)
-   endif
--endif
-\ No newline at end of file
-+endif

@@ -84,7 +84,7 @@ jobs:
       ANYKERNEL_REF: ${{ inputs.anykernel_ref || 'master' }}
     steps:
       - name: Checkout builder metadata
-        uses: actions/checkout@v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Resolve upstream commits
         id: meta
@@ -132,7 +132,7 @@ jobs:
 
       - name: Check unchanged-input marker
         id: marker
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .build-marker
           key: built-v1-${{ steps.meta.outputs.build_key }}
@@ -169,7 +169,7 @@ jobs:
       CCACHE_DIR: ${{ github.workspace }}/.ccache
     steps:
       - name: Checkout builder
-        uses: actions/checkout@v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Read configuration
         id: config
@@ -177,6 +177,7 @@ jobs:
         run: |
           set -euo pipefail
           jq -e . "$CONFIG" >/dev/null
+          echo "mihomo_go=$(jq -er .go configs/mihomo-ebpf-test.json)" >> "$GITHUB_OUTPUT"
           for key in kernel_repo kernel_ref kernel_base defconfig arch cross_compile \
                      bakasu_repo cake_repo bbg_repo \
                      kernel_patches_repo rtl8812au_repo anykernel_repo; do
@@ -200,7 +201,7 @@ jobs:
 
       - name: Restore compiler cache
         id: ccache
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .ccache
           key: ccache-v1-${{ runner.os }}-${{ needs.resolve-inputs.outputs.build_key }}
@@ -411,9 +412,9 @@ jobs:
           cp kernel/out/drivers/kernelsu/preinit/runner.elf artifacts/bakasu-tests/
 
       - name: Set up Go for real Mihomo BPF regression tests
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
-          go-version: '1.26.10'
+          go-version: ${{ steps.config.outputs.mihomo_go }}
           cache-dependency-path: tests/device/ebpf-backport/go.sum
 
       - name: Build pinned Mihomo integration tests
@@ -462,7 +463,7 @@ jobs:
 
       - name: Upload Droidspaces syscall results
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: droidspaces-backport-tests
           path: artifacts/droidspaces-tests/
@@ -480,7 +481,7 @@ jobs:
 
       - name: Upload BakaSU execution results
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: bakasu-runtime-tests
           path: artifacts/bakasu-tests/
@@ -489,7 +490,7 @@ jobs:
 
       - name: Upload security audit and fault-injection results
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: security-audit-tests
           path: artifacts/security-tests/
@@ -498,7 +499,7 @@ jobs:
 
       - name: Upload component regression results
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: component-tests
           path: artifacts/component-tests/
@@ -525,7 +526,7 @@ jobs:
 
       - name: Upload Binder freezer execution results
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: binder-freezer-runtime-tests
           path: artifacts/binder-freezer-tests/
@@ -534,7 +535,7 @@ jobs:
 
       - name: Upload cgroup freezer execution results
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: freezer-runtime-tests
           path: artifacts/freezer-tests/
@@ -543,7 +544,7 @@ jobs:
 
       - name: Upload BPF execution results
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ebpf-runtime-tests
           path: artifacts/ebpf-tests/
@@ -575,6 +576,9 @@ jobs:
           cp "$(git -C kernel rev-parse --absolute-git-dir)/source-revisions.json" artifacts/
           bakasu_sha=$(git -C kernel/KernelSU rev-parse --short=8 HEAD)
           susfs_sha=$(sha256sum patches/lineage-4.9/susfs-4.9.patch | cut -c1-8)
+          susfs_version=$(sed -n 's/^#define SUSFS_VERSION "\([^"]*\)"$/\1/p' kernel/include/linux/susfs.h)
+          test "$susfs_version" = "$(jq -er .susfs.version configs/vendored-upstreams.json)"
+          test "$(go env GOVERSION)" = "go$(jq -er .go configs/mihomo-ebpf-test.json)"
           droidspaces_sha=$(sha256sum patches/lineage-4.9/droidspaces-4.9.patch | cut -c1-8)
           systemd_sha=$(sha256sum patches/lineage-4.9/droidspaces-backports/*.patch | sha256sum | cut -c1-8)
           package="OnePlus6-6T-BakaSU-${bakasu_sha}-SUSFS-${susfs_sha}-DS7-${droidspaces_sha}-AK3.zip"
@@ -585,7 +589,7 @@ jobs:
             ak3/anykernel.sh "artifacts/$package"
           cp kernel/out/arch/arm64/boot/Image.gz-dtb artifacts/
           cp configs/droidspaces-backports.json configs/security-backports.json artifacts/
-          cp configs/vendored-upstreams.json docs/upstream-update-20261116.md artifacts/
+          cp configs/vendored-upstreams.json docs/upstream-update-20261122.md artifacts/
           cp docs/security-advisories-20261105.json docs/custom-patch-audit-20261105.json artifacts/
           {
             echo "builder=$(git rev-parse HEAD)"
@@ -606,6 +610,9 @@ jobs:
             echo "bakasu_preinit=embedded-static-elf-and-susfs-inline-hooks"
             echo "ak3_installer=$(sha256sum ak3/anykernel.sh | cut -c1-12)"
             echo "boot_installation=kernel-only-preserve-ramdisk"
+            echo "mihomo=$(jq -r .commit configs/mihomo-ebpf-test.json)"
+            echo "mihomo_test_go=$(go env GOVERSION)"
+            echo "linux_firmware=$(jq -r .linux_firmware.commit configs/vendored-upstreams.json)"
             echo "ebpf_scope=experimental-packet-rewrite-cgroup-and-isolated-tc-direct-lookup"
             echo "ebpf_patch=$(sha256sum patches/lineage-4.9/mihomo-ebpf-4.9.patch | cut -c1-12)"
             echo "ebpf_cgroup_patch=$(sha256sum patches/lineage-4.9/mihomo-cgroup-4.9.patch | cut -c1-12)"
@@ -617,7 +624,7 @@ jobs:
             echo "binder_freezer_patch=$(sha256sum patches/lineage-4.9/binder-freezer-4.9.patch | cut -c1-12)"
             echo "binder_freezer_source=$(jq -r .commit configs/binder-freezer.json)"
             echo "binder_freeze_notifications=not-backported"
-            echo "susfs=$(jq -r .susfs.version configs/vendored-upstreams.json)-vendored ($(sha256sum patches/lineage-4.9/susfs-4.9.patch | cut -c1-12))"
+            echo "susfs=$susfs_version-vendored ($(sha256sum patches/lineage-4.9/susfs-4.9.patch | cut -c1-12))"
             echo "hybridmount=$(jq -r .hybridmount.version configs/vendored-upstreams.json)@$(jq -r .hybridmount.commit configs/vendored-upstreams.json) ($(sha256sum patches/lineage-4.9/hybridmount-4.9.patch | cut -c1-12))"
             echo "susfs_upstream=$(jq -r .susfs.commit configs/vendored-upstreams.json)"
             echo "susfs_port=$(jq -r .susfs.port_commit configs/vendored-upstreams.json)"
@@ -644,12 +651,12 @@ jobs:
             echo "firmware_sha256=$(sha256sum kernel/firmware/htc_9271.fw kernel/firmware/rt2870.bin kernel/firmware/mt7601u.bin | tr '\n' ';')"
           } > artifacts/build-info.txt
           (cd artifacts && sha256sum "$package" Image.gz-dtb build-info.txt \
-            source-revisions.json vendored-upstreams.json upstream-update-20261116.md \
+            source-revisions.json vendored-upstreams.json upstream-update-20261122.md \
             droidspaces-backports.json security-backports.json \
             security-advisories-20261105.json custom-patch-audit-20261105.json > SHA256SUMS)
 
       - name: Upload AK3 artifacts
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: OnePlus6-6T-lineage-4.9-ak3
           path: |
@@ -669,8 +676,9 @@ jobs:
           set -euo pipefail
           tag="${RELEASE_TAG:-v1.0.0-$(date +%Y%m%d-%H%M%S)}"
           git check-ref-format "refs/tags/$tag"
+          (cd artifacts && sha256sum --check --status SHA256SUMS)
           {
-            cat docs/upstream-update-20261116.md
+            cat docs/upstream-update-20261122.md
             printf '\n## 本次构建\n\n'
             printf 'CI: %s/%s/actions/runs/%s\n\n' "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID"
             printf '源码: `%s`\n\n' "$GITHUB_SHA"
@@ -679,7 +687,7 @@ jobs:
           gh release create "$tag" \
             artifacts/*-AK3.zip artifacts/SHA256SUMS \
             artifacts/build-info.txt artifacts/source-revisions.json artifacts/Image.gz-dtb \
-            artifacts/vendored-upstreams.json artifacts/upstream-update-20261116.md \
+            artifacts/vendored-upstreams.json artifacts/upstream-update-20261122.md \
             artifacts/droidspaces-backports.json artifacts/security-backports.json \
             artifacts/security-advisories-20261105.json artifacts/custom-patch-audit-20261105.json \
             --target "$GITHUB_SHA" \
@@ -689,7 +697,7 @@ jobs:
 
       - name: Save compiler cache
         if: ${{ !cancelled() && steps.ccache.outcome == 'success' && steps.ccache.outputs.cache-hit != 'true' }}
-        uses: actions/cache/save@v5
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .ccache
           key: ccache-v1-${{ runner.os }}-${{ needs.resolve-inputs.outputs.build_key }}
@@ -703,7 +711,7 @@ jobs:
 
       - name: Cache unchanged-input marker
         if: success() && needs.resolve-inputs.outputs.marker_hit != 'true'
-        uses: actions/cache/save@v5
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .build-marker
           key: built-v1-${{ needs.resolve-inputs.outputs.build_key }}

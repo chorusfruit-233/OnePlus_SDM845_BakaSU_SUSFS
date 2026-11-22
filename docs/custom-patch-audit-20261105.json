@@ -22,7 +22,7 @@
     },
     {
       "file": "patches/lineage-4.9/bakasu-compat-4.9.patch",
-      "sha256": "efbe56ed2313d7a83c5299fa0d146808a8f56d78c8f40e5acaa5d6af52d7bc42",
+      "sha256": "9f200fd5cb93f5eb9f3cf79a93f1b7d95a37fb1b94b082c75dab9162e4e01309",
       "group": "BakaSU compatibility",
       "review": "Preinit filename/FD ownership and retry paths, blacklist symbol collision, host code generation ABI.",
       "result": "no-new-finding",
@@ -34,7 +34,7 @@
         "kernel/tools/code_generation/preinit_runner/preinit_runner.mk",
         "kernel/tools/kernel_compat.mk"
       ],
-      "followup_review": "2026-11-16: upstream preinit -f Makefile fix replaces local KBUILD_SRC override; retain hard failure when required UAPI headers are absent."
+      "followup_review": "2026-11-22: Rebased legacy preinit ownership and module-source discovery after upstream added compatibility probes."
     },
     {
       "file": "patches/lineage-4.9/bakasu-preinit-module-4.9.patch",
@@ -50,30 +50,30 @@
     },
     {
       "file": "patches/lineage-4.9/bakasu-selinux-4.9.patch",
-      "sha256": "57190eac8a493237a3074d607a98f5cd867221d18445da7d025e3817f53d40f9",
+      "sha256": "48afe82706d51e687e96e74593ab922def2d20cd2a3e83c05efa04d60c214d37",
       "group": "BakaSU SELinux",
       "review": "Legacy policy layouts, hook installation rollback, persistence failure propagation and priority-filter configuration guards.",
       "result": "no-new-finding",
       "verification": "Existing ABI/cleanup/integration fault fixtures; SELinux device behavior requires device validation",
       "touched_files": [
-        "kernel/feature/selinux_hide.c",
+        "kernel/feature/selinux_hide/selinux_hide.c",
+        "kernel/feature/selinux_hide/selinux_hide_auto.c",
+        "kernel/feature/selinux_hide/selinux_hide_susfs.c",
         "kernel/tools/susfs_compat.mk"
       ],
-      "followup_review": "2026-11-16: update the strict automatic-hook source version guard to the reviewed SUSFS v2.4.0 port; all architecture, symbol and manual-hook exclusion checks remain required."
+      "followup_review": "2026-11-22: Reviewed the split backends, exact ownership of legacy LSM slots, callback lifetime, rollback and backup pinning."
     },
     {
       "file": "patches/lineage-4.9/bakasu-susfs-sync-4.9.patch",
-      "sha256": "228455754590e6565d204d537c20cf3ce2280574820d033bf5629b43dc511461",
+      "sha256": "f6d206307443d22dc9e002965a12fd3f06fd08aa848a92cf6f8901ff09391f7d",
       "group": "BakaSU SUSFS sync",
       "review": "Feature dependencies, manager/tracker wrapper and compatibility dispatch; main remains tracked.",
       "result": "no-new-finding",
       "verification": "Prepared source compatibility guard, ABI fixtures, phone build",
       "touched_files": [
-        "kernel/Kconfig",
-        "kernel/manager/throne_tracker.c",
-        "kernel/supercall/dispatch.c"
+        "kernel/manager/throne_tracker.c"
       ],
-      "followup_review": "2026-11-16: upstream refresh; see docs/upstream-update-20261116.md for retained hardening and compatibility boundaries."
+      "followup_review": "2026-11-22: Both dispatch cases and package refresh are upstream. Declare the path filter when the priority option is disabled."
     },
     {
       "file": "patches/lineage-4.9/bbg-slot-allow.patch",
@@ -376,7 +376,7 @@
     },
     {
       "file": "patches/lineage-4.9/hybridmount-4.9.patch",
-      "sha256": "371a3d3003892d216e6051505b59c7e6e4816c2fee4688394e6ff6adc013dba3",
+      "sha256": "ab71e4255b7bc5f4e6c1df2e89452aec194c36d70aa52d3b62ce7958cd55c97f",
       "group": "Hybrid Mount",
       "review": "Shared user-page parser, RCU/SRCU reader ownership, inode eviction, rule replacement, virtual directory topology, keyring privilege boundary.",
       "result": "fixed",
@@ -393,7 +393,7 @@
         "fs/hybridmount/hybridmount.c",
         "fs/hybridmount/hybridmount.h"
       ],
-      "followup_review": "2026-11-16: retain shared-page snapshots while syncing upstream lifetime/permission fixes; use equivalent 4.9 IS_RDONLY(inode) for the backing-superblock xattr guard. See docs/upstream-update-20261116.md."
+      "followup_review": "2026-11-22: Reviewed recursive backing rejection, path reference balance and RCU retirement of the published xattr table."
     },
     {
       "file": "patches/lineage-4.9/kernel-4.9-adaptation.patch",
@@ -674,7 +674,7 @@
     },
     {
       "file": "patches/lineage-4.9/susfs-4.9.patch",
-      "sha256": "f5eec37371a0750460a71a835d1aae6eefe534082217aff32b0baec0b25be45d",
+      "sha256": "05f631b99ba019fbada40f5baf929fff781778d95d75b8ba2a40e891902b09ab",
       "group": "SUSFS",
       "review": "Inode hash collisions, string boundaries, first allocation, reverse-rule replacement, readlink ABI and priority-filter publication/fault cleanup.",
       "result": "fixed",
@@ -702,7 +702,7 @@
         "mm/memory.c",
         "security/selinux/avc.c"
       ],
-      "followup_review": "2026-11-16: upstream refresh; see docs/upstream-update-20261116.md for retained hardening and compatibility boundaries."
+      "followup_review": "2026-11-22: The 4.9 donor now uses inode state for both lookup paths. The previous prepared source already included both fixes."
     },
     {
       "file": "patches/tests/freezer-selftest-fortify.patch",
@@ -730,12 +730,13 @@
   "integration_files": [
     {
       "file": "scripts/susfs-inline-hook.sh",
-      "sha256": "01762f2ac34ef0daa479e391cc956d311d1645e337d013efbc1d40604fe723a9"
+      "sha256": "22d42f43891cfc0583b892bca69d4e7405edfafa7ec7dd3029dba47e71124cf0",
+      "followup_review": "2026-11-22: The 4.9 automatic hook moved into its own backend file. The native hook ABI and duplicate-hook checks remain in effect."
     },
     {
       "file": "scripts/prepare-sources.sh",
-      "sha256": "03d8f7fac2823ec755c8d7d6bff1df07d3433e0a50690e518d7bb273ab84696e",
-      "followup_review": "2026-11-16: upstream refresh; see docs/upstream-update-20261116.md for retained hardening and compatibility boundaries."
+      "sha256": "08760f937e05f4bacbaaf5ddcb53f7cac970486b3ec51da99f61ae4baa74a390",
+      "followup_review": "2026-11-22: Pin the three firmware files to the reviewed linux-firmware revision and verify each SHA-256 before building."
     },
     {
       "file": "scripts/source_revisions.py",
@@ -754,7 +755,7 @@
     "drivers/android/binder.c": "637a4b9c59a9974b1e371dd49ddfcc1e0fd2fb4a5e8aa8d35b0ab12514102771",
     "drivers/hid/hid-core.c": "547cab3499d08e7cc195f01c4f8ef48b1c80ec6686acc0d2e5ad1617354f8d08",
     "drivers/rekernel/rekernel.c": "a938df7f5e95c3402ccbe40a971d0606306c5daee08a6ce80fee98a2c3e4109a",
-    "fs/hybridmount/hybridmount.c": "423213d24c44bf783f8bfd1055f4257c26ad612af797a41885c3d7af2082e4cf",
+    "fs/hybridmount/hybridmount.c": "1a24ca8082c1ece25c50f0aca44ef84c8038d5e87b3a1080044d794e3950ebae",
     "fs/susfs.c": "a27e4a0a054c67f6a8015ceabd2dd791dc4aedd3e7ab46e9e73b1f05c49a01bb",
     "net/bluetooth/rfcomm/sock.c": "147b146d8125c88853101de01344d7f1699758fafb6e1e89fa00223fb2f22abe",
     "net/bluetooth/sco.c": "302f842d00336f871420578524c32bfdbcae6a8b11aabfc2ebed1ce6be4186cf",
@@ -764,5 +765,5 @@
     "net/nfc/llcp_core.c": "0195108ac864fd583f539cdb80d68b15ec6939808675edd51b8bc64eba7cc7d9",
     "net/nfc/llcp_sock.c": "c4002101bd2332fabd3287f4f7ea426f05eeb777c9fc7a03670f16aee47983ab"
   },
-  "upstream_refresh_date": "2026-11-16"
+  "upstream_refresh_date": "2026-11-22"
 }

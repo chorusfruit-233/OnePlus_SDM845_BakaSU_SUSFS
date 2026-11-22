@@ -20,6 +20,7 @@ FUNCTIONS = (
     "ksu_selinux_hide_disable",
     "selinux_hide_feature_get",
     "selinux_hide_feature_set",
+    "ksu_selinux_hide_backup_in_use",
     "ksu_selinux_hide_drop_backup_if_unused",
 )
 
@@ -84,10 +85,11 @@ typedef uint64_t u64;
 typedef int (*write_op_fn)(void*,char*,size_t);
 static int original(void *a,char *b,size_t c) {(void)a;(void)b;(void)c;return 0;}
 static int installed(void *a,char *b,size_t c) {(void)a;(void)b;(void)c;return 0;}
-static write_op_fn context_slot, access_slot, setprocattr_slot;
-static write_op_fn *context_write=&context_slot,*access_write=&access_slot;
-static write_op_fn orig_context_write,orig_access_write,ksu_orig_setprocattr;
-static uintptr_t selinux_setprocattr_hook_ptr;
+static write_op_fn context_slot, access_slot, setprocattr_slot, setxattr_slot;
+static write_op_fn *context_write, *access_write;
+static write_op_fn orig_context_write,orig_access_write,ksu_orig_setprocattr,ksu_orig_setxattr;
+static uintptr_t selinux_setprocattr_hook_ptr, selinux_setxattr_hook_ptr;
+static bool ksu_selinux_hide_keep_backup;
 static bool ksu_selinux_hide_running,ksu_selinux_hide_enabled,ksu_selinux_hide_cleanup_pending;
 static int selinux_hide_mutex;
 struct policydb { int unused; };
@@ -107,11 +109,19 @@ static int ksu_patch_text(void *dst,void *value,size_t size,int flags) {
     memcpy(dst,value,size);
     return 0;
 }
-static int ksu_selinux_hide_enable(void) {enable_calls++; return enable_error;}
+static int ksu_selinux_hide_enable(void) {
+    enable_calls++;
+    if (!enable_error) ksu_selinux_hide_keep_backup=true;
+    return enable_error;
+}
 static void reset(bool running) {
-    context_slot=access_slot=setprocattr_slot=installed;
-    orig_context_write=orig_access_write=ksu_orig_setprocattr=original;
+    context_slot=access_slot=setprocattr_slot=setxattr_slot=installed;
+    context_write=&context_slot;
+    access_write=&access_slot;
+    orig_context_write=orig_access_write=ksu_orig_setprocattr=ksu_orig_setxattr=original;
     selinux_setprocattr_hook_ptr=(uintptr_t)&setprocattr_slot;
+    selinux_setxattr_hook_ptr=(uintptr_t)&setxattr_slot;
+    ksu_selinux_hide_keep_backup=running;
     ksu_selinux_hide_running=ksu_selinux_hide_enabled=running;
     ksu_selinux_hide_cleanup_pending=false;
     failing_slot=NULL;
@@ -129,29 +139,34 @@ int main(void) {
     assert(selinux_hide_feature_set(0)==0);
     assert(!ksu_selinux_hide_running && !ksu_selinux_hide_enabled);
     assert(!ksu_selinux_hide_cleanup_pending);
-    assert(!orig_context_write && !orig_access_write && !ksu_orig_setprocattr);
-    assert(context_slot==original && access_slot==original && setprocattr_slot==original);
+    assert(!context_write && !access_write && !selinux_setprocattr_hook_ptr && !selinux_setxattr_hook_ptr);
+    assert(context_slot==original && access_slot==original && setprocattr_slot==original && setxattr_slot==original);
+    assert(orig_context_write==original && orig_access_write==original);
+    assert(ksu_orig_setprocattr==original && ksu_orig_setxattr==original);
     ksu_selinux_hide_drop_backup_if_unused();
-    assert(!backup_policydb && !backup_sidtab && destroy_calls==1);
-    puts("PASS: successful disable restores callbacks and releases unused backup");
+    assert(backup_policydb && backup_sidtab && !destroy_calls);
+    puts("PASS: successful disable restores all four slots and keeps resources for in-flight callbacks");
 
-    void *slots[]={&context_slot,&access_slot,&setprocattr_slot};
-    for(unsigned int i=0;i<3;i++) {
+    void *slots[]={&context_slot,&access_slot,&setprocattr_slot,&setxattr_slot};
+    for(unsigned int i=0;i<sizeof(slots)/sizeof(slots[0]);i++) {
         reset(true);
         failing_slot=slots[i];
         assert(selinux_hide_feature_set(0)==-EIO);
         assert(ksu_selinux_hide_running && ksu_selinux_hide_enabled);
         assert(ksu_selinux_hide_cleanup_pending);
-        assert((i==0?orig_context_write:i==1?orig_access_write:ksu_orig_setprocattr)==original);
+        assert((context_write!=NULL)==(i==0));
+        assert((access_write!=NULL)==(i==1));
+        assert((selinux_setprocattr_hook_ptr!=0)==(i==2));
+        assert((selinux_setxattr_hook_ptr!=0)==(i==3));
         assert(selinux_hide_feature_get(&value)==-EAGAIN);
         ksu_selinux_hide_drop_backup_if_unused();
         assert(backup_policydb && backup_sidtab && !destroy_calls);
         failing_slot=NULL;
         assert(selinux_hide_feature_set(0)==0);
         assert(!ksu_selinux_hide_running && !ksu_selinux_hide_enabled && !ksu_selinux_hide_cleanup_pending);
-        assert(!orig_context_write && !orig_access_write && !ksu_orig_setprocattr);
+        assert(!context_write && !access_write && !selinux_setprocattr_hook_ptr && !selinux_setxattr_hook_ptr);
         ksu_selinux_hide_drop_backup_if_unused();
-        assert(!backup_policydb && !backup_sidtab && destroy_calls==1);
+        assert(backup_policydb && backup_sidtab && !destroy_calls);
     }
     puts("PASS: each restore failure retains its original callback and backup; disable retry completes");
 
@@ -188,14 +203,15 @@ int main(void) {
      * gets EAGAIN, then ksud feature save persists the feature getter value.
      */
     reset(false);
-    assert(ksu_selinux_hide_unhook()==0);
+    context_write=access_write=NULL;
+    selinux_setprocattr_hook_ptr=selinux_setxattr_hook_ptr=0;
     ksu_selinux_hide_drop_backup_if_unused();
     assert(!backup_policydb && !backup_sidtab);
     enable_error=-EAGAIN;
     assert(selinux_hide_feature_set(1)==-EAGAIN);
     assert(!ksu_selinux_hide_running && !ksu_selinux_hide_cleanup_pending);
     assert(selinux_hide_feature_get(&value)==0 && value==1);
-    assert(!orig_context_write && !orig_access_write && !ksu_orig_setprocattr);
+    assert(!context_write && !access_write && !selinux_setprocattr_hook_ptr && !selinux_setxattr_hook_ptr);
     u64 persisted=value;
     reset(false); /* next boot: a fresh policy backup exists before config load */
     assert(selinux_hide_feature_set(persisted)==0);
@@ -226,9 +242,9 @@ int main(void) {
 def source_file(value):
     path = Path(value)
     if path.is_dir():
-        for suffix in ("KernelSU/kernel/feature/selinux_hide.c",
-                       "kernel/feature/selinux_hide.c",
-                       "feature/selinux_hide.c"):
+        for suffix in ("KernelSU/kernel/feature/selinux_hide/selinux_hide.c",
+                       "kernel/feature/selinux_hide/selinux_hide.c",
+                       "feature/selinux_hide/selinux_hide.c"):
             candidate = path / suffix
             if candidate.is_file():
                 return candidate
@@ -239,12 +255,13 @@ def source_file(value):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", default=str(Path(__file__).resolve().parents[2]
-                        / "kernel/KernelSU/kernel/feature/selinux_hide.c"),
+                        / "kernel/KernelSU/kernel/feature/selinux_hide/selinux_hide.c"),
                         help="selinux_hide.c, kernel root, or BakaSU checkout")
     args = parser.parse_args()
     try:
         path = source_file(args.source)
-        source = path.read_text(encoding="utf-8")
+        source = (path.read_text(encoding="utf-8") + "\n"
+                  + path.with_name("selinux_hide_auto.c").read_text(encoding="utf-8"))
         definitions = [extract_function(source, name) for name in FUNCTIONS]
         compiler = shlex.split(os.environ.get("CC", "cc"))
         if not compiler:

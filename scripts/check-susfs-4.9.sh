@@ -56,7 +56,7 @@ for file in kernel/sys.c block/ioprio.c; do
         fail "Priority UID filtering is incomplete in $file"
 done
 require 'ksu_handle_selinux_setprocattr\(struct task_struct \*p' \
-    "$ksu_root/kernel/feature/selinux_hide.c"
+    "$ksu_root/kernel/feature/selinux_hide/selinux_hide_auto.c"
 require 'static int selinux_setprocattr\(struct task_struct \*p,' \
     "$kernel_root/security/selinux/hooks.c"
 require 'int selinux_kernel_status_page|struct page \*selinux_kernel_status_page' \

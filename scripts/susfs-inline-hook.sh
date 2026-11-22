@@ -258,7 +258,7 @@ for i in "${patch_files[@]}"; do
         # ksu_hide_setprocattr helper is not ABI-compatible with its current
         # four-argument handler; adding it here would duplicate the LSM hook.
         if ! grep -q 'ksu_handle_selinux_setprocattr(struct task_struct \*p' \
-                drivers/kernelsu/feature/selinux_hide.c; then
+                drivers/kernelsu/feature/selinux_hide/selinux_hide_auto.c; then
             fail "BakaSU's Linux 4.9 automatic SELinux hook is missing."
         elif grep -q 'ksu_hide_setprocattr\|ksu_selinux_hide_running' security/selinux/hooks.c; then
             fail "Manual SELinux hooks must not coexist with the Linux 4.9 automatic hook."

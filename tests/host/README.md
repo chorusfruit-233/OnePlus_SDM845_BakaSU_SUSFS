@@ -79,7 +79,7 @@ python3 tests/host/test-selinux-cleanup.py --source kernel
 ```
 
 `--source` accepts `selinux_hide.c`, the kernel root, or the BakaSU checkout.
-The default reads `kernel/KernelSU/kernel/feature/selinux_hide.c` relative to
+The default reads `kernel/KernelSU/kernel/feature/selinux_hide/selinux_hide.c` relative to
 the builder repository. Set `CC` to select a host C compiler; the default is
 `cc`. No kernel build is invoked.
 
@@ -88,7 +88,7 @@ functions, compiles their Linux 4.9 branches with mocked kernel services, and
 injects failure at each callback restore. It checks that failed restores retain
 the original callbacks and backup resources, report an incomplete state, and
 allow a later cleanup retry before enabling again. It also checks successful
-disable and startup-rollback recovery.
+disable, the lifetime of a published backup, and startup-rollback recovery.
 
 The installer mock can return EAGAIN, as happens after boot-completed has freed
 the unused policy backup. The actual getter must retain the requested value for
