@@ -53,7 +53,7 @@
       "kernel/tools/inline_hook_check.mk": "cdcde49e342030da0a9dd628ff6c4450da05bbc1e05e7cbc8d96ca1e9b5d0f40",
       "kernel/feature/selinux_hide/selinux_hide.c": "24be3c0d6ddd3eff5168575ebf62b69d2ed3ea733f60e26aa3b42db52aa69d6c",
       "kernel/feature/selinux_hide/selinux_hide.h": "4bc123bda2f3cd1a67a5339b6825e0720170924e1b808a804f92b9fe12c154be",
-      "kernel/feature/selinux_hide/selinux_hide_auto.c": "398d1abc821cf01fbbff4dee53b9db8d7d3dbf49c98192e4370338d6af173c7c",
+      "kernel/feature/selinux_hide/selinux_hide_auto.c": "c27c23c0175e5fd161aef954bbc68c7aa53c596a7c1d976a549d162f66271d08",
       "kernel/feature/selinux_hide/selinux_hide_susfs.c": "fbafc3ddea0bdfce30fd45c49170f02588b3a74474d704bc75d52d45f2aa6979",
       "kernel/hook/lsm_hooks.c": "2dff787a20344d50823783d699b3f16b55ec854a9012b0422e44ae92cff49a15",
       "kernel/selinux/sepolicy.h": "848fec4233173167f7116b2e6f1a684a8888057c5e0200c10a006f117198bf54",
@@ -61,7 +61,7 @@
       "kernel/runtime/boot_event.c": "9fa4f2e96efdd2f345292f99df0b29b869ffc3e2eb51e89800339f0f923b8bd0",
       "kernel/tools/static_export_check.mk": "1fad20b842e4e8d54952a0286e4d29b1edc0d9690135220f59ac508873e67f1a"
     },
-    "bakasu_reviewed_commit": "2734e0bc155759955880f5fb99be640fc5b92156",
+    "bakasu_reviewed_commit": "57b2db6076f439cfd489f14576444e8f0f2f0a25",
     "local_adaptations": [
       "Linux 4.9 offset-based kernel_read and bounded short-read handling for packages.list",
       "Keep configuration-generation checks, transactional errors and NULL-safe RCU retirement",
@@ -90,7 +90,7 @@
   },
   "linux_firmware": {
     "repo": "https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git",
-    "commit": "a1ebb5ad7eae3caca60b8b3db5792cf43339ba58",
+    "commit": "9a364ea424155016663bfddcb37a64af4a1fb927",
     "files": {
       "htc_9271.fw": "b5c123f9a8f2b0388eddd630860c100b4fe889ccdb4fcf24bc88b0fe2df3e59e",
       "rt2870.bin": "251b8918391eac6415d60dca239e415aad0177e885376f2a17782e64fcbbe317",

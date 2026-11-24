@@ -1,7 +1,7 @@
 {
   "repo": "https://github.com/ravindu644/Droidspaces-OSS",
   "version": "v7.2.0",
-  "commit": "cdadb9eb5d0f86aacffff60776333e6f6b73a30a",
+  "commit": "77e63323c937ae69e260aa8432d6f664997312c1",
   "release_commit": "cdadb9eb5d0f86aacffff60776333e6f6b73a30a",
   "requirements": "Documentation/Kernel-Configuration.md",
   "required_builtin": [

@@ -65,7 +65,7 @@ ramdisk、内核模块或 vendor 接口差异而不兼容。不要在未备份�
   路径检测及私有符号重名处理；CI 实际运行手机内核中嵌入的 preinit ELF，
   验证模块动作、失败/超时处理及返回 init。范围与真机测试见
   [最新 BakaSU 适配记录](docs/bakasu-main-20261024.md)；
-- 已对齐 `main @ 2734e0bc`，采用官方 UID 分派和软件包刷新，保留 4.9 接口及回滚保护。
+- 已更新到 `main @ 57b2db60`，采用官方 UID 分派和软件包刷新，保留 4.9 接口及回滚保护。
   保留此前 `516d3e87` 新增的 SELinux inode/BTF 层：4.9 内建模式沿用
   旧 inode 安全上下文接口，不启用依赖新内核 BTF 的模块路径；审阅检查覆盖新增文件，
   镜像检查确认 `ksu_selinux_inode` 已链接。继续跟踪 `main`；
@@ -126,7 +126,7 @@ CI 在编译前执行 `tests/host/test-selinux-cleanup.py`，从已准备的 Bak
 [`tests/device/README.md`](tests/device/README.md)。测试不修改 SELinux 策略，也不
 将未覆盖的接口或统计结果自动宣称为修复成功。
 
-本次全部上游核对结果及适配边界见 [2026-11-22 更新记录](docs/upstream-update-20261122.md)。
+本次全部上游核对结果及适配边界见 [2026-11-24 更新记录](docs/upstream-update-20261124.md)。
 
 ### Hybrid Mount VFS（内建）
 
@@ -214,7 +214,7 @@ CI 在编译前执行 `tests/host/test-selinux-cleanup.py`，从已准备的 Bak
 - CAKE 更新到 `dtaht/sch_cake @ 53ff94d4b580`，同步现代 netlink 参数/统计
   接口及旧内核兼容层，包含 TCP options 解析越界修复；保留 FQ、FQ_CODEL 与 PIE；
 - TTL/HL target、IPSet、IPv6 NAT；
-- 对照 Droidspaces **v7.2.0** 和主线要求（`cdadb9eb5d0f8`）启用
+- 对照 Droidspaces **v7.2.0** 和主线要求（`77e63323c937`）启用
   namespaces、cgroups、seccomp、veth、bridge、IPv4/IPv6 NAT、macvlan、
   overlayfs、TMPFS XATTR/POSIX ACL、CPU 使用统计、内存和进程数限额；
 - 补齐 macvlan 与 UFW/Fail2Ban 使用的 `xt_recent`；4.9 的 netfilter 旧配置名

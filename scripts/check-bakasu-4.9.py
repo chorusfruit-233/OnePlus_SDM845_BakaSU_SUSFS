@@ -33,8 +33,8 @@ def main():
         for name in changed:
             print(f"  {name}", file=sys.stderr)
         return 1
-    print(f"BakaSU {revision}: reviewed 4.9 integration unchanged "
-          f"(patch base {profile['bakasu_patch_base']}).")
+    print(f"BakaSU {revision}: matches reviewed 4.9 sources "
+          f"(review {profile['bakasu_reviewed_commit']}, patch base {profile['bakasu_patch_base']}).")
     return 0
 
 
