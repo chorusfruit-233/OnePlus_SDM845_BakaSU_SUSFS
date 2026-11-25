@@ -9,7 +9,7 @@
 | BakaSU | main · 57b2db6076f4 | 同步内核来源，刷新 4.9 审阅记录 |
 | Baseband Guard | main · 48d9fdea643b | 同步最新驱动，继续使用 4.9 块设备接口和 A/B 槽位白名单补丁 |
 | Droidspaces | main · 77e63323c937 / v7.2.0 · cdadb9eb5d0f | 主线新增用户态修复，内核配置要求无变化。正式版仍为 v7.2.0 |
-| linux-firmware | main · 9a364ea42415 | 更新下载提交，三份内建 USB Wi-Fi 固件校验值相同 |
+| linux-firmware | main · 16a7a3f83c2f | 11 月 25 日发布前更新下载提交，三份内建 USB Wi-Fi 固件逐字节一致 |
 | LineageOS | lineage-22.2 · 228c16bfcd25 | 基线仍为 4.9.337 |
 | SUSFS / 4.9 移植来源 | v2.4.0 · f76b81f2a6bf / ec069a4e34f9 | 两个来源均无更新 |
 | HybridMount / ReKernel | b0fa65581aff / ac08296174d7 | 两个来源均无更新 |
