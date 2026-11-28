@@ -589,7 +589,7 @@ jobs:
             ak3/anykernel.sh "artifacts/$package"
           cp kernel/out/arch/arm64/boot/Image.gz-dtb artifacts/
           cp configs/droidspaces-backports.json configs/security-backports.json artifacts/
-          cp configs/vendored-upstreams.json docs/upstream-update-20261124.md artifacts/
+          cp configs/vendored-upstreams.json docs/upstream-update-20261128.md artifacts/
           cp docs/security-advisories-20261105.json docs/custom-patch-audit-20261105.json artifacts/
           {
             echo "builder=$(git rev-parse HEAD)"
@@ -652,7 +652,7 @@ jobs:
             echo "firmware_sha256=$(sha256sum kernel/firmware/htc_9271.fw kernel/firmware/rt2870.bin kernel/firmware/mt7601u.bin | tr '\n' ';')"
           } > artifacts/build-info.txt
           (cd artifacts && sha256sum "$package" Image.gz-dtb build-info.txt \
-            source-revisions.json vendored-upstreams.json upstream-update-20261124.md \
+            source-revisions.json vendored-upstreams.json upstream-update-20261128.md \
             droidspaces-backports.json security-backports.json \
             security-advisories-20261105.json custom-patch-audit-20261105.json > SHA256SUMS)
 
@@ -679,7 +679,7 @@ jobs:
           git check-ref-format "refs/tags/$tag"
           (cd artifacts && sha256sum --check --status SHA256SUMS)
           {
-            cat docs/upstream-update-20261124.md
+            cat docs/upstream-update-20261128.md
             printf '\n## 本次构建\n\n'
             printf 'CI: %s/%s/actions/runs/%s\n\n' "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID"
             printf '源码: `%s`\n\n' "$GITHUB_SHA"
@@ -688,7 +688,7 @@ jobs:
           gh release create "$tag" \
             artifacts/*-AK3.zip artifacts/SHA256SUMS \
             artifacts/build-info.txt artifacts/source-revisions.json artifacts/Image.gz-dtb \
-            artifacts/vendored-upstreams.json artifacts/upstream-update-20261124.md \
+            artifacts/vendored-upstreams.json artifacts/upstream-update-20261128.md \
             artifacts/droidspaces-backports.json artifacts/security-backports.json \
             artifacts/security-advisories-20261105.json artifacts/custom-patch-audit-20261105.json \
             --target "$GITHUB_SHA" \

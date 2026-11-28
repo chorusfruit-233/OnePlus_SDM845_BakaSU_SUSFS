@@ -55,7 +55,7 @@ ramdisk、内核模块或 vendor 接口差异而不兼容。不要在未备份�
 ### BakaSU 与 SUSFS
 
 - BakaSU 默认跟踪 `main`，每次构建先解析并记录实际提交。
-  Linux 4.9 配套补丁已重基到 `2734e0bc`。更新涉及已审阅的接口时，构建会要求重新核对。
+  Linux 4.9 配套补丁已重基到 `4ca505a8`。更新涉及已审阅的接口时，构建会要求重新核对。
 - 已审查 `main @ 896e8981` 的 32 位用户空间兼容更新：保留 SUSFS inline hooks，
   使用上游系统调用号生成器。CI 同时检查
   原生/32 位寄存器、指针及系统调用号处理；设备端兼容行为仍需真机验证；
@@ -65,7 +65,7 @@ ramdisk、内核模块或 vendor 接口差异而不兼容。不要在未备份�
   路径检测及私有符号重名处理；CI 实际运行手机内核中嵌入的 preinit ELF，
   验证模块动作、失败/超时处理及返回 init。范围与真机测试见
   [最新 BakaSU 适配记录](docs/bakasu-main-20261024.md)；
-- 已更新到 `main @ 57b2db60`，采用官方 UID 分派和软件包刷新，保留 4.9 接口及回滚保护。
+- 已更新到 `main @ 4ca505a8`，采用官方 UID 分派和软件包刷新，保留 4.9 接口及回滚保护。
   保留此前 `516d3e87` 新增的 SELinux inode/BTF 层：4.9 内建模式沿用
   旧 inode 安全上下文接口，不启用依赖新内核 BTF 的模块路径；审阅检查覆盖新增文件，
   镜像检查确认 `ksu_selinux_inode` 已链接。继续跟踪 `main`；
@@ -84,7 +84,8 @@ ramdisk、内核模块或 vendor 接口差异而不兼容。不要在未备份�
   路径过滤不再依赖旧的卸载标记和文件所有者豁免；配置的应用 UID 可见标记路径。
   使用新功能需更新支持 v2.4.0 的官方 SUSFS 用户态工具。
   同步 `ec069a4e` 的 4.9 移植：UID 查询改读 `packages.list` 并使用 `O_NOATIME`，
-  适配旧 `kernel_read`、短读与大小上限；保留错误回滚、刷新代次和空指针保护。
+  适配旧 `kernel_read`、短读与大小上限，保留错误回滚、刷新代次和空指针保护。
+  同步 `b3fdebf2` 的 sdcardfs 兼容改动，在共享底层 inode 的存储视图间传递标记并保留所有者访问。
   `CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER=y` 默认启用，关闭时调用端也同步禁用。
   官方 GKI 手动 SELinux hooks 在本树由以下 NonGKI 自动接入替代；
 - 使用 SUSFS 官方 inline hook 方式（`scripts/susfs-inline-hook.sh`）替换 KernelSU
@@ -126,12 +127,12 @@ CI 在编译前执行 `tests/host/test-selinux-cleanup.py`，从已准备的 Bak
 [`tests/device/README.md`](tests/device/README.md)。测试不修改 SELinux 策略，也不
 将未覆盖的接口或统计结果自动宣称为修复成功。
 
-本次全部上游核对结果及适配边界见 [2026-11-24 更新记录](docs/upstream-update-20261124.md)。
+本次全部上游核对结果及适配边界见 [2026-11-28 更新记录](docs/upstream-update-20261128.md)。
 
 ### Hybrid Mount VFS（内建）
 
 - [Hybrid-Mount/meta-hybrid_mount](https://github.com/Hybrid-Mount/meta-hybrid_mount)
-  的 VFS 驱动更新到 `dev @ b0fa65581aff`，以自包含补丁
+  的内建 VFS 驱动已核对到 `dev @ 025a6a09a0a5`，驱动树与 `b0fa65581aff` 相同，以自包含补丁
   `patches/lineage-4.9/hybridmount-4.9.patch` vendored；同步 backing 权限、noexec/nodev、只读句柄缓存和原生目录隔离；
 - 同步 inode/RCU 引用、规则替换缓存、按 UID 区分的同名子项、父目录转换、
   seqcount 写侧与分配失败回滚修复；内建 ext4 export encoder 防护覆盖
@@ -332,7 +333,7 @@ SUSFS 补丁的哈希）和所有上游 commit 共同组成 build key：
 | Kernel | [LineageOS/android_kernel_oneplus_sdm845](https://github.com/LineageOS/android_kernel_oneplus_sdm845) | 固定基线 commit |
 | BakaSU | [Baka-SU/BakaSU](https://github.com/Baka-SU/BakaSU) | 默认跟踪 `main`，校验配套实现 |
 | SUSFS v2.4.0 | 自包含补丁（源自 [JackA1ltman/NonGKI_Kernel_Build_2nd](https://github.com/JackA1ltman/NonGKI_Kernel_Build_2nd)） | vendored，随仓库版本变化 |
-| Hybrid Mount VFS | [Hybrid-Mount/meta-hybrid_mount](https://github.com/Hybrid-Mount/meta-hybrid_mount)（dev 分支） | vendored，固定 `b0fa65581aff`，内建 hm1 provider |
+| Hybrid Mount VFS | [Hybrid-Mount/meta-hybrid_mount](https://github.com/Hybrid-Mount/meta-hybrid_mount)（dev 分支） | vendored，核对到 `025a6a09a0a5`，内建 hm1 provider |
 | RTL8812AU/8821AU/8814AU | [aircrack-ng/rtl8812au](https://github.com/aircrack-ng/rtl8812au) | 默认跟踪 `v5.6.4.2`（构建时克隆 + 适配补丁） |
 | CAKE | [dtaht/sch_cake](https://github.com/dtaht/sch_cake) | 固定最新 `53ff94d4b580`，同步 4.9 兼容层和 UAPI |
 | BBRv3 patches | [WildKernels/kernel_patches](https://github.com/WildKernels/kernel_patches) | 稀疏拉取 `common/bbrv3` |

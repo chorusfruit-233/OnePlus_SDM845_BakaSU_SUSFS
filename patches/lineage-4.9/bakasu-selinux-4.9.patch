@@ -1,5 +1,5 @@
 # BakaSU Linux 4.9 adaptation.
-# Base: 2734e0bc155759955880f5fb99be640fc5b92156.
+# Base: 4ca505a878d9a3d9584417ef6b7fa443f2e516d5.
 # Applies to the reviewed Lineage ARM64 SUSFS inline/automatic SELinux port.
 
 diff --git a/kernel/feature/selinux_hide/selinux_hide.c b/kernel/feature/selinux_hide/selinux_hide.c
@@ -157,10 +157,10 @@ index aa901971..09bdfd54 100644
      extern struct page *selinux_status_page;
  #endif
 diff --git a/kernel/feature/selinux_hide/selinux_hide_auto.c b/kernel/feature/selinux_hide/selinux_hide_auto.c
-index 94120f30..e4fa9243 100644
+index a37b1d0c..9c0dde23 100644
 --- a/kernel/feature/selinux_hide/selinux_hide_auto.c
 +++ b/kernel/feature/selinux_hide/selinux_hide_auto.c
-@@ -50,55 +50,17 @@ static __nocfi void ksu_security_compute_av_user(struct policydb *policydb, stru
+@@ -51,55 +51,17 @@ static __nocfi void ksu_security_compute_av_user(struct policydb *policydb, stru
                                                  struct context *tcontext, u16 tclass, struct av_decision *avd,
                                                  struct extended_perms *xperms) = NULL;
  #else
@@ -224,7 +224,7 @@ index 94120f30..e4fa9243 100644
  #endif
  // clang-format on
  
-@@ -388,6 +350,10 @@ int __nocfi ksu_handle_selinux_setprocattr(const char *name, void *value, size_t
+@@ -353,6 +315,10 @@ int __nocfi ksu_handle_selinux_setprocattr(const char *name, void *value, size_t
  int __nocfi ksu_handle_selinux_setprocattr(struct task_struct *p, char *name, void *value, size_t size)
  #endif
  {
@@ -235,7 +235,7 @@ index 94120f30..e4fa9243 100644
      if (likely(ksu_get_uid_t(current_uid()) < 10000)) {
          goto call_orig;
      }
-@@ -645,10 +611,10 @@ static int my_sel_open_handle_status(struct inode *inode, struct file *filp)
+@@ -610,10 +576,10 @@ static int my_sel_open_handle_status(struct inode *inode, struct file *filp)
      return ret;
  }
  
@@ -248,7 +248,7 @@ index 94120f30..e4fa9243 100644
      if (!sel_open_handle_status_slot) {
  #ifdef CONFIG_KALLSYMS_ALL
          struct file_operations *ops = (struct file_operations *)find_kernel_symbol_exact("sel_handle_status_ops");
-@@ -658,7 +624,7 @@ static void hook_selinux_status_open()
+@@ -623,7 +589,7 @@ static void hook_selinux_status_open()
  #endif
          if (!ops) {
              pr_err("selinux_hide: sel_handle_status_ops not found, fake status will not work\n");
@@ -257,7 +257,7 @@ index 94120f30..e4fa9243 100644
          }
          sel_open_handle_status_slot = &ops->open;
      }
-@@ -670,6 +636,7 @@ static void hook_selinux_status_open()
+@@ -635,6 +601,7 @@ static void hook_selinux_status_open()
          sel_open_handle_status_slot = NULL;
          orig_sel_open_handle_status = NULL;
      }
@@ -265,7 +265,7 @@ index 94120f30..e4fa9243 100644
  }
  
  #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 2, 0) && !defined(KSU_COMPAT_HAS_LIST_OF_LSM_HOOKS)
-@@ -677,49 +644,60 @@ extern void ksu_unregister_setprocattr_lsm_hook();
+@@ -642,49 +609,60 @@ extern void ksu_unregister_setprocattr_lsm_hook();
  extern void ksu_unregister_setxattr_lsm_hook();
  #endif
  
@@ -336,7 +336,7 @@ index 94120f30..e4fa9243 100644
  }
  
  extern void ksu_register_setprocattr_lsm_hook();
-@@ -740,22 +718,13 @@ static int ksu_selinux_hide_hook(void)
+@@ -705,22 +683,13 @@ static int ksu_selinux_hide_hook(void)
          if (!context_struct_compute_av_fn) {
              pr_warn("context_struct_compute_av not found!\n");
          }
@@ -360,7 +360,7 @@ index 94120f30..e4fa9243 100644
          }
      #endif
  #else
-@@ -775,27 +744,6 @@ static int ksu_selinux_hide_hook(void)
+@@ -740,27 +709,6 @@ static int ksu_selinux_hide_hook(void)
          if (!context_struct_compute_av_fn) {
              pr_warn("context_struct_compute_av not found!\n");
          }
@@ -388,7 +388,7 @@ index 94120f30..e4fa9243 100644
      #endif
  
      #if LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0) && !defined(KSU_COMPAT_USE_SELINUX_STATE)
-@@ -860,6 +808,15 @@ static int ksu_selinux_hide_hook(void)
+@@ -825,6 +773,15 @@ static int ksu_selinux_hide_hook(void)
      }
  #elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 2, 0) || defined(KSU_COMPAT_HAS_LIST_OF_LSM_HOOKS)
      struct security_hook_list *hp;
@@ -404,7 +404,7 @@ index 94120f30..e4fa9243 100644
  
      // https://github.com/torvalds/linux/commit/df0ce17331e2501dbffc060041dfc6c5f85227b5
  #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 17, 0) || defined(KSU_COMPAT_HLIST_FOR_SECURITY_HOOK_LIST)
-@@ -875,6 +832,9 @@ static int ksu_selinux_hide_hook(void)
+@@ -840,6 +797,9 @@ static int ksu_selinux_hide_hook(void)
          // when we are in 4.11+, we can ensure we are control "selinux" LSM by that
          if (strcmp("selinux", hp->lsm))
              continue;
@@ -414,7 +414,7 @@ index 94120f30..e4fa9243 100644
  #endif // #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0)
          selinux_setprocattr_hook_ptr = (unsigned long)&hp->hook.setprocattr;
          ksu_orig_setprocattr = hp->hook.setprocattr;
-@@ -887,7 +847,7 @@ static int ksu_selinux_hide_hook(void)
+@@ -852,7 +812,7 @@ static int ksu_selinux_hide_hook(void)
          }
          break;
      }
@@ -423,7 +423,7 @@ index 94120f30..e4fa9243 100644
          ret = -ENOENT;
          goto unhook;
      }
-@@ -899,6 +859,9 @@ static int ksu_selinux_hide_hook(void)
+@@ -864,6 +824,9 @@ static int ksu_selinux_hide_hook(void)
          // when we are in 4.11+, we can ensure we are control "selinux" LSM by that
          if (strcmp("selinux", hp->lsm))
              continue;
@@ -433,7 +433,7 @@ index 94120f30..e4fa9243 100644
  #endif // #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0)
          selinux_setxattr_hook_ptr = (unsigned long)&hp->hook.inode_setxattr;
          ksu_orig_setxattr = hp->hook.inode_setxattr;
-@@ -911,7 +874,7 @@ static int ksu_selinux_hide_hook(void)
+@@ -876,7 +839,7 @@ static int ksu_selinux_hide_hook(void)
          }
          break;
      }
@@ -442,7 +442,7 @@ index 94120f30..e4fa9243 100644
          ret = -ENOENT;
          goto unhook;
      }
-@@ -928,17 +891,17 @@ static int ksu_selinux_hide_hook(void)
+@@ -893,17 +856,17 @@ static int ksu_selinux_hide_hook(void)
  
  unhook:
      ksu_selinux_hide_unhook();
@@ -464,8 +464,8 @@ index 94120f30..e4fa9243 100644
  }
  
  /*
-@@ -1395,6 +1358,135 @@ out_unlock:
-     return rc;
+@@ -1405,6 +1368,135 @@ out_unlock:
+     return rc ?: orig_rc;
  }
  
 +#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 17, 0) && !defined(KSU_COMPAT_USE_SELINUX_STATE)
@@ -600,7 +600,7 @@ index 94120f30..e4fa9243 100644
  /*
   * Write the security context string representation of
   * the context structure `context' into a dynamically
-@@ -1427,7 +1519,7 @@ static int context_struct_to_string(struct policydb *p, struct context *context,
+@@ -1437,7 +1529,7 @@ static int context_struct_to_string(struct policydb *p, struct context *context,
  #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 17, 0) || defined(KSU_COMPAT_USE_SELINUX_STATE)
      *scontext_len += mls_compute_context_len(p, context);
  #else
@@ -609,7 +609,7 @@ index 94120f30..e4fa9243 100644
  #endif
  
      if (!scontext)
-@@ -1448,7 +1540,7 @@ static int context_struct_to_string(struct policydb *p, struct context *context,
+@@ -1458,7 +1550,7 @@ static int context_struct_to_string(struct policydb *p, struct context *context,
  #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 17, 0) || defined(KSU_COMPAT_USE_SELINUX_STATE)
      mls_sid_to_context(p, context, &scontextp);
  #else
@@ -618,7 +618,7 @@ index 94120f30..e4fa9243 100644
  #endif
  
      *scontextp = 0;
-@@ -1566,7 +1658,7 @@ static void __nocfi type_attribute_bounds_av(struct policydb *policydb, struct c
+@@ -1576,7 +1668,7 @@ static void __nocfi type_attribute_bounds_av(struct policydb *policydb, struct c
      }
  
      if (context_struct_compute_av_fn) {

@@ -6,14 +6,14 @@
     "commit": "f76b81f2a6bf98e4029cc0c823c054edbec29803",
     "port_repo": "https://github.com/JackA1ltman/NonGKI_Kernel_Build_2nd.git",
     "port_ref": "mainline",
-    "port_commit": "ec069a4e34f992d602a6b40d2e211df2516e2865",
+    "port_commit": "b3fdebf206609cb00abf57a1eb4c31878dfbcc57",
     "core_commit": "f76b81f2a6bf98e4029cc0c823c054edbec29803",
     "selinux_integration": "BakaSU NonGKI automatic hooks; LineageOS 4.9 adaptation",
-    "bakasu_patch_base": "2734e0bc155759955880f5fb99be640fc5b92156",
+    "bakasu_patch_base": "4ca505a878d9a3d9584417ef6b7fa443f2e516d5",
     "bakasu_reviewed_files": {
       "kernel/feature/sucompat.c": "00191252383f73eec87b1ae76fbc0c8b245f63d1d64c8a07372d738cdd6a7729",
-      "kernel/selinux/sepolicy.c": "28e58c7c0016b350b8a4ac25dace8f404afe1a2216f8bdd7af4177a83085b8d3",
-      "kernel/selinux/rules.c": "47466c6a376140f7097c5fbf0234dcd85c9bf49a1c43f83fbade9aeeb77bc244",
+      "kernel/selinux/sepolicy.c": "8dbaf8c3346a74d98e5feca85d05a8847cab40ed6a940be69fd0bd129d526cab",
+      "kernel/selinux/rules.c": "8b0ed1b4617e4ca036773b70f26560bb070242d7ea867707ef27f1e4f4fea4a7",
       "kernel/selinux/selinux.c": "7bc8b69fa235f1a199c0940bbf18761c30b7ff388d23ae6a1c4db0ed32957678",
       "kernel/runtime/ksud_integration.c": "7874d7dd10eed9d6c596c79e07c9faab654994f7dea48ee2a2b238dd0b9b7481",
       "kernel/core/init.c": "3a67b501e774fcb580e3fe333654674ecc5b623c4c61609fa6c7e34cf40ea94d",
@@ -53,29 +53,30 @@
       "kernel/tools/inline_hook_check.mk": "cdcde49e342030da0a9dd628ff6c4450da05bbc1e05e7cbc8d96ca1e9b5d0f40",
       "kernel/feature/selinux_hide/selinux_hide.c": "24be3c0d6ddd3eff5168575ebf62b69d2ed3ea733f60e26aa3b42db52aa69d6c",
       "kernel/feature/selinux_hide/selinux_hide.h": "4bc123bda2f3cd1a67a5339b6825e0720170924e1b808a804f92b9fe12c154be",
-      "kernel/feature/selinux_hide/selinux_hide_auto.c": "c27c23c0175e5fd161aef954bbc68c7aa53c596a7c1d976a549d162f66271d08",
+      "kernel/feature/selinux_hide/selinux_hide_auto.c": "c89adace30423545df22abd32d32760b21a815448b52de0659c273a7a7253c73",
       "kernel/feature/selinux_hide/selinux_hide_susfs.c": "fbafc3ddea0bdfce30fd45c49170f02588b3a74474d704bc75d52d45f2aa6979",
       "kernel/hook/lsm_hooks.c": "2dff787a20344d50823783d699b3f16b55ec854a9012b0422e44ae92cff49a15",
-      "kernel/selinux/sepolicy.h": "848fec4233173167f7116b2e6f1a684a8888057c5e0200c10a006f117198bf54",
+      "kernel/selinux/sepolicy.h": "5e227631e2535cdfdce080284197fda508c32e6a569dcc5b7a3a30f546e785b4",
       "kernel/compat/kernel_compat.c": "a058a6df4f77713c4e522d2739960c1ba93f05e685de79d8d102eb383e9c24da",
       "kernel/runtime/boot_event.c": "9fa4f2e96efdd2f345292f99df0b29b869ffc3e2eb51e89800339f0f923b8bd0",
       "kernel/tools/static_export_check.mk": "1fad20b842e4e8d54952a0286e4d29b1edc0d9690135220f59ac508873e67f1a"
     },
-    "bakasu_reviewed_commit": "57b2db6076f439cfd489f14576444e8f0f2f0a25",
+    "bakasu_reviewed_commit": "4ca505a878d9a3d9584417ef6b7fa443f2e516d5",
     "local_adaptations": [
       "Linux 4.9 offset-based kernel_read and bounded short-read handling for packages.list",
       "Keep configuration-generation checks, transactional errors and NULL-safe RCU retirement",
       "Preserve legacy VFS/readlink/statfs helpers and fsnotify filename ABI",
       "Expose the upstream priority-filter option and guard callers when disabled",
       "Apply the hardened transactional UID resolver to the new path allowlist, independently of priority filtering",
-      "Use the native FUSE superblock for directory filtering; keep BakaSU automatic SELinux hooks rather than GKI policy-state hooks"
+      "Use the native FUSE superblock for directory filtering; keep BakaSU automatic SELinux hooks rather than GKI policy-state hooks",
+      "Share sdcardfs lower-inode marks across storage views and preserve owner access"
     ]
   },
   "hybridmount": {
     "version": "hm1",
     "repo": "https://github.com/Hybrid-Mount/meta-hybrid_mount.git",
     "ref": "dev",
-    "commit": "b0fa65581aff1d4a49a11d0f0e66c69ade7e6fca",
+    "commit": "025a6a09a0a569ec31366e712a80b09dfc54e32a",
     "source_path": "module/vfs/src",
     "license": "GPL-2.0-only",
     "source_tree": "e81cc3b73a2ff22b4e0409fb283ec11e7360f252"
@@ -90,7 +91,7 @@
   },
   "linux_firmware": {
     "repo": "https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git",
-    "commit": "16a7a3f83c2f83239b0395faac8da4acbbbb0ffe",
+    "commit": "66a9a75560fcb9fa1db6615e7ea3922ce0dbefea",
     "files": {
       "htc_9271.fw": "b5c123f9a8f2b0388eddd630860c100b4fe889ccdb4fcf24bc88b0fe2df3e59e",
       "rt2870.bin": "251b8918391eac6415d60dca239e415aad0177e885376f2a17782e64fcbbe317",

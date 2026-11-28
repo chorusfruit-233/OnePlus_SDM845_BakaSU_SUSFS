@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fault-inject both actual SUSFS UID filters on the 4.9 port.
+"""Exercise the 4.9 SUSFS UID filters and marked storage views.
 
 Credentials, VFS and RCU are mocked; this does not test Android SELinux or the
 syscall ABI. The test exercises validation, publication, rollback and refresh.
@@ -246,6 +246,42 @@ int main(void) {
 """
 
 
+SDCARDFS_TEST = r"""
+#if IS_ENABLED(CONFIG_SDCARD_FS)
+static void test_sdcardfs_storage_views(void)
+{
+    struct super_block native_sb = {0};
+    struct super_block storage_sb = {.s_magic = SDCARDFS_SUPER_MAGIC};
+    struct inode lower = {.i_sb = &native_sb, .i_mapping = &native_sb};
+    struct sdcardfs_inode_info view = {
+        .vfs_inode = {.i_sb = &storage_sb, .i_mapping = &storage_sb, .i_uid = {10002}},
+        .lower_inode = &lower,
+    };
+    struct sdcardfs_inode_info other_view = view;
+
+    susfs_flag_sdcardfs_lower_inode(&view.vfs_inode, "fixture");
+    assert(test_bit(AS_FLAGS_SUS_PATH_SDCARDFS, &lower.i_state));
+    assert(!test_bit(AS_FLAGS_SUS_PATH, &lower.i_state));
+
+    caller_uid = 110002;
+    assert(susfs_is_inode_sus_path(&other_view.vfs_inode));
+    assert(!susfs_is_inode_sus_path(&lower));
+    caller_uid = 10002;
+    assert(!susfs_is_inode_sus_path(&other_view.vfs_inode));
+    caller_uid = 110001;
+    assert(!susfs_is_inode_sus_path(&other_view.vfs_inode));
+
+    other_view.lower_inode = NULL;
+    caller_uid = 110002;
+    assert(!susfs_is_inode_sus_path(&other_view.vfs_inode));
+    set_bit(AS_FLAGS_SUS_PATH, &other_view.vfs_inode.i_state);
+    assert(susfs_is_inode_sus_path(&other_view.vfs_inode));
+    puts("PASS: sdcardfs views share marks and handle owner, allowlist and missing backing inode cases");
+}
+#endif
+"""
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", type=Path, required=True)
@@ -259,6 +295,7 @@ def main():
                        "ksu_handle_susfs_cmd")
     definitions = (args.source / "include/linux/susfs_def.h").read_text()
     commands = "\n".join(re.findall(r"^#define CMD_SUSFS_\w+ 0x[0-9a-fA-F]+", definitions, re.M))
+    marks = "\n".join(re.findall(r"^#define AS_FLAGS_SUS_PATH(?:_SDCARDFS)? \d+$", definitions, re.M))
     for kind in ("priority", "sus_path"):
         prefix, suffix, body = PREFIX, SUFFIX, priority
         if kind == "sus_path":
@@ -275,22 +312,43 @@ def main():
 static void susfs_add_sus_path(void **p) { assert(0); }
 static void susfs_add_sus_path_loop(void **p) { assert(0); }
 #define unlikely(x) (x)
-#define AS_FLAGS_SUS_PATH 20
 #define FUSE_SUPER_MAGIC 0x65735546
+#define SDCARDFS_SUPER_MAGIC 0x5dca2df5
+#define IS_ENABLED(symbol) (symbol)
+struct mock_uid { uid_t val; };
 struct super_block { unsigned long s_magic; };
-struct inode { void *i_mapping; struct super_block *i_sb; unsigned long i_state; };
+struct inode {
+    void *i_mapping;
+    struct super_block *i_sb;
+    unsigned long i_state;
+    struct mock_uid i_uid;
+};
 struct fuse_inode { struct inode inode; };
 static struct fuse_inode fuse;
 static struct fuse_inode *get_fuse_inode(struct inode *i) { return &fuse; }
 static uid_t caller_uid;
-struct mock_uid { uid_t val; };
 static struct mock_uid current_uid(void) { return (struct mock_uid){caller_uid}; }
+#if IS_ENABLED(CONFIG_SDCARD_FS)
+struct sdcardfs_inode_info { struct inode vfs_inode; struct inode *lower_inode; };
+static struct sdcardfs_inode_info *SDCARDFS_I(struct inode *inode)
+{
+    return (struct sdcardfs_inode_info *)inode;
+}
+static struct inode *sdcardfs_lower_inode(struct inode *inode)
+{
+    return SDCARDFS_I(inode)->lower_inode;
+}
+static bool uid_eq(struct mock_uid a, struct mock_uid b) { return a.val == b.val; }
+#endif
 
 """
             body = source[source.index("struct susfs_sus_path_uid_filter_bitmap {"):
                           source.index("#endif // #ifdef CONFIG_KSU_SUSFS_SUS_PATH",
                                        source.index("struct susfs_sus_path_uid_filter_bitmap {"))]
+            sdcardfs = source.index("#if IS_ENABLED(CONFIG_SDCARD_FS)\nstatic void susfs_flag_sdcardfs_lower_inode(")
+            body += source[sdcardfs:source.index("void susfs_add_sus_path(", sdcardfs)]
             body += extract(source.replace("__attribute__((hot)) ", ""), "susfs_is_inode_sus_path")
+            body += SDCARDFS_TEST
             suffix = suffix.replace('int main(void) {', '''int main(void) {
     struct super_block sb={0};
     struct inode inode={.i_mapping=&sb,.i_sb=&sb,.i_state=1UL<<AS_FLAGS_SUS_PATH};
@@ -308,18 +366,23 @@ static struct mock_uid current_uid(void) { return (struct mock_uid){caller_uid};
     caller_uid=10002;assert(susfs_is_inode_sus_path(&inode));
     fuse.inode.i_state=0;assert(!susfs_is_inode_sus_path(&inode));
     puts("PASS: marked native/FUSE inode visibility follows caller app ID and allowlist");
+#if IS_ENABLED(CONFIG_SDCARD_FS)
+    test_sdcardfs_storage_views();
+#endif
     puts("PASS: app ID boundaries''')
-        print(f"SUSFS {kind} UID filter", flush=True)
-        compile_and_run(prefix + commands + "\n" + helpers + body +
-                        suffix.replace("/* DISPATCH */", dispatch))
+        for sdcardfs_enabled in ((0, 1) if kind == "sus_path" else (0,)):
+            print(f"SUSFS {kind} UID filter (CONFIG_SDCARD_FS={sdcardfs_enabled})", flush=True)
+            compile_and_run(prefix + commands + "\n" + marks + "\n" + helpers + body +
+                            suffix.replace("/* DISPATCH */", dispatch), sdcardfs_enabled)
 
 
-def compile_and_run(source):
+def compile_and_run(source, sdcardfs_enabled):
     with tempfile.TemporaryDirectory(prefix="susfs-uid-") as directory:
         program = Path(directory) / "priority.c"
         executable = Path(directory) / "priority"
         program.write_text(source)
         subprocess.run(shlex.split(os.environ.get("CC", "cc")) + [
+            f"-DCONFIG_SDCARD_FS={sdcardfs_enabled}",
             "-std=gnu11", "-Wall", "-Wextra", "-Werror", "-Wno-unused-parameter",
             "-Wno-unused-variable", "-Wno-sign-compare", "-Wno-misleading-indentation",
             str(program), "-o", str(executable)], check=True)
